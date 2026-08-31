@@ -1,20 +1,19 @@
 # 说明：
-# 下方 @nd-backend-bot 与 @nd-frontend-bot 为占位账号，
-# 请替换为两个 Agent 各自使用的 GitHub 机器账号（或具备写权限的 GitHub App slug）。
+# 下方账号分别为两个 Agent 使用的 GitHub 机器账号。
 
 # 全局兜底：仓库所有者
 * @chiyuan222
 
 # 后端专属
-/apps/api/** @nd-backend-bot
+/apps/api/** @arpovt9mxm
 
 # 前端专属
-/apps/web/** @nd-frontend-bot
-/public/** @nd-frontend-bot
+/apps/web/** @o18x2daq63
+/public/** @o18x2daq63
 
 # 契约与共享类型：两个 Agent 都必须 review
-/openapi.yaml @nd-backend-bot @nd-frontend-bot
-/packages/contract/** @nd-backend-bot @nd-frontend-bot
+/openapi.yaml @arpovt9mxm @o18x2daq63
+/packages/contract/** @arpovt9mxm @o18x2daq63
 
 # CI、根配置：仓库所有者
 /.github/** @chiyuan222
