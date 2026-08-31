@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { KnotMark } from "@/components/knot-mark";
+import { getForumIndexData, USE_MOCK } from "@/lib/data";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "论坛",
@@ -14,7 +17,9 @@ const FEATURES = [
   { title: "精华沉淀", desc: "优质讨论加精，汇入首页推荐" },
 ] as const;
 
-export default function ForumIndexPage() {
+export default async function ForumIndexPage() {
+  const data = await getForumIndexData();
+
   return (
     <div className="mx-auto max-w-page space-y-12">
       {/* 页头 */}
@@ -26,37 +31,106 @@ export default function ForumIndexPage() {
           论坛
         </h1>
         <p className="mt-4 max-w-reading text-body leading-relaxed text-secondary">
-          织者的集结地：讨论、求助与分享。板块与主题流将在后端数据接入后开放。
+          织者的集结地：讨论、求助与分享。
+          {USE_MOCK && (
+            <span className="ml-2 rounded-sm border border-amber-soft px-1.5 py-0.5 font-mono text-caption text-amber">
+              MOCK 数据预览
+            </span>
+          )}
         </p>
       </header>
 
       <div className="grid gap-6 lg:grid-cols-12">
-        {/* 板块框架 */}
+        {/* 板块列表 */}
         <aside aria-label="板块列表" className="lg:col-span-4">
           <div className="rounded-md border border-border-subtle bg-surface p-5">
             <h2 className="flex items-center gap-2 text-h3 font-semibold">
               <KnotMark size={18} />
               板块
             </h2>
-            <ul className="mt-4 space-y-2">
-              {[1, 2, 3].map((i) => (
-                <li
-                  key={i}
-                  className="flex items-center gap-3 rounded-sm border border-dashed border-border-subtle px-3 py-2.5 text-small text-faint"
-                >
-                  <span aria-hidden className="block h-1.5 w-1.5 rounded-full bg-border-subtle" />
-                  待创建板块 · {String(i).padStart(2, "0")}
-                </li>
-              ))}
-            </ul>
-            <p className="mt-4 text-caption text-faint">
-              板块由管理员在后端数据就绪后建立。
-            </p>
+            {data && data.boards.length > 0 ? (
+              <ul className="mt-4 space-y-2">
+                {data.boards.map((b) => (
+                  <li key={b.id}>
+                    <Link
+                      href={`/forum/${b.slug}`}
+                      className="group flex items-center gap-3 rounded-sm border border-border-subtle px-3 py-2.5 text-small text-primary transition-colors duration-fast hover:border-amber-soft"
+                    >
+                      <span aria-hidden className="block h-1.5 w-1.5 rounded-full bg-amber" />
+                      {b.name}
+                      <span className="ml-auto font-mono text-caption text-faint">
+                        {b.threadCount} 主题
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <>
+                <ul className="mt-4 space-y-2">
+                  {[1, 2, 3].map((i) => (
+                    <li
+                      key={i}
+                      className="flex items-center gap-3 rounded-sm border border-dashed border-border-subtle px-3 py-2.5 text-small text-faint"
+                    >
+                      <span aria-hidden className="block h-1.5 w-1.5 rounded-full bg-border-subtle" />
+                      待创建板块 · {String(i).padStart(2, "0")}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-4 text-caption text-faint">
+                  板块由管理员在后端数据就绪后建立。
+                </p>
+              </>
+            )}
           </div>
         </aside>
 
         {/* 主题流 */}
         <section aria-label="主题流" className="lg:col-span-8">
+          {data && data.threads.data.length > 0 ? (
+            <ol className="divide-y divide-border-subtle rounded-md border border-border-subtle bg-surface">
+              {data.threads.data.map((t) => (
+                <li key={t.id}>
+                  <Link
+                    href={`/forum/${t.boardSlug}?thread=${t.id}`}
+                    className="group flex items-center gap-4 px-5 py-4 transition-colors duration-fast hover:bg-raised"
+                  >
+                    <span className="min-w-0 grow">
+                      <span className="flex items-center gap-2">
+                        {t.pinned && (
+                          <span className="shrink-0 rounded-sm border border-amber-soft/60 px-1.5 py-0.5 font-mono text-caption text-amber">
+                            置顶
+                          </span>
+                        )}
+                        {t.locked && (
+                          <span className="shrink-0 rounded-sm border border-border-subtle px-1.5 py-0.5 font-mono text-caption text-faint">
+                            锁定
+                          </span>
+                        )}
+                        <span className="truncate text-body font-medium text-primary group-hover:text-amber">
+                          {t.title}
+                        </span>
+                      </span>
+                      <span className="mt-1 block font-mono text-caption text-faint">
+                        {t.author.displayName} · 最后回复 {t.lastPostAt.slice(0, 10)}
+                      </span>
+                    </span>
+                    <span className="flex shrink-0 items-center gap-4 text-center font-mono text-caption text-secondary">
+                      <span>
+                        <span className="block text-small text-primary">{t.replyCount}</span>
+                        回复
+                      </span>
+                      <span>
+                        <span className="block text-small text-primary">{t.likeCount}</span>
+                        喜欢
+                      </span>
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ol>
+          ) : (
           <div className="flex h-full flex-col items-center justify-center rounded-md border border-border-subtle bg-surface px-6 py-16 text-center">
             <KnotMark size={44} />
             <h2 className="mt-5 font-serif text-h2 font-semibold">
@@ -81,6 +155,7 @@ export default function ForumIndexPage() {
               </Link>
             </div>
           </div>
+          )}
         </section>
       </div>
 
