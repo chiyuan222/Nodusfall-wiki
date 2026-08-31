@@ -1,11 +1,15 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'node:path';
 import { AppModule } from './app.module';
+import { ProblemDetailsFilter } from './common/problem-details.filter';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.setGlobalPrefix('v1');
   app.enableCors({ origin: true, credentials: true });
+  app.useStaticAssets(join(process.cwd(), 'uploads'), { prefix: '/uploads/' });
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -13,6 +17,7 @@ async function bootstrap(): Promise<void> {
       forbidNonWhitelisted: true,
     }),
   );
+  app.useGlobalFilters(new ProblemDetailsFilter());
 
   const port = Number(process.env.PORT ?? 4000);
   await app.listen(port);

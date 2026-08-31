@@ -5,9 +5,37 @@ import { PrismaService } from '../prisma/prisma.service';
 
 export type PublicUser = Omit<User, 'passwordHash'>;
 
-export function toPublicUser(user: User): PublicUser {
-  const { passwordHash: _passwordHash, ...rest } = user;
-  return rest;
+export interface UserSummary {
+  id: string;
+  username: string;
+  displayName: string;
+  avatarUrl: string | null;
+  role: User['role'];
+  createdAt: Date;
+}
+
+export interface UserResponse extends UserSummary {
+  bio: string | null;
+  updatedAt: Date;
+}
+
+export function toUserSummary(user: User): UserSummary {
+  return {
+    id: user.id,
+    username: user.username,
+    displayName: user.displayName ?? user.username,
+    avatarUrl: user.avatarUrl,
+    role: user.role,
+    createdAt: user.createdAt,
+  };
+}
+
+export function toUserResponse(user: User): UserResponse {
+  return {
+    ...toUserSummary(user),
+    bio: user.bio,
+    updatedAt: user.updatedAt,
+  };
 }
 
 @Injectable()
@@ -51,6 +79,7 @@ export class UsersService {
       data: {
         email: dto.email,
         username: dto.username,
+        displayName: dto.username,
         passwordHash,
       },
     });

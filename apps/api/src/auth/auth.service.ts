@@ -1,5 +1,7 @@
 import {
+  ForbiddenException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -8,7 +10,7 @@ import { User } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
-import { PublicUser, toPublicUser } from '../users/users.service';
+import { toUserResponse, UserResponse } from '../users/users.service';
 import { AuthSessionDto } from './dto/auth-session.dto';
 
 @Injectable()
@@ -25,7 +27,7 @@ export class AuthService {
     tokenType: 'Bearer';
     expiresIn: number;
     sessionId: string;
-    user: PublicUser;
+    user: UserResponse;
   }> {
     if (dto.grantType === 'password') {
       return this.loginWithPassword(dto.email!, dto.password!);
@@ -33,8 +35,17 @@ export class AuthService {
     return this.refresh(dto.refreshToken!);
   }
 
-  async deleteSession(sessionId: string): Promise<void> {
-    await this.prisma.session.updateMany({
+  async deleteSession(sessionId: string, userId: string): Promise<void> {
+    const session = await this.prisma.session.findUnique({
+      where: { id: sessionId },
+    });
+    if (!session) {
+      throw new NotFoundException('session not found');
+    }
+    if (session.userId !== userId) {
+      throw new ForbiddenException('cannot revoke another session');
+    }
+    await this.prisma.session.update({
       where: { id: sessionId },
       data: { revokedAt: new Date() },
     });
@@ -111,7 +122,7 @@ export class AuthService {
       tokenType: 'Bearer' as const,
       expiresIn: 900,
       sessionId,
-      user: toPublicUser(user),
+      user: toUserResponse(user),
     };
   }
 }
