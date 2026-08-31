@@ -15,10 +15,17 @@ import {
   MediaField,
   RowActions,
 } from "./editor-controls";
+import {
+  describeSaveError,
+  loadCmsPage,
+  saveCmsPage,
+  type LoadSource,
+} from "./cms-io";
 
 /**
- * 首页内容编辑器（临时本地方案，待后端 CMS 契约冻结后替换为接口读写）
- * 工作流：编辑 → 「下载 JSON」→ 替换 apps/web/public/content/home-page.json 并提交。
+ * 首页内容编辑器
+ * 工作流：编辑 → 「保存到服务器」（PUT /admin/content/pages/home，需管理员登录）。
+ * 接口不可用时自动回退本地 /content/home-page.json，并保留「下载 JSON」兜底。
  */
 
 type Draft = HomePageContent;
@@ -28,23 +35,38 @@ export function HomeEditor() {
   const [error, setError] = useState("");
   const [dirty, setDirty] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [source, setSource] = useState<LoadSource>("file");
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState("");
   const [openSection, setOpenSection] = useState<HomeSectionId | null>("hero");
 
   const load = () => {
     setError("");
-    fetch("/content/home-page.json", { cache: "no-store" })
-      .then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json() as Promise<Draft>;
-      })
-      .then((data) => {
+    setSaveMsg("");
+    loadCmsPage<Draft>("home", "/content/home-page.json")
+      .then(({ data, source: s }) => {
         setDraft(data);
+        setSource(s);
         setDirty(false);
       })
       .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
   };
 
   useEffect(load, []);
+
+  const save = () => {
+    if (!draft || saving) return;
+    setSaving(true);
+    setSaveMsg("");
+    saveCmsPage("home", draft)
+      .then(() => {
+        setDirty(false);
+        setSource("api");
+        setSaveMsg("已保存到服务器，前台即时生效。");
+      })
+      .catch((e: unknown) => setSaveMsg(describeSaveError(e)))
+      .finally(() => setSaving(false));
+  };
 
   const mutate = (fn: (d: Draft) => void) => {
     setDraft((prev) => {
@@ -108,7 +130,7 @@ export function HomeEditor() {
       <div className="py-16 text-center">
         <h1 className="font-serif text-h1 font-semibold">内容配置读取失败</h1>
         <p className="mt-3 text-small text-secondary">
-          无法加载 <code className="font-mono text-amber">/content/home-page.json</code>（{error}）
+          CMS 接口与本地 <code className="font-mono text-amber">/content/home-page.json</code> 均无法加载（{error}）
         </p>
         <button type="button" onClick={load} className="mt-6 rounded-md bg-amber px-6 py-2 text-small font-medium text-amber-fg">
           重试
@@ -128,8 +150,16 @@ export function HomeEditor() {
         <h1 className="font-serif text-h1 font-semibold">首页内容管理</h1>
         {dirty && (
           <span className="rounded-sm border border-amber-soft px-2 py-0.5 text-caption text-amber">
-            有未导出的修改
+            有未保存的修改
           </span>
+        )}
+        {source === "file" && (
+          <span className="rounded-sm border border-border-subtle px-2 py-0.5 text-caption text-faint">
+            数据源：本地文件（接口不可用）
+          </span>
+        )}
+        {saveMsg && (
+          <span className="text-caption text-secondary">{saveMsg}</span>
         )}
         <span className="grow" />
         <Link
@@ -152,18 +182,23 @@ export function HomeEditor() {
         <button type="button" onClick={copy} className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary hover:border-amber-soft hover:text-primary">
           {copied ? "已复制 ✓" : "复制 JSON"}
         </button>
-        <button type="button" onClick={download} className="rounded-md bg-amber px-5 py-2 text-small font-medium text-amber-fg hover:opacity-90">
+        <button type="button" onClick={download} className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary hover:border-amber-soft hover:text-primary">
           下载 JSON
+        </button>
+        <button
+          type="button"
+          onClick={save}
+          disabled={saving || !dirty}
+          className="rounded-md bg-amber px-5 py-2 text-small font-medium text-amber-fg hover:opacity-90 disabled:opacity-40"
+        >
+          {saving ? "保存中…" : "保存到服务器"}
         </button>
       </div>
 
       <div className="mt-4 rounded-md border border-border-subtle bg-surface p-4 text-small text-secondary">
         <p>
-          在此处编辑首页横幅、公告条与入口卡 → 点击「下载 JSON」→ 替换仓库中的
-          <code className="font-mono text-amber"> apps/web/public/content/home-page.json </code>
-          并提交。图片/视频请先把文件放入
-          <code className="font-mono text-amber"> apps/web/public/content/ </code>
-          再在此填写路径。
+          在此处编辑首页横幅、公告条、快报栏与入口卡 → 点击「保存到服务器」即时生效（需管理员登录）。
+          图片/视频可在媒体字段直接点「上传文件」直传；「下载 JSON」保留为离线兜底。
         </p>
       </div>
 
