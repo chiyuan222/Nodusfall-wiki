@@ -39,6 +39,13 @@ export default function RootLayout({
   return (
     <html lang="zh-CN" className={jetBrainsMono.variable}>
       <head>
+        {/* 主题初始化：首帧前恢复用户选择，避免闪烁 */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "try{var t=localStorage.getItem('nodusfall.theme.v1');if(t==='starlight'||t==='oracle')document.documentElement.dataset.theme=t}catch(e){}",
+          }}
+        />
         {/* 衬线标题 webfont（display=swap；加载失败时回落 tokens.css 本地衬线栈）。
             思源宋体 CJK 无法经 next/font 子集化，故用 <link> 引入。 */}
         {/* eslint-disable-next-line @next/next/no-page-custom-font */}

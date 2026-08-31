@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { KnotMark } from "./knot-mark";
+import { ThemeSwitcher } from "./theme-switcher";
 
 export const NAV_ITEMS = [
   { href: "/", label: "首页" },
-  { href: "/world", label: "世界观" },
+  { href: "/world", label: "总览" },
   { href: "/wiki", label: "Wiki" },
   { href: "/guides", label: "攻略" },
   { href: "/forum", label: "论坛" },
@@ -50,6 +51,7 @@ export function SiteHeader() {
         </nav>
 
         <div className="ml-auto flex items-center gap-3">
+          <ThemeSwitcher compact />
           <Link
             href="/search"
             className="rounded-md px-3 py-1.5 text-small text-secondary hover:bg-raised hover:text-primary"

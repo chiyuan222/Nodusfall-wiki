@@ -80,6 +80,42 @@
 /* 浅色主题：M1 不启用，仅预留结构（P2） */
 /* [data-theme="light"] { ... } */
 
+/* ---------- 主题：冷峻星轨（深色冷蓝变体） ---------- */
+[data-theme="starlight"] {
+  --bg-canvas: #0a0e16;
+  --bg-surface: #101623;
+  --bg-raised: #18202f;
+  --border-subtle: #232d40;
+  --text-primary: #e6ecf5;
+  --text-secondary: #93a1b8;
+  --text-faint: #5a6a82;
+  --accent-amber: #7fa8d9;
+  --accent-amber-soft: #3e5b80;
+  --accent-amber-fg: #0a0e16;
+  --semantic-success: #5f9a7a;
+  --semantic-danger: #b45f4f;
+  --semantic-info: #5b7b9a;
+}
+
+/* ---------- 主题：静默神谕（浅色圣所变体） ---------- */
+[data-theme="oracle"] {
+  --bg-canvas: #f5f1e8;
+  --bg-surface: #fbf8f0;
+  --bg-raised: #efe9dc;
+  --border-subtle: #ded6c4;
+  --text-primary: #211e19;
+  --text-secondary: #5d574a;
+  --text-faint: #98917f;
+  --accent-amber: #a67c1e;
+  --accent-amber-soft: #c9a85c;
+  --accent-amber-fg: #fbf8f0;
+  --semantic-success: #3f7a50;
+  --semantic-danger: #a03e2c;
+  --semantic-info: #3e6080;
+  --shadow-card: 0 1px 2px rgba(60, 50, 30, 0.12);
+  --shadow-overlay: 0 8px 24px rgba(60, 50, 30, 0.18);
+}
+
 /* 全局遵守 prefers-reduced-motion：仅保留透明度过渡 */
 @media (prefers-reduced-motion: reduce) {
   *,

@@ -26,7 +26,7 @@ export default function HomePage() {
             href="/world"
             className="rounded-md bg-amber px-6 py-2.5 text-small font-medium text-amber-fg transition-opacity duration-fast hover:opacity-90"
           >
-            世界观导览
+            游戏总览
           </Link>
           <Link
             href="/wiki"
