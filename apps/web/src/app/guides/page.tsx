@@ -1,11 +1,33 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { KnotMark } from "@/components/knot-mark";
+import { getGuideList, USE_MOCK } from "@/lib/data";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "攻略",
   description: "《源初之结》玩家攻略：配队、养成与评分。",
 };
+
+function RatingBadge({ rating, count }: { rating: number; count?: number }) {
+  const rated = rating > 0;
+  return (
+    <span
+      className={`flex shrink-0 flex-col items-center justify-center rounded-md border px-3 py-2 ${
+        rated ? "border-amber-soft/60 text-amber" : "border-dashed border-border-subtle text-faint"
+      }`}
+      aria-label={rated ? `评分 ${rating}` : "暂无评分"}
+    >
+      <span className="font-serif text-h3 font-semibold leading-none">
+        {rated ? rating.toFixed(1) : "—"}
+      </span>
+      <span className="mt-1 font-mono text-caption">
+        {rated && count !== undefined ? `${count} 人` : "未评分"}
+      </span>
+    </span>
+  );
+}
 
 const FEATURES = [
   { title: "评分排序", desc: "社区评分沉淀优质攻略，好内容浮上来" },
@@ -14,7 +36,9 @@ const FEATURES = [
   { title: "编辑器", desc: "结构化写作，段落、配装与图片混排" },
 ] as const;
 
-export default function GuidesIndexPage() {
+export default async function GuidesIndexPage() {
+  const list = await getGuideList();
+
   return (
     <div className="mx-auto max-w-page space-y-12">
       {/* 页头 */}
@@ -26,7 +50,12 @@ export default function GuidesIndexPage() {
           攻略
         </h1>
         <p className="mt-4 max-w-reading text-body leading-relaxed text-secondary">
-          玩家产出的攻略与心得：流派构筑、讨伐节奏、配装思路。列表与评分将在后端数据接入后开放。
+          玩家产出的攻略与心得：流派构筑、讨伐节奏、配装思路。
+          {USE_MOCK && (
+            <span className="ml-2 rounded-sm border border-amber-soft px-1.5 py-0.5 font-mono text-caption text-amber">
+              MOCK 数据预览
+            </span>
+          )}
         </p>
       </header>
 
@@ -49,7 +78,39 @@ export default function GuidesIndexPage() {
         </span>
       </div>
 
-      {/* 空态 */}
+      {/* 攻略列表（有数据）/ 空态（无数据） */}
+      {list && list.data.length > 0 ? (
+        <ol aria-label="攻略列表" className="space-y-4">
+          {list.data.map((g) => (
+            <li key={g.id}>
+              <Link
+                href={`/guides/${g.slug}`}
+                className="group flex items-center gap-5 rounded-md border border-border-subtle bg-surface p-5 shadow-card transition-colors duration-fast hover:border-amber-soft"
+              >
+                <RatingBadge rating={g.rating} count={g.ratingCount} />
+                <span className="min-w-0 grow">
+                  <span className="block truncate text-body font-semibold text-primary group-hover:text-amber">
+                    {g.title}
+                  </span>
+                  <span className="mt-1 line-clamp-2 block text-small leading-relaxed text-secondary">
+                    {g.excerpt}
+                  </span>
+                  <span className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-faint">
+                    {g.tags.map((t) => (
+                      <span key={t} className="rounded-sm border border-border-subtle px-1.5 py-0.5">
+                        {t}
+                      </span>
+                    ))}
+                    <span className="ml-auto font-mono">
+                      {g.author.displayName} · {g.updatedAt.slice(0, 10)}
+                    </span>
+                  </span>
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ol>
+      ) : (
       <section aria-label="攻略列表" className="flex flex-col items-center justify-center rounded-md border border-border-subtle bg-surface px-6 py-16 text-center">
         <KnotMark size={44} />
         <h2 className="mt-5 font-serif text-h2 font-semibold">
@@ -73,6 +134,7 @@ export default function GuidesIndexPage() {
           </Link>
         </div>
       </section>
+      )}
 
       {/* 能力预告 */}
       <section aria-labelledby="guides-features" className="border-t border-border-subtle pt-10">

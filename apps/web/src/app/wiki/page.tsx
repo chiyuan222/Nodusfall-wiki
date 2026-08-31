@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { KnotMark } from "@/components/knot-mark";
+import { getWikiIndexData, USE_MOCK } from "@/lib/data";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Wiki 资料库",
@@ -14,7 +17,13 @@ const FEATURES = [
   { title: "版本历史", desc: "每次修改可追溯、可比对、可回退" },
 ] as const;
 
-export default function WikiIndexPage() {
+function formatDate(iso: string): string {
+  return iso.slice(0, 10);
+}
+
+export default async function WikiIndexPage() {
+  const data = await getWikiIndexData();
+
   return (
     <div className="mx-auto max-w-page space-y-12">
       {/* 页头 */}
@@ -26,61 +35,120 @@ export default function WikiIndexPage() {
           Wiki 资料库
         </h1>
         <p className="mt-4 max-w-reading text-body leading-relaxed text-secondary">
-          由玩家共同维护的《源初之结》资料库。条目、分类与版本历史将在后端数据接入后逐一点亮。
+          由玩家共同维护的《源初之结》资料库。
+          {USE_MOCK && (
+            <span className="ml-2 rounded-sm border border-amber-soft px-1.5 py-0.5 font-mono text-caption text-amber">
+              MOCK 数据预览
+            </span>
+          )}
         </p>
       </header>
 
       <div className="grid gap-6 lg:grid-cols-12">
-        {/* 分类导航框架 */}
+        {/* 分类导航 */}
         <aside aria-label="分类导航" className="lg:col-span-4">
           <div className="rounded-md border border-border-subtle bg-surface p-5">
             <h2 className="flex items-center gap-2 text-h3 font-semibold">
               <KnotMark size={18} />
               分类导航
             </h2>
-            <ul className="mt-4 space-y-2">
-              {[1, 2, 3, 4].map((i) => (
-                <li
-                  key={i}
-                  className="flex items-center gap-3 rounded-sm border border-dashed border-border-subtle px-3 py-2.5 text-small text-faint"
-                >
-                  <span aria-hidden className="block h-1.5 w-1.5 rounded-full bg-border-subtle" />
-                  待创建分类 · {String(i).padStart(2, "0")}
-                </li>
-              ))}
-            </ul>
-            <p className="mt-4 text-caption text-faint">
-              分类框架由管理员在后端数据就绪后建立。
-            </p>
+            {data && data.categories.length > 0 ? (
+              <ul className="mt-4 space-y-2">
+                {data.categories.map((c) => (
+                  <li key={c.id}>
+                    <Link
+                      href={`/wiki?category=${c.slug}`}
+                      className="group flex items-center gap-3 rounded-sm border border-border-subtle px-3 py-2.5 text-small text-primary transition-colors duration-fast hover:border-amber-soft"
+                    >
+                      <span aria-hidden className="block h-1.5 w-1.5 rounded-full bg-amber" />
+                      {c.name}
+                      <span aria-hidden className="ml-auto font-mono text-caption text-faint transition-colors duration-fast group-hover:text-amber">
+                        →
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <>
+                <ul className="mt-4 space-y-2">
+                  {[1, 2, 3, 4].map((i) => (
+                    <li
+                      key={i}
+                      className="flex items-center gap-3 rounded-sm border border-dashed border-border-subtle px-3 py-2.5 text-small text-faint"
+                    >
+                      <span aria-hidden className="block h-1.5 w-1.5 rounded-full bg-border-subtle" />
+                      待创建分类 · {String(i).padStart(2, "0")}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-4 text-caption text-faint">
+                  分类框架由管理员在后端数据就绪后建立。
+                </p>
+              </>
+            )}
           </div>
         </aside>
 
         {/* 条目区 */}
         <section aria-label="条目列表" className="lg:col-span-8">
-          <div className="flex h-full flex-col items-center justify-center rounded-md border border-border-subtle bg-surface px-6 py-16 text-center">
-            <KnotMark size={44} />
-            <h2 className="mt-5 font-serif text-h2 font-semibold">
-              第一批条目正在编目
-            </h2>
-            <p className="mt-3 max-w-reading text-small leading-relaxed text-secondary">
-              资料库尚未开放检索。你可以先到游戏总览页了解世界观与玩法框架，
-              或使用搜索查找已上线内容。
-            </p>
-            <div className="mt-7 flex flex-wrap justify-center gap-3">
-              <Link
-                href="/world"
-                className="rounded-md bg-amber px-6 py-2.5 text-small font-medium text-amber-fg transition-opacity duration-fast hover:opacity-90"
-              >
-                前往游戏总览
-              </Link>
-              <Link
-                href="/search"
-                className="rounded-md border border-border-subtle bg-raised px-6 py-2.5 text-small text-primary transition-colors duration-fast hover:border-amber-soft"
-              >
-                先去搜索
-              </Link>
+          {data && data.pages.data.length > 0 ? (
+            <ol className="divide-y divide-border-subtle rounded-md border border-border-subtle bg-surface">
+              {data.pages.data.map((p) => (
+                <li key={p.id}>
+                  <Link
+                    href={`/wiki/${p.slug}`}
+                    className="group block px-5 py-4 transition-colors duration-fast hover:bg-raised"
+                  >
+                    <h3 className="text-body font-semibold text-primary group-hover:text-amber">
+                      {p.title}
+                    </h3>
+                    <p className="mt-1 line-clamp-2 text-small leading-relaxed text-secondary">
+                      {p.excerpt}
+                    </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-faint">
+                      {p.tags.map((t) => (
+                        <span
+                          key={t}
+                          className="rounded-sm border border-border-subtle px-1.5 py-0.5"
+                        >
+                          {t}
+                        </span>
+                      ))}
+                      <span className="ml-auto font-mono">
+                        {p.author.displayName} · {formatDate(p.updatedAt)}
+                      </span>
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <div className="flex h-full flex-col items-center justify-center rounded-md border border-border-subtle bg-surface px-6 py-16 text-center">
+              <KnotMark size={44} />
+              <h2 className="mt-5 font-serif text-h2 font-semibold">
+                第一批条目正在编目
+              </h2>
+              <p className="mt-3 max-w-reading text-small leading-relaxed text-secondary">
+                资料库尚未开放检索。你可以先到游戏总览页了解世界观与玩法框架，
+                或使用搜索查找已上线内容。
+              </p>
+              <div className="mt-7 flex flex-wrap justify-center gap-3">
+                <Link
+                  href="/world"
+                  className="rounded-md bg-amber px-6 py-2.5 text-small font-medium text-amber-fg transition-opacity duration-fast hover:opacity-90"
+                >
+                  前往游戏总览
+                </Link>
+                <Link
+                  href="/search"
+                  className="rounded-md border border-border-subtle bg-raised px-6 py-2.5 text-small text-primary transition-colors duration-fast hover:border-amber-soft"
+                >
+                  先去搜索
+                </Link>
+              </div>
             </div>
-          </div>
+          )}
         </section>
       </div>
 
