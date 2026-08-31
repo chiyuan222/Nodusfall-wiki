@@ -46,6 +46,19 @@ function detail(guide: GuideWithAuthor) {
 export class GuidesService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private async distribution(guideId: string) {
+    const rows = await this.prisma.rating.groupBy({
+      by: ['score'],
+      where: { guideId },
+      _count: true,
+    });
+    const distribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    for (const row of rows) {
+      distribution[row.score as 1 | 2 | 3 | 4 | 5] = row._count;
+    }
+    return distribution;
+  }
+
   async list(query: {
     tag?: string;
     q?: string;
@@ -158,7 +171,7 @@ export class GuidesService {
     return {
       average: guide.ratingAvg,
       count: guide.ratingCount,
-      distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+      distribution: await this.distribution(guide.id),
       myScore,
     };
   }
@@ -188,7 +201,7 @@ export class GuidesService {
     return {
       average: updated.ratingAvg,
       count: updated.ratingCount,
-      distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+      distribution: await this.distribution(guide.id),
       myScore: score,
     };
   }

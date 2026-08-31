@@ -10,7 +10,7 @@ export interface UserSummary {
   username: string;
   displayName: string;
   avatarUrl: string | null;
-  role: User['role'];
+  role: 'guest' | 'member' | 'editor' | 'moderator' | 'admin';
   createdAt: Date;
 }
 
@@ -25,7 +25,7 @@ export function toUserSummary(user: User): UserSummary {
     username: user.username,
     displayName: user.displayName ?? user.username,
     avatarUrl: user.avatarUrl,
-    role: user.role,
+    role: user.role.toLowerCase() as UserSummary['role'],
     createdAt: user.createdAt,
   };
 }
