@@ -67,10 +67,11 @@ console.log('CODEOWNERS 已更新');
 
 // 2. 解析账号 node id
 const repoData = graphql(
-  `query($owner:String!,$name:String!){ repository(owner:$owner,name:$name){ id } }`,
+  `query($owner:String!,$name:String!){ repository(owner:$owner,name:$name){ id owner { __typename } } }`,
   { owner: 'chiyuan222', name: 'Nodusfall-wiki' },
 );
 const repositoryId = repoData.repository.id;
+const isOrg = repoData.repository.owner.__typename === 'Organization';
 
 function actorId(login) {
   const data = graphql(
@@ -122,23 +123,25 @@ protect('develop', {
   isAdminEnforced: true,
 });
 
-protect('backend/*', {
-  restrictsPushes: true,
-  pushActorIds: [backendId],
-});
+if (isOrg) {
+  protect('backend/*', {
+    restrictsPushes: true,
+    pushActorIds: [backendId],
+  });
 
-protect('frontend/*', {
-  restrictsPushes: true,
-  pushActorIds: [frontendId],
-});
+  protect('frontend/*', {
+    restrictsPushes: true,
+    pushActorIds: [frontendId],
+  });
+} else {
+  console.log('当前是个人仓库，跳过 backend/* 与 frontend/* 的推送限制；请依赖独立令牌 + CODEOWNERS 实现隔离。');
+}
 
 protect('contract/*', {
   requiresApprovingReviews: true,
   requiredApprovingReviewCount: 2,
   dismissesStaleReviews: true,
   requiresCodeOwnerReviews: true,
-  restrictsPushes: true,
-  pushActorIds: [backendId, frontendId],
   isAdminEnforced: true,
 });
 
