@@ -148,6 +148,7 @@ model ForumThread {
   board       ForumBoard @relation(fields: [boardId], references: [id])
   title       String
   content     String
+  coverImage  String?
   authorId    String
   author      User       @relation("ThreadAuthor", fields: [authorId], references: [id])
   pinned      Boolean    @default(false)
@@ -230,4 +231,11 @@ model Upload {
   userId    String
   user      User     @relation("UploadUser", fields: [userId], references: [id])
   createdAt DateTime @default(now())
+}
+
+model ContentPage {
+  id        String   @id @default(uuid())
+  slug      String   @unique
+  data      Json
+  updatedAt DateTime @updatedAt
 }

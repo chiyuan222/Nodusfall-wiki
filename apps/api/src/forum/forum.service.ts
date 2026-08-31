@@ -28,11 +28,14 @@ function threadSummary(thread: ThreadWithAuthor) {
     id: thread.id,
     boardSlug: '', // patched by caller
     title: thread.title,
+    excerpt: plainExcerpt(thread.content),
+    coverImage: thread.coverImage,
     author: toUserSummary(thread.author),
     pinned: thread.pinned,
     locked: thread.locked,
     replyCount: thread.replyCount,
     likeCount: thread.likeCount,
+    bookmarkedByMe: false,
     createdAt: thread.createdAt,
     updatedAt: thread.updatedAt,
     lastPostAt: thread.lastPostAt,
@@ -51,6 +54,14 @@ function postView(post: PostWithAuthor) {
     likeCount: post.likeCount,
     likedByMe: false,
   };
+}
+
+function plainExcerpt(content: string): string {
+  return content
+    .replace(/[#>*_`~\-[\]()!]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 160);
 }
 
 @Injectable()
@@ -87,7 +98,11 @@ export class ForumService {
     };
   }
 
-  async createThread(userId: string, boardSlug: string, dto: { title: string; content: string }) {
+  async createThread(
+    userId: string,
+    boardSlug: string,
+    dto: { title: string; content: string; coverImage?: string | null },
+  ) {
     const board = await this.prisma.forumBoard.findUnique({ where: { slug: boardSlug } });
     if (!board) throw new NotFoundException('board not found');
     const thread = await this.prisma.forumThread.create({
@@ -95,6 +110,7 @@ export class ForumService {
         boardId: board.id,
         title: dto.title,
         content: dto.content,
+        coverImage: dto.coverImage ?? null,
         authorId: userId,
       },
       include: { author: true },
@@ -115,6 +131,7 @@ export class ForumService {
     title?: string;
     pinned?: boolean;
     locked?: boolean;
+    coverImage?: string | null;
   }) {
     const existing = await this.prisma.forumThread.findUnique({ where: { id: threadId } });
     if (!existing) throw new NotFoundException('thread not found');
@@ -124,6 +141,7 @@ export class ForumService {
         title: dto.title ?? existing.title,
         pinned: dto.pinned ?? existing.pinned,
         locked: dto.locked ?? existing.locked,
+        coverImage: dto.coverImage !== undefined ? dto.coverImage : existing.coverImage,
       },
       include: { author: true, board: true },
     });

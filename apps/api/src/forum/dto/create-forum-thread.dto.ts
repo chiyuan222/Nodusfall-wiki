@@ -1,4 +1,4 @@
-import { IsString, MaxLength } from 'class-validator';
+import { IsOptional, IsString, IsUrl, MaxLength } from 'class-validator';
 
 export class CreateForumThreadDto {
   @IsString()
@@ -8,4 +8,8 @@ export class CreateForumThreadDto {
   @IsString()
   @MaxLength(20000)
   content!: string;
+
+  @IsOptional()
+  @IsUrl()
+  coverImage?: string | null;
 }

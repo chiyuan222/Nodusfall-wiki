@@ -10,6 +10,7 @@ import { ForumModule } from './forum/forum.module';
 import { CommentsModule } from './comments/comments.module';
 import { SearchModule } from './search/search.module';
 import { UploadsModule } from './uploads/uploads.module';
+import { ContentModule } from './content/content.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { UploadsModule } from './uploads/uploads.module';
     CommentsModule,
     SearchModule,
     UploadsModule,
+    ContentModule,
   ],
 })
 export class AppModule {}

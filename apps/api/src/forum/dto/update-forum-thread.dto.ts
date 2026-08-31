@@ -1,4 +1,10 @@
-import { IsBoolean, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsOptional,
+  IsString,
+  IsUrl,
+  MaxLength,
+} from 'class-validator';
 
 export class UpdateForumThreadDto {
   @IsOptional()
@@ -13,4 +19,8 @@ export class UpdateForumThreadDto {
   @IsOptional()
   @IsBoolean()
   locked?: boolean;
+
+  @IsOptional()
+  @IsUrl()
+  coverImage?: string | null;
 }
