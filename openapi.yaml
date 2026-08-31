@@ -33,6 +33,8 @@ tags:
     description: 跨内容搜索
   - name: Uploads
     description: 文件上传与预签名
+  - name: Content
+    description: 内容驱动的页面 CMS
 paths:
   /health:
     get:
@@ -47,6 +49,62 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Health"
+
+  /content/pages/{slug}:
+    get:
+      tags: [Content]
+      operationId: getContentPage
+      summary: 获取页面内容（home / world）
+      security: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [home, world]
+      responses:
+        "200":
+          description: 页面内容
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContentPageResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /admin/content/pages/{slug}:
+    put:
+      tags: [Content]
+      operationId: putContentPage
+      summary: 保存页面内容（管理员写）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [home, world]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContentPageWrite"
+      responses:
+        "200":
+          description: 保存后的页面内容
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContentPageResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
 
   /users:
     post:
@@ -1274,6 +1332,7 @@ components:
             properties:
               title: { type: string, maxLength: 120 }
               content: { type: string, maxLength: 20000 }
+              coverImage: { type: [string, "null"], format: uri }
     UpdateForumThreadRequest:
       required: true
       content:
@@ -1284,6 +1343,7 @@ components:
               title: { type: string, maxLength: 120 }
               pinned: { type: boolean }
               locked: { type: boolean }
+              coverImage: { type: [string, "null"], format: uri }
     CreateForumPostRequest:
       required: true
       content:
@@ -1566,7 +1626,7 @@ components:
 
     RatingSummary:
       type: object
-      required: [average, count, distribution]
+      required: [average, count, distribution, myScore]
       properties:
         average:
           type: number
@@ -1574,6 +1634,11 @@ components:
         count:
           type: integer
           example: 42
+        myScore:
+          type: [integer, "null"]
+          minimum: 1
+          maximum: 5
+          example: 4
         distribution:
           type: object
           additionalProperties:
@@ -1607,17 +1672,20 @@ components:
 
     ForumThreadSummary:
       type: object
-      required: [id, boardSlug, title, author, pinned, locked, replyCount, likeCount, createdAt, updatedAt, lastPostAt]
+      required: [id, boardSlug, title, excerpt, coverImage, author, pinned, locked, replyCount, likeCount, bookmarkedByMe, createdAt, updatedAt, lastPostAt]
       properties:
         id: { type: string, format: uuid }
         boardSlug: { type: string }
         title: { type: string }
+        excerpt: { type: string }
+        coverImage: { type: [string, "null"], format: uri }
         author:
           $ref: "#/components/schemas/UserSummary"
         pinned: { type: boolean }
         locked: { type: boolean }
         replyCount: { type: integer }
         likeCount: { type: integer }
+        bookmarkedByMe: { type: boolean }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
         lastPostAt: { type: string, format: date-time }
@@ -1738,6 +1806,288 @@ components:
         key: { type: string }
         url: { type: string, format: uri }
         expiresIn: { type: integer }
+
+    ContentMeta:
+      type: object
+      required: [pageId, updatedAt, maintainer, note]
+      properties:
+        pageId: { type: string }
+        updatedAt: { type: string }
+        maintainer: { type: string }
+        note: { type: string }
+
+    MediaSlot:
+      type: object
+      required: [kind, src, alt, poster]
+      properties:
+        kind: { type: string, enum: [image, video] }
+        src: { type: string }
+        alt: { type: string }
+        poster: { type: string }
+
+    Cta:
+      type: object
+      required: [label, href, style]
+      properties:
+        label: { type: string }
+        href: { type: string }
+        style: { type: string, enum: [primary, ghost] }
+
+    HomeHero:
+      type: object
+      required: [kicker, title, lead, media, ctas]
+      properties:
+        hidden: { type: boolean }
+        kicker: { type: string }
+        title: { type: string }
+        lead: { type: string }
+        media: { $ref: "#/components/schemas/MediaSlot" }
+        ctas:
+          type: array
+          items: { $ref: "#/components/schemas/Cta" }
+
+    HomeNotice:
+      type: object
+      required: [text, linkLabel, linkHref]
+      properties:
+        hidden: { type: boolean }
+        text: { type: string }
+        linkLabel: { type: string }
+        linkHref: { type: string }
+
+    HomeEntryCard:
+      type: object
+      required: [title, desc, href, media]
+      properties:
+        title: { type: string }
+        desc: { type: string }
+        href: { type: string }
+        media: { $ref: "#/components/schemas/MediaSlot" }
+
+    HomeEntries:
+      type: object
+      required: [title, cards]
+      properties:
+        hidden: { type: boolean }
+        title: { type: string }
+        cards:
+          type: array
+          items: { $ref: "#/components/schemas/HomeEntryCard" }
+
+    HomeDigestItem:
+      type: object
+      required: [date, tag, title, url, excerpt, image]
+      properties:
+        date: { type: string }
+        tag: { type: string }
+        title: { type: string }
+        url: { type: string }
+        excerpt: { type: string }
+        image: { type: string }
+
+    HomeDigestColumn:
+      type: object
+      required: [title, emptyText, items]
+      properties:
+        title: { type: string }
+        emptyText: { type: string }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/HomeDigestItem" }
+
+    HomeDigest:
+      type: object
+      required: [latest, featured]
+      properties:
+        hidden: { type: boolean }
+        latest: { $ref: "#/components/schemas/HomeDigestColumn" }
+        featured: { $ref: "#/components/schemas/HomeDigestColumn" }
+
+    HomePageContent:
+      type: object
+      required: [meta, sections, hero, notice, digest, entries]
+      properties:
+        meta: { $ref: "#/components/schemas/ContentMeta" }
+        sections:
+          type: array
+          items: { type: string, enum: [hero, notice, digest, entries] }
+        hero: { $ref: "#/components/schemas/HomeHero" }
+        notice: { $ref: "#/components/schemas/HomeNotice" }
+        digest: { $ref: "#/components/schemas/HomeDigest" }
+        entries: { $ref: "#/components/schemas/HomeEntries" }
+
+    WorldHero:
+      type: object
+      required: [kicker, title, subtitle, lead, art, chips, ctas]
+      properties:
+        hidden: { type: boolean }
+        kicker: { type: string }
+        title: { type: string }
+        subtitle: { type: string }
+        lead: { type: string }
+        art: { $ref: "#/components/schemas/MediaSlot" }
+        chips:
+          type: array
+          items:
+            type: object
+            required: [label, value]
+            properties:
+              label: { type: string }
+              value: { type: string }
+        ctas:
+          type: array
+          items: { $ref: "#/components/schemas/Cta" }
+
+    WorldOverview:
+      type: object
+      required: [title, lead, facts]
+      properties:
+        hidden: { type: boolean }
+        title: { type: string }
+        lead: { type: string }
+        facts:
+          type: array
+          items:
+            type: object
+            required: [label, value]
+            properties:
+              label: { type: string }
+              value: { type: string }
+
+    WorldviewEntry:
+      type: object
+      required: [no, title, en, body, tag, image]
+      properties:
+        no: { type: string }
+        title: { type: string }
+        en: { type: string }
+        body: { type: string }
+        tag: { type: string }
+        image: { $ref: "#/components/schemas/MediaSlot" }
+
+    WorldWorldview:
+      type: object
+      required: [title, intro, entries]
+      properties:
+        hidden: { type: boolean }
+        title: { type: string }
+        intro: { type: string }
+        entries:
+          type: array
+          items: { $ref: "#/components/schemas/WorldviewEntry" }
+
+    GameplayFeature:
+      type: object
+      required: [no, title, body, image]
+      properties:
+        no: { type: string }
+        title: { type: string }
+        body: { type: string }
+        image: { $ref: "#/components/schemas/MediaSlot" }
+
+    WorldGameplay:
+      type: object
+      required: [title, intro, features]
+      properties:
+        hidden: { type: boolean }
+        title: { type: string }
+        intro: { type: string }
+        features:
+          type: array
+          items: { $ref: "#/components/schemas/GameplayFeature" }
+
+    WorldOfficialLink:
+      type: object
+      required: [label, url, desc]
+      properties:
+        label: { type: string }
+        url: { type: string }
+        desc: { type: string }
+
+    WorldOfficial:
+      type: object
+      required: [title, links]
+      properties:
+        hidden: { type: boolean }
+        title: { type: string }
+        links:
+          type: array
+          items: { $ref: "#/components/schemas/WorldOfficialLink" }
+
+    RepostItem:
+      type: object
+      required: [date, source, title, url, excerpt, media]
+      properties:
+        date: { type: string }
+        source: { type: string }
+        title: { type: string }
+        url: { type: string }
+        excerpt: { type: string }
+        media: { $ref: "#/components/schemas/MediaSlot" }
+
+    WorldReposts:
+      type: object
+      required: [title, intro, emptyText, items]
+      properties:
+        hidden: { type: boolean }
+        title: { type: string }
+        intro: { type: string }
+        emptyText: { type: string }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/RepostItem" }
+
+    NewsItem:
+      type: object
+      required: [date, tag, title, url, excerpt, media]
+      properties:
+        date: { type: string }
+        tag: { type: string }
+        title: { type: string }
+        url: { type: string }
+        excerpt: { type: string }
+        media: { $ref: "#/components/schemas/MediaSlot" }
+
+    WorldNews:
+      type: object
+      required: [title, emptyText, items]
+      properties:
+        hidden: { type: boolean }
+        title: { type: string }
+        emptyText: { type: string }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/NewsItem" }
+
+    WorldPageContent:
+      type: object
+      required: [meta, sections, hero, overview, worldview, gameplay, official, reposts, news]
+      properties:
+        meta: { $ref: "#/components/schemas/ContentMeta" }
+        sections:
+          type: array
+          items: { type: string, enum: [hero, overview, worldview, gameplay, official, reposts, news] }
+        hero: { $ref: "#/components/schemas/WorldHero" }
+        overview: { $ref: "#/components/schemas/WorldOverview" }
+        worldview: { $ref: "#/components/schemas/WorldWorldview" }
+        gameplay: { $ref: "#/components/schemas/WorldGameplay" }
+        official: { $ref: "#/components/schemas/WorldOfficial" }
+        reposts: { $ref: "#/components/schemas/WorldReposts" }
+        news: { $ref: "#/components/schemas/WorldNews" }
+
+    ContentPageResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          oneOf:
+            - $ref: "#/components/schemas/HomePageContent"
+            - $ref: "#/components/schemas/WorldPageContent"
+
+    ContentPageWrite:
+      oneOf:
+        - $ref: "#/components/schemas/HomePageContent"
+        - $ref: "#/components/schemas/WorldPageContent"
 
   responses:
     ValidationError:
