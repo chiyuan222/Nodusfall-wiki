@@ -1,21 +1,62 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { DetailSkeleton } from "@/components/skeleton";
+import { notFound } from "next/navigation";
+import { wikiApi, type WikiPage } from "@/lib/api";
+import { ApiError } from "@/lib/errors";
+import { Markdown, slugifyHeading } from "@/components/markdown";
+import { CommentSection } from "@/components/comment-section";
+
+async function loadPage(slug: string): Promise<WikiPage> {
+  try {
+    return await wikiApi.page(slug);
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) notFound();
+    throw e;
+  }
+}
 
 export async function generateMetadata({
   params,
 }: {
   params: { slug: string };
 }): Promise<Metadata> {
-  return { title: `条目 ${params.slug}` };
+  try {
+    const page = await wikiApi.page(params.slug);
+    return { title: page.title, description: page.excerpt };
+  } catch {
+    return { title: "Wiki 条目" };
+  }
 }
 
-/** Wiki 详情骨架：面包屑 + 正文 + 粘性目录 + 评论区，契约冻结后接数据 */
-export default function WikiPageDetail({
+/** 从 Markdown 提取 h2/h3 生成目录（slug 算法与 Markdown 组件渲染一致） */
+function extractToc(content: string) {
+  const toc: { depth: number; text: string; id: string }[] = [];
+  const seen = new Map<string, number>();
+  for (const line of content.split("\n")) {
+    const m = /^(#{2,3})\s+(.+)$/.exec(line.trim());
+    if (!m) continue;
+    const text = m[2]!.replace(/[*_`]/g, "").trim();
+    toc.push({
+      depth: m[1]!.length,
+      text,
+      id: slugifyHeading(text, seen),
+    });
+  }
+  return toc;
+}
+
+export default async function WikiPageDetail({
   params,
 }: {
   params: { slug: string };
 }) {
+  const page = await loadPage(params.slug);
+  const comments = await wikiApi.comments(params.slug).catch(() => ({
+    data: [],
+    pagination: { page: 1, perPage: 20, total: 0, totalPages: 0, hasMore: false },
+  }));
+  const toc = extractToc(page.content);
+
   return (
     <div className="mx-auto max-w-page">
       {/* 面包屑 */}
@@ -24,25 +65,43 @@ export default function WikiPageDetail({
           WIKI
         </Link>
         <span aria-hidden>/</span>
-        <span className="truncate text-faint">{params.slug}</span>
+        <span className="truncate text-faint">{page.title}</span>
       </nav>
 
       <div className="mt-6 grid gap-8 lg:grid-cols-[1fr_240px]">
         <article className="space-y-10">
-          <DetailSkeleton />
+          <header className="space-y-4">
+            <h1 className="font-serif text-display font-semibold">{page.title}</h1>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-caption text-faint">
+              <span>{page.author.displayName}</span>
+              <span aria-hidden>·</span>
+              <time dateTime={page.updatedAt}>
+                更新于 {new Date(page.updatedAt).toLocaleDateString("zh-CN")}
+              </time>
+              <span aria-hidden>·</span>
+              <span>v{page.version} · {page.revisionCount} 次修订</span>
+            </div>
+            {page.tags.length > 0 && (
+              <ul className="flex flex-wrap gap-2" aria-label="标签">
+                {page.tags.map((tag) => (
+                  <li
+                    key={tag}
+                    className="rounded-sm border border-border-subtle px-2 py-0.5 font-mono text-caption text-secondary"
+                  >
+                    {tag}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </header>
 
-          {/* 评论区占位 */}
-          <section
-            aria-labelledby="wiki-comments"
-            className="rounded-md border border-border-subtle bg-surface p-6"
-          >
-            <h2 id="wiki-comments" className="font-serif text-h2 font-semibold">
-              评论
-            </h2>
-            <p className="mt-3 rounded-sm border border-dashed border-border-subtle px-4 py-6 text-center font-mono text-caption text-faint">
-              评论区将在后端数据接入后启用
-            </p>
-          </section>
+          <Markdown content={page.content} />
+
+          <CommentSection
+            targetType="wiki"
+            slug={params.slug}
+            initial={comments}
+          />
         </article>
 
         {/* 粘性目录 */}
@@ -55,14 +114,22 @@ export default function WikiPageDetail({
               Contents
             </p>
             <h2 className="mt-1 text-small font-semibold text-secondary">目录</h2>
-            <div className="mt-3 space-y-2" aria-hidden>
-              <span className="block h-3 w-4/5 rounded-sm border border-dashed border-border-subtle" />
-              <span className="block h-3 w-3/5 rounded-sm border border-dashed border-border-subtle" />
-              <span className="block h-3 w-2/3 rounded-sm border border-dashed border-border-subtle" />
-            </div>
-            <p className="mt-3 text-caption text-faint">
-              目录由正文标题自动生成。
-            </p>
+            {toc.length === 0 ? (
+              <p className="mt-3 text-caption text-faint">本篇无小节标题。</p>
+            ) : (
+              <ol className="mt-3 space-y-2">
+                {toc.map((h) => (
+                  <li key={h.id} className={h.depth === 3 ? "pl-4" : ""}>
+                    <a
+                      href={`#${h.id}`}
+                      className="text-small text-secondary transition-colors duration-fast hover:text-amber"
+                    >
+                      {h.text}
+                    </a>
+                  </li>
+                ))}
+              </ol>
+            )}
           </div>
         </aside>
       </div>

@@ -80,6 +80,13 @@ export const guidesApi = {
       (r) => r.data,
     ),
 
+  /** 提交/更新我的评分（POST，幂等），返回最新汇总 */
+  rate: (slug: string, score: number) =>
+    request<{ data: RatingSummary }>(`/guides/${slug}/ratings`, {
+      method: "POST",
+      body: { score },
+    }).then((r) => r.data),
+
   comments: (slug: string, page?: number) =>
     list<Comment>(`/guides/${slug}/comments`, { page }),
 };
@@ -102,6 +109,28 @@ export const forumApi = {
 
   posts: (threadId: string, page?: number) =>
     list<ForumPost>(`/forum/threads/${threadId}/posts`, { page }),
+};
+
+// ---------- 评论（写操作） ----------
+
+export const commentApi = {
+  /** 发表评论：target 为 wiki 页或攻略的 slug */
+  create: (targetType: "wiki" | "guide", slug: string, content: string) =>
+    request<{ data: Comment }>(
+      targetType === "wiki"
+        ? `/wiki/pages/${slug}/comments`
+        : `/guides/${slug}/comments`,
+      { method: "POST", body: { content } },
+    ).then((r) => r.data),
+
+  remove: (commentId: string) =>
+    request<void>(`/comments/${commentId}`, { method: "DELETE" }),
+
+  like: (commentId: string) =>
+    request<void>(`/comments/${commentId}/like`, { method: "PUT" }),
+
+  unlike: (commentId: string) =>
+    request<void>(`/comments/${commentId}/like`, { method: "DELETE" }),
 };
 
 // ---------- 搜索 ----------
