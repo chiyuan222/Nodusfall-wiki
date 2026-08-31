@@ -1,0 +1,1817 @@
+openapi: 3.1.0
+info:
+  title: Nodusfall Wiki API
+  version: 1.0.0
+  description: 《源初之结》非官方玩家 Wiki、攻略与论坛的后端接口契约。字段以本文件为唯一事实源。
+  contact:
+    name: Nodusfall Wiki Team
+    url: https://github.com/chiyuan222/Nodusfall-wiki
+  license:
+    name: MIT
+    identifier: MIT
+servers:
+  - url: http://127.0.0.1:4000/v1
+    description: 本地开发
+  - url: https://api.nodusfall.wiki/v1
+    description: 生产环境（占位）
+tags:
+  - name: System
+    description: 健康检查与系统信息
+  - name: Users
+    description: 用户注册与资料
+  - name: Auth
+    description: 登录、令牌与会话
+  - name: Wiki
+    description: Wiki 分类、页面与版本历史
+  - name: Guides
+    description: 攻略与评分
+  - name: Forum
+    description: 板块、主题与回复
+  - name: Comments
+    description: 内容评论与点赞
+  - name: Search
+    description: 跨内容搜索
+  - name: Uploads
+    description: 文件上传与预签名
+paths:
+  /health:
+    get:
+      tags: [System]
+      operationId: getHealth
+      summary: 健康检查
+      security: []
+      responses:
+        "200":
+          description: 服务正常
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+
+  /users:
+    post:
+      tags: [Users]
+      operationId: registerUser
+      summary: 注册用户
+      security: []
+      requestBody:
+        $ref: "#/components/requestBodies/RegisterRequest"
+      responses:
+        "201":
+          description: 注册成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /users/me:
+    get:
+      tags: [Users]
+      operationId: getCurrentUser
+      summary: 获取当前用户资料
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: 当前用户
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    patch:
+      tags: [Users]
+      operationId: updateCurrentUser
+      summary: 更新当前用户资料
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        $ref: "#/components/requestBodies/UpdateCurrentUserRequest"
+      responses:
+        "200":
+          description: 更新后的用户
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /users/{userId}:
+    get:
+      tags: [Users]
+      operationId: getUser
+      summary: 获取公开用户资料
+      security: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: 用户公开资料
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserSummary"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /auth/sessions:
+    post:
+      tags: [Auth]
+      operationId: createSession
+      summary: 登录或刷新令牌
+      security: []
+      requestBody:
+        $ref: "#/components/requestBodies/AuthSessionRequest"
+      responses:
+        "200":
+          description: 认证会话
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthSession"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+  /auth/sessions/{sessionId}:
+    delete:
+      tags: [Auth]
+      operationId: deleteSession
+      summary: 登出并撤销会话
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: 已登出
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /wiki/categories:
+    get:
+      tags: [Wiki]
+      operationId: listWikiCategories
+      summary: 获取 Wiki 分类
+      security: []
+      responses:
+        "200":
+          description: 分类列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WikiCategoryList"
+
+  /wiki/pages:
+    get:
+      tags: [Wiki]
+      operationId: listWikiPages
+      summary: 获取 Wiki 页面列表
+      security: []
+      parameters:
+        - name: category
+          in: query
+          schema: { type: string }
+        - name: tag
+          in: query
+          schema: { type: string }
+        - name: q
+          in: query
+          schema: { type: string }
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, published, archived]
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [updatedAt, createdAt, title]
+            default: updatedAt
+      responses:
+        "200":
+          description: 页面列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WikiPageList"
+    post:
+      tags: [Wiki]
+      operationId: createWikiPage
+      summary: 创建 Wiki 页面
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        $ref: "#/components/requestBodies/CreateWikiPageRequest"
+      responses:
+        "201":
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WikiPage"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /wiki/pages/{slug}:
+    get:
+      tags: [Wiki]
+      operationId: getWikiPage
+      summary: 获取 Wiki 页面
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/Slug"
+      responses:
+        "200":
+          description: 页面详情
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WikiPage"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Wiki]
+      operationId: updateWikiPage
+      summary: 更新 Wiki 页面
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Slug"
+      requestBody:
+        $ref: "#/components/requestBodies/UpdateWikiPageRequest"
+      responses:
+        "200":
+          description: 更新后的页面
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WikiPage"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+    delete:
+      tags: [Wiki]
+      operationId: deleteWikiPage
+      summary: 删除 Wiki 页面
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Slug"
+      responses:
+        "204":
+          description: 已删除
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /wiki/pages/{slug}/revisions:
+    get:
+      tags: [Wiki]
+      operationId: listWikiPageRevisions
+      summary: 获取版本历史
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/Slug"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+      responses:
+        "200":
+          description: 版本列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WikiPageRevisionList"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /wiki/pages/{slug}/revisions/{revisionId}:
+    get:
+      tags: [Wiki]
+      operationId: getWikiPageRevision
+      summary: 获取指定版本
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/Slug"
+        - name: revisionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: 版本详情
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WikiPageRevision"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /guides:
+    get:
+      tags: [Guides]
+      operationId: listGuides
+      summary: 获取攻略列表
+      security: []
+      parameters:
+        - name: tag
+          in: query
+          schema: { type: string }
+        - name: q
+          in: query
+          schema: { type: string }
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, published, archived]
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [rating, updatedAt, createdAt]
+            default: updatedAt
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+      responses:
+        "200":
+          description: 攻略列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GuideList"
+    post:
+      tags: [Guides]
+      operationId: createGuide
+      summary: 创建攻略
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        $ref: "#/components/requestBodies/CreateGuideRequest"
+      responses:
+        "201":
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Guide"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /guides/{slug}:
+    get:
+      tags: [Guides]
+      operationId: getGuide
+      summary: 获取攻略详情
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/Slug"
+      responses:
+        "200":
+          description: 攻略详情
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Guide"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Guides]
+      operationId: updateGuide
+      summary: 更新攻略
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Slug"
+      requestBody:
+        $ref: "#/components/requestBodies/UpdateGuideRequest"
+      responses:
+        "200":
+          description: 更新后的攻略
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Guide"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Guides]
+      operationId: deleteGuide
+      summary: 删除攻略
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Slug"
+      responses:
+        "204":
+          description: 已删除
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /guides/{slug}/ratings:
+    get:
+      tags: [Guides]
+      operationId: getGuideRating
+      summary: 获取攻略评分汇总
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/Slug"
+      responses:
+        "200":
+          description: 评分汇总
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RatingSummary"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [Guides]
+      operationId: rateGuide
+      summary: 提交或更新评分
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Slug"
+      requestBody:
+        $ref: "#/components/requestBodies/RatingInput"
+      responses:
+        "200":
+          description: 评分结果
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RatingSummary"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /forum/boards:
+    get:
+      tags: [Forum]
+      operationId: listForumBoards
+      summary: 获取论坛板块
+      security: []
+      responses:
+        "200":
+          description: 板块列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForumBoardList"
+
+  /forum/boards/{boardSlug}/threads:
+    get:
+      tags: [Forum]
+      operationId: listForumThreads
+      summary: 获取板块内主题列表
+      security: []
+      parameters:
+        - name: boardSlug
+          in: path
+          required: true
+          schema: { type: string }
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [lastPostAt, createdAt]
+            default: lastPostAt
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+      responses:
+        "200":
+          description: 主题列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForumThreadList"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [Forum]
+      operationId: createForumThread
+      summary: 发布主题
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: boardSlug
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        $ref: "#/components/requestBodies/CreateForumThreadRequest"
+      responses:
+        "201":
+          description: 发布成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForumThread"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /forum/threads/{threadId}:
+    get:
+      tags: [Forum]
+      operationId: getForumThread
+      summary: 获取主题详情
+      security: []
+      parameters:
+        - name: threadId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: 主题详情
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForumThread"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Forum]
+      operationId: updateForumThread
+      summary: 更新主题
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: threadId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        $ref: "#/components/requestBodies/UpdateForumThreadRequest"
+      responses:
+        "200":
+          description: 更新后的主题
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForumThread"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Forum]
+      operationId: deleteForumThread
+      summary: 删除主题
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: threadId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: 已删除
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /forum/threads/{threadId}/posts:
+    get:
+      tags: [Forum]
+      operationId: listForumPosts
+      summary: 获取主题回复列表
+      security: []
+      parameters:
+        - name: threadId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+      responses:
+        "200":
+          description: 回复列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForumPostList"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [Forum]
+      operationId: createForumPost
+      summary: 发表回复
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: threadId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        $ref: "#/components/requestBodies/CreateForumPostRequest"
+      responses:
+        "201":
+          description: 回复成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForumPost"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /forum/posts/{postId}:
+    patch:
+      tags: [Forum]
+      operationId: updateForumPost
+      summary: 编辑回复
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        $ref: "#/components/requestBodies/CreateForumPostRequest"
+      responses:
+        "200":
+          description: 更新后的回复
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForumPost"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Forum]
+      operationId: deleteForumPost
+      summary: 删除回复
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: 已删除
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /forum/posts/{postId}/like:
+    put:
+      tags: [Forum]
+      operationId: likeForumPost
+      summary: 点赞回复
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: 已点赞
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Forum]
+      operationId: unlikeForumPost
+      summary: 取消点赞
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: 已取消
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /forum/threads/{threadId}/bookmark:
+    put:
+      tags: [Forum]
+      operationId: bookmarkThread
+      summary: 收藏主题
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: threadId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: 已收藏
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Forum]
+      operationId: unbookmarkThread
+      summary: 取消收藏
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: threadId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: 已取消
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /wiki/pages/{slug}/comments:
+    get:
+      tags: [Comments]
+      operationId: listWikiComments
+      summary: 获取 Wiki 页面评论
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/Slug"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+      responses:
+        "200":
+          description: 评论列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommentList"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [Comments]
+      operationId: createWikiComment
+      summary: 发表 Wiki 评论
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Slug"
+      requestBody:
+        $ref: "#/components/requestBodies/CreateCommentRequest"
+      responses:
+        "201":
+          description: 评论成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Comment"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /guides/{slug}/comments:
+    get:
+      tags: [Comments]
+      operationId: listGuideComments
+      summary: 获取攻略评论
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/Slug"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+      responses:
+        "200":
+          description: 评论列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommentList"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [Comments]
+      operationId: createGuideComment
+      summary: 发表攻略评论
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Slug"
+      requestBody:
+        $ref: "#/components/requestBodies/CreateCommentRequest"
+      responses:
+        "201":
+          description: 评论成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Comment"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /comments/{commentId}:
+    patch:
+      tags: [Comments]
+      operationId: updateComment
+      summary: 编辑评论
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: commentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        $ref: "#/components/requestBodies/CreateCommentRequest"
+      responses:
+        "200":
+          description: 更新后的评论
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Comment"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Comments]
+      operationId: deleteComment
+      summary: 删除评论
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: commentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: 已删除
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /comments/{commentId}/like:
+    put:
+      tags: [Comments]
+      operationId: likeComment
+      summary: 点赞评论
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: commentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: 已点赞
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Comments]
+      operationId: unlikeComment
+      summary: 取消点赞
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: commentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: 已取消
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /search:
+    get:
+      tags: [Search]
+      operationId: search
+      summary: 跨内容搜索
+      security: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string }
+        - name: kind
+          in: query
+          schema:
+            type: string
+            enum: [all, wiki, guide, forum]
+            default: all
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+      responses:
+        "200":
+          description: 搜索结果
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+
+  /uploads:
+    post:
+      tags: [Uploads]
+      operationId: uploadFile
+      summary: 上传文件
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "201":
+          description: 上传成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Upload"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "413":
+          description: 文件过大
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /uploads/presign:
+    post:
+      tags: [Uploads]
+      operationId: presignUpload
+      summary: 获取预签名上传地址
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        $ref: "#/components/requestBodies/PresignUploadRequest"
+      responses:
+        "201":
+          description: 预签名信息
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PresignedUpload"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    Slug:
+      name: slug
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PerPage:
+      name: perPage
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+  requestBodies:
+    RegisterRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [email, username, password]
+            properties:
+              email:
+                type: string
+                format: email
+              username:
+                type: string
+                minLength: 2
+                maxLength: 32
+                pattern: "^[\\w\\-\\u4e00-\\u9fa5]+$"
+              password:
+                type: string
+                minLength: 8
+                maxLength: 128
+    AuthSessionRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [grantType]
+            properties:
+              grantType:
+                type: string
+                enum: [password, refreshToken]
+              email:
+                type: string
+                format: email
+              password:
+                type: string
+              refreshToken:
+                type: string
+    UpdateCurrentUserRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              displayName:
+                type: string
+                maxLength: 64
+              avatarUrl:
+                type: string
+                format: uri
+              bio:
+                type: string
+                maxLength: 500
+    CreateWikiPageRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [title, content, categorySlug]
+            properties:
+              title:
+                type: string
+                maxLength: 200
+              slug:
+                type: string
+                pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+              categorySlug:
+                type: string
+              tags:
+                type: array
+                items: { type: string }
+                maxItems: 10
+              content:
+                type: string
+              status:
+                type: string
+                enum: [draft, published]
+                default: draft
+              changelog:
+                type: string
+                maxLength: 200
+    UpdateWikiPageRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              title: { type: string }
+              categorySlug: { type: string }
+              tags:
+                type: array
+                items: { type: string }
+                maxItems: 10
+              content: { type: string }
+              status:
+                type: string
+                enum: [draft, published, archived]
+              changelog:
+                type: string
+                maxLength: 200
+    CreateGuideRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [title, content]
+            properties:
+              title: { type: string, maxLength: 200 }
+              slug:
+                type: string
+                pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+              content: { type: string }
+              tags:
+                type: array
+                items: { type: string }
+                maxItems: 10
+              status:
+                type: string
+                enum: [draft, published]
+                default: draft
+              relatedCharacter:
+                type: string
+    UpdateGuideRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              title: { type: string }
+              content: { type: string }
+              tags:
+                type: array
+                items: { type: string }
+                maxItems: 10
+              status:
+                type: string
+                enum: [draft, published, archived]
+              relatedCharacter: { type: string }
+    RatingInput:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [score]
+            properties:
+              score:
+                type: integer
+                minimum: 1
+                maximum: 5
+    CreateForumThreadRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [title, content]
+            properties:
+              title: { type: string, maxLength: 120 }
+              content: { type: string, maxLength: 20000 }
+    UpdateForumThreadRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              title: { type: string, maxLength: 120 }
+              pinned: { type: boolean }
+              locked: { type: boolean }
+    CreateForumPostRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [content]
+            properties:
+              content: { type: string, maxLength: 20000 }
+    CreateCommentRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [content]
+            properties:
+              content: { type: string, maxLength: 2000 }
+    PresignUploadRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [filename, contentType]
+            properties:
+              filename: { type: string }
+              contentType: { type: string }
+              size:
+                type: integer
+                maximum: 10485760
+
+  schemas:
+    Error:
+      type: object
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          format: uri
+          example: "https://api.nodusfall.example.com/errors/validation-error"
+        title:
+          type: string
+          example: "Validation Error"
+        status:
+          type: integer
+          example: 400
+        detail:
+          type: string
+          example: "请求参数校验失败"
+        instance:
+          type: string
+          format: uri
+        code:
+          type: string
+          example: "VALIDATION_ERROR"
+        requestId:
+          type: string
+          example: "req_01J0ABCDEF"
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ValidationIssue"
+
+    ValidationIssue:
+      type: object
+      required: [field, code, message]
+      properties:
+        field:
+          type: string
+          example: "email"
+        code:
+          type: string
+          example: "INVALID_FORMAT"
+        message:
+          type: string
+          example: "email 必须是有效的邮箱地址"
+
+    Pagination:
+      type: object
+      required: [page, perPage, total, totalPages, hasMore]
+      properties:
+        page:
+          type: integer
+          example: 1
+        perPage:
+          type: integer
+          example: 20
+        total:
+          type: integer
+          example: 128
+        totalPages:
+          type: integer
+          example: 7
+        hasMore:
+          type: boolean
+          example: true
+
+    Health:
+      type: object
+      required: [status, version]
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+        version:
+          type: string
+          example: "1.0.0"
+        dependencies:
+          type: object
+          additionalProperties:
+            type: string
+
+    UserSummary:
+      type: object
+      required: [id, username, displayName, role, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        username: { type: string }
+        displayName: { type: string }
+        avatarUrl: { type: string, format: uri }
+        role:
+          type: string
+          enum: [guest, member, editor, moderator, admin]
+        createdAt: { type: string, format: date-time }
+
+    User:
+      allOf:
+        - $ref: "#/components/schemas/UserSummary"
+        - type: object
+          properties:
+            bio: { type: string }
+            updatedAt: { type: string, format: date-time }
+
+    AuthSession:
+      type: object
+      required: [accessToken, refreshToken, tokenType, expiresIn, sessionId, user]
+      properties:
+        accessToken: { type: string }
+        refreshToken: { type: string }
+        tokenType:
+          type: string
+          example: "Bearer"
+        expiresIn:
+          type: integer
+          example: 900
+        sessionId: { type: string, format: uuid }
+        user:
+          $ref: "#/components/schemas/User"
+
+    WikiCategory:
+      type: object
+      required: [id, slug, name, sortOrder]
+      properties:
+        id: { type: string, format: uuid }
+        slug: { type: string }
+        name: { type: string }
+        description: { type: string }
+        sortOrder: { type: integer }
+
+    WikiCategoryList:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/WikiCategory"
+
+    WikiPageSummary:
+      type: object
+      required: [id, slug, title, excerpt, categorySlug, tags, status, author, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        slug: { type: string }
+        title: { type: string }
+        excerpt: { type: string }
+        categorySlug: { type: string }
+        tags:
+          type: array
+          items: { type: string }
+        status:
+          type: string
+          enum: [draft, published, archived]
+        author:
+          $ref: "#/components/schemas/UserSummary"
+        updatedAt: { type: string, format: date-time }
+
+    WikiPage:
+      allOf:
+        - $ref: "#/components/schemas/WikiPageSummary"
+        - type: object
+          required: [content, version, createdAt, revisionCount]
+          properties:
+            content: { type: string }
+            version: { type: integer }
+            createdAt: { type: string, format: date-time }
+            revisionCount: { type: integer }
+
+    WikiPageList:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/WikiPageSummary"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+
+    WikiPageRevision:
+      type: object
+      required: [id, pageId, version, title, content, changelog, author, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        pageId: { type: string, format: uuid }
+        version: { type: integer }
+        title: { type: string }
+        content: { type: string }
+        changelog: { type: string }
+        author:
+          $ref: "#/components/schemas/UserSummary"
+        createdAt: { type: string, format: date-time }
+
+    WikiPageRevisionList:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/WikiPageRevision"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+
+    GuideSummary:
+      type: object
+      required: [id, slug, title, excerpt, tags, status, author, rating, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        slug: { type: string }
+        title: { type: string }
+        excerpt: { type: string }
+        tags:
+          type: array
+          items: { type: string }
+        status:
+          type: string
+          enum: [draft, published, archived]
+        author:
+          $ref: "#/components/schemas/UserSummary"
+        rating:
+          type: number
+          minimum: 0
+          maximum: 5
+        ratingCount:
+          type: integer
+        updatedAt: { type: string, format: date-time }
+
+    Guide:
+      allOf:
+        - $ref: "#/components/schemas/GuideSummary"
+        - type: object
+          required: [content, createdAt]
+          properties:
+            content: { type: string }
+            relatedCharacter: { type: string }
+            createdAt: { type: string, format: date-time }
+
+    GuideList:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/GuideSummary"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+
+    RatingSummary:
+      type: object
+      required: [average, count, distribution]
+      properties:
+        average:
+          type: number
+          example: 4.6
+        count:
+          type: integer
+          example: 42
+        distribution:
+          type: object
+          additionalProperties:
+            type: integer
+          example:
+            "1": 1
+            "2": 0
+            "3": 3
+            "4": 12
+            "5": 26
+
+    ForumBoard:
+      type: object
+      required: [id, slug, name, sortOrder, threadCount]
+      properties:
+        id: { type: string, format: uuid }
+        slug: { type: string }
+        name: { type: string }
+        description: { type: string }
+        sortOrder: { type: integer }
+        threadCount: { type: integer }
+
+    ForumBoardList:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ForumBoard"
+
+    ForumThreadSummary:
+      type: object
+      required: [id, boardSlug, title, author, pinned, locked, replyCount, likeCount, createdAt, updatedAt, lastPostAt]
+      properties:
+        id: { type: string, format: uuid }
+        boardSlug: { type: string }
+        title: { type: string }
+        author:
+          $ref: "#/components/schemas/UserSummary"
+        pinned: { type: boolean }
+        locked: { type: boolean }
+        replyCount: { type: integer }
+        likeCount: { type: integer }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        lastPostAt: { type: string, format: date-time }
+
+    ForumThread:
+      allOf:
+        - $ref: "#/components/schemas/ForumThreadSummary"
+        - type: object
+          required: [content]
+          properties:
+            content: { type: string }
+
+    ForumThreadList:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ForumThreadSummary"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+
+    ForumPost:
+      type: object
+      required: [id, threadId, author, content, floor, createdAt, updatedAt, likeCount, likedByMe]
+      properties:
+        id: { type: string, format: uuid }
+        threadId: { type: string, format: uuid }
+        author:
+          $ref: "#/components/schemas/UserSummary"
+        content: { type: string }
+        floor: { type: integer }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        likeCount: { type: integer }
+        likedByMe: { type: boolean }
+
+    ForumPostList:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ForumPost"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+
+    Comment:
+      type: object
+      required: [id, targetType, targetId, author, content, createdAt, updatedAt, likeCount, likedByMe]
+      properties:
+        id: { type: string, format: uuid }
+        targetType:
+          type: string
+          enum: [wiki_page, guide]
+        targetId: { type: string }
+        author:
+          $ref: "#/components/schemas/UserSummary"
+        content: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        likeCount: { type: integer }
+        likedByMe: { type: boolean }
+
+    CommentList:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Comment"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+
+    SearchResult:
+      type: object
+      required: [kind, id, title, excerpt, url]
+      properties:
+        kind:
+          type: string
+          enum: [wiki, guide, forum]
+        id: { type: string }
+        title: { type: string }
+        excerpt: { type: string }
+        url: { type: string }
+        updatedAt: { type: string, format: date-time }
+
+    SearchResponse:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/SearchResult"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+
+    Upload:
+      type: object
+      required: [id, url, key, mimeType, size, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        url: { type: string, format: uri }
+        key: { type: string }
+        mimeType: { type: string }
+        size: { type: integer }
+        createdAt: { type: string, format: date-time }
+
+    PresignedUpload:
+      type: object
+      required: [uploadUrl, key, url, expiresIn]
+      properties:
+        uploadUrl: { type: string, format: uri }
+        key: { type: string }
+        url: { type: string, format: uri }
+        expiresIn: { type: integer }
+
+  responses:
+    ValidationError:
+      description: 请求校验失败
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            type: "https://api.nodusfall.example.com/errors/validation-error"
+            title: "Validation Error"
+            status: 400
+            detail: "请求参数校验失败"
+            code: "VALIDATION_ERROR"
+            requestId: "req_01J0ABCDEF"
+            errors:
+              - field: "email"
+                code: "INVALID_FORMAT"
+                message: "email 必须是有效的邮箱地址"
+    Unauthorized:
+      description: 未认证或令牌无效
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            type: "https://api.nodusfall.example.com/errors/unauthorized"
+            title: "Unauthorized"
+            status: 401
+            code: "UNAUTHENTICATED"
+    Forbidden:
+      description: 权限不足
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            type: "https://api.nodusfall.example.com/errors/forbidden"
+            title: "Forbidden"
+            status: 403
+            code: "FORBIDDEN"
+    NotFound:
+      description: 资源不存在
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            type: "https://api.nodusfall.example.com/errors/not-found"
+            title: "Not Found"
+            status: 404
+            code: "NOT_FOUND"
+    Conflict:
+      description: 资源冲突
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            type: "https://api.nodusfall.example.com/errors/conflict"
+            title: "Conflict"
+            status: 409
+            code: "CONFLICT"
+    RateLimited:
+      description: 触发限流
+      headers:
+        Retry-After:
+          schema: { type: integer }
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            type: "https://api.nodusfall.example.com/errors/rate-limited"
+            title: "Too Many Requests"
+            status: 429
+            code: "RATE_LIMITED"
