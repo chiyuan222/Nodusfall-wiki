@@ -107,8 +107,58 @@ export const forumApi = {
       (r) => r.data,
     ),
 
+  /** 发布主题（需登录） */
+  createThread: (
+    boardSlug: string,
+    input: { title: string; content: string; coverImage?: string | null },
+  ) =>
+    request<{ data: ForumThread }>(`/forum/boards/${boardSlug}/threads`, {
+      method: "POST",
+      body: input,
+    }).then((r) => r.data),
+
+  /** 更新主题（作者/管理员；pinned/locked 仅管理员） */
+  updateThread: (
+    threadId: string,
+    patch: {
+      title?: string;
+      pinned?: boolean;
+      locked?: boolean;
+      coverImage?: string | null;
+    },
+  ) =>
+    request<{ data: ForumThread }>(`/forum/threads/${threadId}`, {
+      method: "PATCH",
+      body: patch,
+    }).then((r) => r.data),
+
+  deleteThread: (threadId: string) =>
+    request<void>(`/forum/threads/${threadId}`, { method: "DELETE" }),
+
   posts: (threadId: string, page?: number) =>
     list<ForumPost>(`/forum/threads/${threadId}/posts`, { page }),
+
+  /** 发表回复（需登录） */
+  createPost: (threadId: string, content: string) =>
+    request<{ data: ForumPost }>(`/forum/threads/${threadId}/posts`, {
+      method: "POST",
+      body: { content },
+    }).then((r) => r.data),
+
+  deletePost: (postId: string) =>
+    request<void>(`/forum/posts/${postId}`, { method: "DELETE" }),
+
+  likePost: (postId: string) =>
+    request<void>(`/forum/posts/${postId}/like`, { method: "PUT" }),
+
+  unlikePost: (postId: string) =>
+    request<void>(`/forum/posts/${postId}/like`, { method: "DELETE" }),
+
+  bookmark: (threadId: string) =>
+    request<void>(`/forum/threads/${threadId}/bookmark`, { method: "PUT" }),
+
+  unbookmark: (threadId: string) =>
+    request<void>(`/forum/threads/${threadId}/bookmark`, { method: "DELETE" }),
 };
 
 // ---------- 评论（写操作） ----------
