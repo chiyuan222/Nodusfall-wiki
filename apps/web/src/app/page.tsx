@@ -89,13 +89,13 @@ export default async function HomePage() {
                   <EmptySlot label="首屏导语" />
                 )}
               </div>
-              <div className="mt-8 flex flex-wrap gap-3">
+              <div className="mt-8 grid max-w-md grid-cols-2 gap-3">
                 {content.hero.ctas.map((cta, i) =>
                   cta.style === "primary" ? (
                     <Link
                       key={`${cta.href}-${i}`}
                       href={cta.href || "/"}
-                      className="rounded-md bg-amber px-6 py-2.5 text-small font-medium text-amber-fg transition-opacity duration-fast hover:opacity-90"
+                      className="rounded-md bg-amber px-4 py-2.5 text-center text-small font-medium tracking-widest text-amber-fg transition-opacity duration-fast hover:opacity-90"
                     >
                       {cta.label}
                     </Link>
@@ -103,7 +103,7 @@ export default async function HomePage() {
                     <Link
                       key={`${cta.href}-${i}`}
                       href={cta.href || "/"}
-                      className="rounded-md border border-border-subtle bg-raised px-6 py-2.5 text-small text-primary transition-colors duration-fast hover:border-amber-soft"
+                      className="rounded-md border border-border-subtle bg-raised px-4 py-2.5 text-center text-small tracking-widest text-primary transition-colors duration-fast hover:border-amber-soft"
                     >
                       {cta.label}
                     </Link>

@@ -11,9 +11,17 @@ export default function SearchPage({
 }) {
   const q = searchParams.q ?? "";
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="font-serif text-h1 font-semibold">搜索</h1>
+    <div className="mx-auto max-w-page space-y-8">
+      <header className="pt-6 lg:pt-10">
+        <p className="font-mono text-caption uppercase tracking-[0.4em] text-faint">
+          Search
+        </p>
+        <h1 className="mt-3 font-serif text-[2rem] font-semibold text-primary md:text-[2.5rem]">
+          搜索
+        </h1>
+        <p className="mt-4 max-w-reading text-body leading-relaxed text-secondary">
+          统一检索 Wiki 条目、攻略与论坛主题。
+        </p>
       </header>
       <form action="/search" method="get" role="search" className="flex gap-2">
         <input

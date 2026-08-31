@@ -44,9 +44,16 @@ function SectionShell({
     <section
       id={id}
       aria-labelledby={`${id}-title`}
-      className="scroll-mt-28 border-t border-border-subtle py-14 lg:scroll-mt-36"
+      className="relative scroll-mt-28 border-t border-border-subtle py-14 lg:scroll-mt-36"
     >
-      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
+      {/* 板块序号水印（编辑风，与首页「结」字水印同一语言） */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute -top-2 right-0 select-none font-serif text-[6rem] font-semibold leading-none text-primary opacity-[0.05]"
+      >
+        {String(index).padStart(2, "0")}
+      </span>
+      <div className="relative flex flex-wrap items-baseline gap-x-4 gap-y-2">
         <span className="font-mono text-caption tracking-[0.35em] text-amber">
           {String(index).padStart(2, "0")}
         </span>
@@ -96,7 +103,10 @@ function HeroSection({ content }: { content: WorldPageContent }) {
       </div>
 
       <div className="mt-8">
-        <MediaSlotView media={hero.art} variant="hero" priority />
+        {/* 与首页一致的编辑风双线框装裱，放大为 banner 比例 */}
+        <div className="rounded-lg border border-border-subtle bg-surface p-2 shadow-card">
+          <MediaSlotView media={hero.art} variant="banner" priority />
+        </div>
       </div>
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
@@ -116,7 +126,7 @@ function HeroSection({ content }: { content: WorldPageContent }) {
             <Link
               key={`${cta.href}-${i}`}
               href={cta.href || "/"}
-              className="rounded-md bg-amber px-6 py-2.5 text-small font-medium text-amber-fg transition-opacity duration-fast hover:opacity-90"
+              className="min-w-32 rounded-md bg-amber px-5 py-2.5 text-center text-small font-medium tracking-widest text-amber-fg transition-opacity duration-fast hover:opacity-90"
             >
               {cta.label}
             </Link>
@@ -126,7 +136,7 @@ function HeroSection({ content }: { content: WorldPageContent }) {
               href={cta.href || undefined}
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-md border border-border-subtle bg-raised px-6 py-2.5 text-small text-primary transition-colors duration-fast hover:border-amber-soft"
+              className="min-w-32 rounded-md border border-border-subtle bg-raised px-5 py-2.5 text-center text-small tracking-widest text-primary transition-colors duration-fast hover:border-amber-soft"
             >
               {cta.label}
             </a>
