@@ -15,6 +15,7 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
 import { PaginationQueryDto } from '../common/pagination';
 import { CreateForumPostDto } from './dto/create-forum-post.dto';
 import { CreateForumThreadDto } from './dto/create-forum-thread.dto';
@@ -35,12 +36,15 @@ export class ForumController {
   }
 
   @Get('boards/:boardSlug/threads')
+  @UseGuards(OptionalJwtAuthGuard)
   listThreads(
+    @Req() req: Request,
     @Param('boardSlug') boardSlug: string,
     @Query() pagination: PaginationQueryDto,
     @Query('sort') sort: any,
   ) {
-    return this.forumService.listThreads(boardSlug, pagination.page, pagination.perPage, sort ?? 'lastPostAt');
+    const userId = (req as any).user?.sub;
+    return this.forumService.listThreads(boardSlug, pagination.page, pagination.perPage, sort ?? 'lastPostAt', userId);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -54,8 +58,10 @@ export class ForumController {
   }
 
   @Get('threads/:threadId')
-  getThread(@Param('threadId') threadId: string) {
-    return this.forumService.getThread(threadId).then((data) => ({ data }));
+  @UseGuards(OptionalJwtAuthGuard)
+  getThread(@Req() req: Request, @Param('threadId') threadId: string) {
+    const userId = (req as any).user?.sub;
+    return this.forumService.getThread(threadId, userId).then((data) => ({ data }));
   }
 
   @UseGuards(JwtAuthGuard)
@@ -76,8 +82,14 @@ export class ForumController {
   }
 
   @Get('threads/:threadId/posts')
-  listPosts(@Param('threadId') threadId: string, @Query() pagination: PaginationQueryDto) {
-    return this.forumService.listPosts(threadId, pagination.page, pagination.perPage);
+  @UseGuards(OptionalJwtAuthGuard)
+  listPosts(
+    @Req() req: Request,
+    @Param('threadId') threadId: string,
+    @Query() pagination: PaginationQueryDto,
+  ) {
+    const userId = (req as any).user?.sub;
+    return this.forumService.listPosts(threadId, pagination.page, pagination.perPage, userId);
   }
 
   @UseGuards(JwtAuthGuard)

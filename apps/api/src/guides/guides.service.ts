@@ -147,13 +147,19 @@ export class GuidesService {
     });
   }
 
-  async getRating(slug: string) {
+  async getRating(slug: string, userId?: string) {
     const guide = await this.prisma.guide.findUnique({ where: { slug } });
     if (!guide) throw new NotFoundException('guide not found');
+    const myScore = userId
+      ? (await this.prisma.rating.findUnique({
+          where: { guideId_userId: { guideId: guide.id, userId } },
+        }))?.score ?? null
+      : null;
     return {
       average: guide.ratingAvg,
       count: guide.ratingCount,
       distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+      myScore,
     };
   }
 
@@ -183,6 +189,7 @@ export class GuidesService {
       average: updated.ratingAvg,
       count: updated.ratingCount,
       distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+      myScore: score,
     };
   }
 }

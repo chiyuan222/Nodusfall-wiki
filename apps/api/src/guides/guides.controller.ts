@@ -14,6 +14,7 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
 import { PaginationQueryDto } from '../common/pagination';
 import { CreateGuideDto } from './dto/create-guide.dto';
 import { UpdateGuideDto } from './dto/update-guide.dto';
@@ -74,8 +75,10 @@ export class GuidesController {
   }
 
   @Get(':slug/ratings')
-  getRating(@Param('slug') slug: string) {
-    return this.guidesService.getRating(slug).then((data) => ({ data }));
+  @UseGuards(OptionalJwtAuthGuard)
+  getRating(@Req() req: Request, @Param('slug') slug: string) {
+    const userId = (req as any).user?.sub;
+    return this.guidesService.getRating(slug, userId).then((data) => ({ data }));
   }
 
   @UseGuards(JwtAuthGuard)

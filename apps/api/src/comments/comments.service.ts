@@ -10,7 +10,7 @@ import { toUserSummary } from '../users/users.service';
 
 type CommentWithAuthor = Comment & { author: User };
 
-function commentView(comment: CommentWithAuthor) {
+function commentView(comment: CommentWithAuthor, likedByMe = false) {
   return {
     id: comment.id,
     targetType: comment.targetType === 'WIKI_PAGE' ? 'wiki_page' : 'guide',
@@ -20,7 +20,7 @@ function commentView(comment: CommentWithAuthor) {
     createdAt: comment.createdAt,
     updatedAt: comment.updatedAt,
     likeCount: comment.likeCount,
-    likedByMe: false,
+    likedByMe,
   };
 }
 
@@ -39,7 +39,13 @@ export class CommentsService {
     return guide.id;
   }
 
-  async list(type: 'WIKI_PAGE' | 'GUIDE', slug: string, page: number, perPage: number) {
+  async list(
+    type: 'WIKI_PAGE' | 'GUIDE',
+    slug: string,
+    page: number,
+    perPage: number,
+    userId?: string,
+  ) {
     const targetId = await this.resolveTarget(type, slug);
     const where = { targetType: type, targetId };
     const [total, comments] = await this.prisma.$transaction([
@@ -52,8 +58,17 @@ export class CommentsService {
         include: { author: true },
       }),
     ]);
+    const liked = userId
+      ? new Set(
+          (
+            await this.prisma.commentLike.findMany({
+              where: { userId, commentId: { in: comments.map((c) => c.id) } },
+            })
+          ).map((like) => like.commentId),
+        )
+      : new Set<string>();
     return {
-      data: comments.map(commentView),
+      data: comments.map((comment) => commentView(comment, liked.has(comment.id))),
       pagination: pageInfo(page, perPage, total),
     };
   }

@@ -42,7 +42,7 @@ function threadSummary(thread: ThreadWithAuthor) {
   };
 }
 
-function postView(post: PostWithAuthor) {
+function postView(post: PostWithAuthor, likedByMe = false) {
   return {
     id: post.id,
     threadId: post.threadId,
@@ -52,7 +52,7 @@ function postView(post: PostWithAuthor) {
     createdAt: post.createdAt,
     updatedAt: post.updatedAt,
     likeCount: post.likeCount,
-    likedByMe: false,
+    likedByMe,
   };
 }
 
@@ -77,7 +77,13 @@ export class ForumService {
       .then((boards) => boards.map(boardView));
   }
 
-  async listThreads(boardSlug: string, page: number, perPage: number, sort: 'lastPostAt' | 'createdAt') {
+  async listThreads(
+    boardSlug: string,
+    page: number,
+    perPage: number,
+    sort: 'lastPostAt' | 'createdAt',
+    userId?: string,
+  ) {
     const board = await this.prisma.forumBoard.findUnique({ where: { slug: boardSlug } });
     if (!board) throw new NotFoundException('board not found');
     const where = { boardId: board.id };
@@ -92,8 +98,21 @@ export class ForumService {
         include: { author: true },
       }),
     ]);
+    const bookmarks = userId
+      ? new Set(
+          (
+            await this.prisma.forumThreadBookmark.findMany({
+              where: { userId, threadId: { in: threads.map((t) => t.id) } },
+            })
+          ).map((b) => b.threadId),
+        )
+      : new Set<string>();
     return {
-      data: threads.map((thread) => ({ ...threadSummary(thread), boardSlug })),
+      data: threads.map((thread) => ({
+        ...threadSummary(thread),
+        boardSlug,
+        bookmarkedByMe: bookmarks.has(thread.id),
+      })),
       pagination: pageInfo(page, perPage, total),
     };
   }
@@ -118,13 +137,23 @@ export class ForumService {
     return { ...threadSummary(thread), boardSlug, content: thread.content };
   }
 
-  async getThread(threadId: string) {
+  async getThread(threadId: string, userId?: string) {
     const thread = await this.prisma.forumThread.findUnique({
       where: { id: threadId },
       include: { author: true, board: true },
     });
     if (!thread) throw new NotFoundException('thread not found');
-    return { ...threadSummary(thread), boardSlug: thread.board.slug, content: thread.content };
+    const bookmarked = userId
+      ? !!(await this.prisma.forumThreadBookmark.findUnique({
+          where: { threadId_userId: { threadId, userId } },
+        }))
+      : false;
+    return {
+      ...threadSummary(thread),
+      boardSlug: thread.board.slug,
+      bookmarkedByMe: bookmarked,
+      content: thread.content,
+    };
   }
 
   async updateThread(userId: string, threadId: string, dto: {
@@ -154,7 +183,7 @@ export class ForumService {
     });
   }
 
-  async listPosts(threadId: string, page: number, perPage: number) {
+  async listPosts(threadId: string, page: number, perPage: number, userId?: string) {
     const thread = await this.prisma.forumThread.findUnique({ where: { id: threadId } });
     if (!thread) throw new NotFoundException('thread not found');
     const where = { threadId };
@@ -168,8 +197,17 @@ export class ForumService {
         include: { author: true },
       }),
     ]);
+    const liked = userId
+      ? new Set(
+          (
+            await this.prisma.forumPostLike.findMany({
+              where: { userId, postId: { in: posts.map((p) => p.id) } },
+            })
+          ).map((like) => like.postId),
+        )
+      : new Set<string>();
     return {
-      data: posts.map(postView),
+      data: posts.map((post) => postView(post, liked.has(post.id))),
       pagination: pageInfo(page, perPage, total),
     };
   }

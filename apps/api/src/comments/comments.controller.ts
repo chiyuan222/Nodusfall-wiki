@@ -15,6 +15,7 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
 import { PaginationQueryDto } from '../common/pagination';
 import { CommentsService } from './comments.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
@@ -28,8 +29,14 @@ export class CommentsController {
   constructor(private readonly commentsService: CommentsService) {}
 
   @Get('wiki/pages/:slug/comments')
-  listWikiComments(@Param('slug') slug: string, @Query() pagination: PaginationQueryDto) {
-    return this.commentsService.list('WIKI_PAGE', slug, pagination.page, pagination.perPage);
+  @UseGuards(OptionalJwtAuthGuard)
+  listWikiComments(
+    @Req() req: Request,
+    @Param('slug') slug: string,
+    @Query() pagination: PaginationQueryDto,
+  ) {
+    const userId = (req as any).user?.sub;
+    return this.commentsService.list('WIKI_PAGE', slug, pagination.page, pagination.perPage, userId);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -45,8 +52,14 @@ export class CommentsController {
   }
 
   @Get('guides/:slug/comments')
-  listGuideComments(@Param('slug') slug: string, @Query() pagination: PaginationQueryDto) {
-    return this.commentsService.list('GUIDE', slug, pagination.page, pagination.perPage);
+  @UseGuards(OptionalJwtAuthGuard)
+  listGuideComments(
+    @Req() req: Request,
+    @Param('slug') slug: string,
+    @Query() pagination: PaginationQueryDto,
+  ) {
+    const userId = (req as any).user?.sub;
+    return this.commentsService.list('GUIDE', slug, pagination.page, pagination.perPage, userId);
   }
 
   @UseGuards(JwtAuthGuard)
