@@ -39,11 +39,14 @@ function gh(args, input) {
 }
 
 function graphql(query, variables) {
+  const bodyFile = '_graphql_body.json';
+  writeFileSync(bodyFile, JSON.stringify({ query, variables }));
   const r = spawnSync(
     'gh',
-    ['api', 'graphql', '-f', `query=${query}`, '-F', `variables=${JSON.stringify(variables)}`],
+    ['api', 'graphql', '--input', bodyFile],
     { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 },
   );
+  rmSync(bodyFile, { force: true });
   if (r.status !== 0) {
     throw new Error(`gh api graphql 失败：${r.stderr || r.stdout}`);
   }
@@ -80,8 +83,22 @@ function actorId(login) {
 const backendId = actorId(backend);
 const frontendId = actorId(frontend);
 
+// 已存在的规则会被跳过，保证脚本可以重复执行。
+const existing = new Set(
+  (
+    graphql(
+      `query($owner:String!,$name:String!){ repository(owner:$owner,name:$name){ branchProtectionRules(first:100){ nodes { pattern } } } }`,
+      { owner: 'chiyuan222', name: 'Nodusfall-wiki' },
+    ).repository.branchProtectionRules?.nodes ?? []
+  ).map((node) => node.pattern),
+);
+
 // 3. 创建分支保护规则（GraphQL）
 function protect(pattern, input) {
+  if (existing.has(pattern)) {
+    console.log(`跳过（已存在）：${pattern}`);
+    return;
+  }
   return graphql(
     `mutation($input:CreateBranchProtectionRuleInput!){ createBranchProtectionRule(input:$input){ branchProtectionRule { id pattern } } }`,
     { input: { repositoryId, pattern, ...input } },

@@ -26,6 +26,7 @@
 ## 文档索引
 
 - [给 Kimi agent 的前端交接包](KIMI_HANDOFF.md)
+- [对接 Kimi 的任务指令（可直接复制）](KIMI_PROMPT.md)
 - [总体方案](docs/plan/00-overview.md)
 - [角色与边界](docs/plan/01-roles-and-boundaries.md)
 - [后端任务计划](docs/plan/02-backend-task-plan.md)
