@@ -17,6 +17,7 @@ import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
 import { PaginationQueryDto } from '../common/pagination';
+import { ListForumThreadsQueryDto } from './dto/list-forum-threads-query.dto';
 import { CreateForumPostDto } from './dto/create-forum-post.dto';
 import { CreateForumThreadDto } from './dto/create-forum-thread.dto';
 import { UpdateForumThreadDto } from './dto/update-forum-thread.dto';
@@ -40,11 +41,16 @@ export class ForumController {
   listThreads(
     @Req() req: Request,
     @Param('boardSlug') boardSlug: string,
-    @Query() pagination: PaginationQueryDto,
-    @Query('sort') sort: any,
+    @Query() query: ListForumThreadsQueryDto,
   ) {
     const userId = (req as any).user?.sub;
-    return this.forumService.listThreads(boardSlug, pagination.page, pagination.perPage, sort ?? 'lastPostAt', userId);
+    return this.forumService.listThreads(
+      boardSlug,
+      query.page,
+      query.perPage,
+      query.sort ?? 'lastPostAt',
+      userId,
+    );
   }
 
   @UseGuards(JwtAuthGuard)
