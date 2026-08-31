@@ -41,19 +41,43 @@ export interface HomeEntries {
   cards: HomeEntryCard[];
 }
 
-export type HomeSectionId = "hero" | "notice" | "entries";
+/** 动态/精华条目：管理员手填的精选链接，图片+标题简介由链接目标页承担，这里只列文本行 */
+export interface HomeDigestItem {
+  date: string;
+  tag: string;
+  title: string;
+  url: string;
+  excerpt: string;
+}
+
+export interface HomeDigestColumn {
+  title: string;
+  emptyText: string;
+  items: HomeDigestItem[];
+}
+
+/** 首页两栏快报：最新动态 | 精华推荐 */
+export interface HomeDigest {
+  hidden?: boolean;
+  latest: HomeDigestColumn;
+  featured: HomeDigestColumn;
+}
+
+export type HomeSectionId = "hero" | "notice" | "digest" | "entries";
 
 export interface HomePageContent {
   meta: { pageId: string; updatedAt: string; maintainer: string; note: string };
   sections: HomeSectionId[];
   hero: HomeHero;
   notice: HomeNotice;
+  digest: HomeDigest;
   entries: HomeEntries;
 }
 
 export const HOME_SECTION_LABEL: Record<HomeSectionId, string> = {
   hero: "首屏横幅",
   notice: "公告条",
+  digest: "动态与精华",
   entries: "入口卡",
 };
 

@@ -34,7 +34,7 @@ export default async function HomePage() {
     );
   }
 
-  const visible = (id: "hero" | "notice" | "entries") =>
+  const visible = (id: "hero" | "notice" | "digest" | "entries") =>
     content.sections.includes(id) && !content[id].hidden;
 
   return (
@@ -60,11 +60,18 @@ export default async function HomePage() {
         </aside>
       )}
 
-      {/* 首屏横幅：文案 + 媒体（图片或视频） */}
+      {/* 首屏横幅：文案 + 放大媒体（图片或视频），媒体以编辑风双线框装裱 */}
       {visible("hero") && (
-        <section aria-label="首屏" className="pt-4 lg:pt-8">
-          <div className="grid items-center gap-8 lg:grid-cols-12">
-            <div className="lg:col-span-5">
+        <section aria-label="首屏" className="relative pt-4 lg:pt-8">
+          {/* 衬线水印 */}
+          <span
+            aria-hidden
+            className="pointer-events-none absolute -top-10 right-0 select-none font-serif text-[11rem] font-semibold leading-none text-primary opacity-[0.05] lg:text-[16rem]"
+          >
+            结
+          </span>
+          <div className="relative grid items-center gap-8 lg:grid-cols-12 lg:gap-10">
+            <div className="lg:col-span-4">
               {content.hero.kicker ? (
                 <p className="font-mono text-caption uppercase tracking-[0.4em] text-faint">
                   {content.hero.kicker}
@@ -104,10 +111,76 @@ export default async function HomePage() {
                 )}
               </div>
             </div>
-            <div className="lg:col-span-7">
-              <MediaSlotView media={content.hero.media} variant="hero" priority />
+            <div className="lg:col-span-8">
+              {/* 放大主视觉：外层编辑风双线框 */}
+              <div className="rounded-lg border border-border-subtle bg-surface p-2 shadow-card">
+                <MediaSlotView media={content.hero.media} variant="banner" priority />
+              </div>
             </div>
           </div>
+        </section>
+      )}
+
+      {/* 两栏快报：最新动态 | 精华推荐 */}
+      {visible("digest") && (
+        <section aria-label="最新动态与精华推荐" className="grid gap-6 md:grid-cols-2">
+          {(
+            [
+              ["latest", content.digest.latest],
+              ["featured", content.digest.featured],
+            ] as const
+          ).map(([key, col]) => (
+            <div
+              key={key}
+              className="rounded-md border border-border-subtle bg-surface p-5 shadow-card"
+            >
+              <div className="flex items-baseline justify-between gap-3 border-b border-border-subtle pb-3">
+                <h2 className="font-serif text-h2 font-semibold text-primary">
+                  {col.title || "（待填写栏目标题）"}
+                </h2>
+                <span aria-hidden className="font-mono text-caption uppercase tracking-[0.3em] text-faint">
+                  {key === "latest" ? "NEWS" : "PICKS"}
+                </span>
+              </div>
+              {col.items.length > 0 ? (
+                <ol className="mt-2 divide-y divide-border-subtle">
+                  {col.items.map((item, i) => (
+                    <li key={`${item.url}-${i}`}>
+                      <Link
+                        href={item.url || "/"}
+                        className="group flex items-baseline gap-3 py-3"
+                      >
+                        {item.tag && (
+                          <span className="shrink-0 rounded-sm border border-amber-soft/60 px-1.5 py-0.5 font-mono text-caption text-amber">
+                            {item.tag}
+                          </span>
+                        )}
+                        <span className="min-w-0">
+                          <span className="block truncate text-small font-medium text-primary group-hover:text-amber">
+                            {item.title || "（待填写标题）"}
+                          </span>
+                          {item.excerpt && (
+                            <span className="mt-0.5 line-clamp-1 block text-caption text-secondary">
+                              {item.excerpt}
+                            </span>
+                          )}
+                        </span>
+                        {item.date && (
+                          <time className="ml-auto shrink-0 font-mono text-caption text-faint">
+                            {item.date}
+                          </time>
+                        )}
+                      </Link>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <p className="mt-4 rounded-sm border border-dashed border-border-subtle px-4 py-6 text-center font-mono text-caption text-faint">
+                  {col.emptyText || "待管理员补充。"}
+                </p>
+              )}
+            </div>
+          ))}
         </section>
       )}
 

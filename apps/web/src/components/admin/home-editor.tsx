@@ -259,6 +259,68 @@ export function HomeEditor() {
                     </>
                   )}
 
+                  {id === "digest" && (
+                    <>
+                      <p className="text-caption text-faint">
+                        两栏快报显示在首屏下方：左栏最新动态、右栏精华推荐。条目为空时前台显示虚线空态框。
+                      </p>
+                      {(["latest", "featured"] as const).map((key) => (
+                        <div key={key} className="rounded-md border border-border-subtle p-4">
+                          <p className="mb-3 font-mono text-caption uppercase tracking-widest text-amber">
+                            {key === "latest" ? "左栏 · 最新动态" : "右栏 · 精华推荐"}
+                          </p>
+                          <div className="grid gap-3 md:grid-cols-2">
+                            <Field
+                              label="栏目标题"
+                              value={draft.digest[key].title}
+                              onChange={(v) => mutate((d) => void (d.digest[key].title = v))}
+                            />
+                            <Field
+                              label="空态提示文字"
+                              value={draft.digest[key].emptyText}
+                              onChange={(v) => mutate((d) => void (d.digest[key].emptyText = v))}
+                            />
+                          </div>
+                          <div className="mt-3 space-y-3">
+                            {draft.digest[key].items.map((item, j) => (
+                              <ItemCard
+                                key={j}
+                                title={`items[${j}]`}
+                                index={j}
+                                length={draft.digest[key].items.length}
+                                onMove={(f, t) => listOp((d) => d.digest[key].items, "move", { index: f, to: t })}
+                                onRemove={(x) => listOp((d) => d.digest[key].items, "remove", { index: x })}
+                              >
+                                <div className="grid gap-3 md:grid-cols-3">
+                                  <Field label="标题" value={item.title} onChange={(v) => mutate((d) => void (d.digest[key].items[j]!.title = v))} />
+                                  <Field label="链接（站内 / 或外链）" value={item.url} onChange={(v) => mutate((d) => void (d.digest[key].items[j]!.url = v))} />
+                                  <div className="grid grid-cols-2 gap-3">
+                                    <Field label="标签（可留空）" value={item.tag} onChange={(v) => mutate((d) => void (d.digest[key].items[j]!.tag = v))} />
+                                    <Field label="日期（可留空）" value={item.date} onChange={(v) => mutate((d) => void (d.digest[key].items[j]!.date = v))} />
+                                  </div>
+                                  <div className="md:col-span-3">
+                                    <Field label="简介（可留空）" value={item.excerpt} onChange={(v) => mutate((d) => void (d.digest[key].items[j]!.excerpt = v))} />
+                                  </div>
+                                </div>
+                              </ItemCard>
+                            ))}
+                          </div>
+                          <button
+                            type="button"
+                            className={`${addBtnCls} mt-3`}
+                            onClick={() =>
+                              listOp((d) => d.digest[key].items, "add", {
+                                item: { date: "", tag: "", title: "", url: "", excerpt: "" },
+                              })
+                            }
+                          >
+                            + 添加条目
+                          </button>
+                        </div>
+                      ))}
+                    </>
+                  )}
+
                   {id === "entries" && (
                     <>
                       <Field label="板块标题" value={draft.entries.title} onChange={(v) => mutate((d) => void (d.entries.title = v))} />

@@ -5,11 +5,11 @@
     "maintainer": "",
     "note": "本文件驱动首页的横幅、公告条与入口卡。管理员可在 /admin/home 可视化编辑后导出替换本文件；待后端 CMS 契约冻结后改由接口下发。sections 数组控制板块顺序与显隐。"
   },
-  "sections": ["hero", "notice", "entries"],
+  "sections": ["hero", "notice", "digest", "entries"],
   "hero": {
     "hidden": false,
     "kicker": "NODUSFALL · 非官方玩家社区",
-    "title": "万物之结，由此而始",
+    "title": "诸神入刃，斩断死结",
     "lead": "《源初之结》的玩家 Wiki、攻略与讨论论坛。资料由社区共同维护。",
     "media": {
       "kind": "image",
@@ -28,6 +28,19 @@
     "text": "",
     "linkLabel": "",
     "linkHref": ""
+  },
+  "digest": {
+    "hidden": false,
+    "latest": {
+      "title": "最新动态",
+      "emptyText": "管理员尚未发布动态。",
+      "items": []
+    },
+    "featured": {
+      "title": "精华推荐",
+      "emptyText": "管理员尚未推荐内容。",
+      "items": []
+    }
   },
   "entries": {
     "hidden": false,

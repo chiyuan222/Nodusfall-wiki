@@ -6,9 +6,10 @@ import type { MediaSlot } from "@/lib/world-content";
  * 视频使用原生 <video controls>，无第三方依赖；poster 留空时浏览器取首帧。
  */
 
-type Variant = "hero" | "entry" | "card";
+type Variant = "banner" | "hero" | "entry" | "card";
 
 const ASPECT: Record<Variant, string> = {
+  banner: "aspect-video",
   hero: "aspect-[21/9]",
   entry: "aspect-[4/3]",
   card: "aspect-[3/2]",
