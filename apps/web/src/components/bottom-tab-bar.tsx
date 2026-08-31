@@ -15,7 +15,7 @@ export function BottomTabBar() {
       aria-label="底部导航"
       className="fixed inset-x-0 bottom-0 z-40 border-t border-border-subtle bg-surface/95 backdrop-blur lg:hidden"
     >
-      <div className="grid grid-cols-5">
+      <div className="grid grid-cols-6">
         {items.map((item) => {
           const active =
             item.href === "/"

@@ -1,5 +1,13 @@
 import type { Metadata, Viewport } from "next";
+import { JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+
+const jetBrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  variable: "--font-mono-web",
+  display: "swap",
+});
 import { SiteHeader } from "@/components/site-header";
 import { BottomTabBar } from "@/components/bottom-tab-bar";
 import { SiteFooter } from "@/components/site-footer";
@@ -29,7 +37,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="zh-CN">
+    <html lang="zh-CN" className={jetBrainsMono.variable}>
+      <head>
+        {/* 衬线标题 webfont（display=swap；加载失败时回落 tokens.css 本地衬线栈）。
+            思源宋体 CJK 无法经 next/font 子集化，故用 <link> 引入。 */}
+        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;600;700&display=swap"
+        />
+      </head>
       <body className="flex min-h-dvh flex-col">
         <SiteHeader />
         <main id="main" className="mx-auto w-full max-w-page flex-1 px-4 py-6 md:px-6">

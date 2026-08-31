@@ -5,28 +5,40 @@ export default function HomePage() {
   return (
     <div className="space-y-12">
       {/* 首屏：节点母题主视觉 */}
-      <section className="rounded-lg border border-border-subtle bg-surface px-6 py-16 text-center shadow-card md:py-24">
-        <p className="text-caption uppercase tracking-widest text-faint">
+      <section className="relative overflow-hidden rounded-lg border border-border-subtle bg-surface px-6 py-16 text-center shadow-card md:py-24">
+        {/* 琥珀辉光 */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute left-1/2 top-0 h-72 w-[42rem] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-25 blur-3xl"
+          style={{ background: "radial-gradient(closest-side, var(--accent-amber), transparent)" }}
+        />
+        <p className="relative text-caption uppercase tracking-[0.4em] text-faint">
           Nodusfall · 非官方玩家社区
         </p>
-        <h1 className="mx-auto mt-4 max-w-reading font-serif text-display font-semibold leading-tight">
+        <h1 className="relative mx-auto mt-4 max-w-reading font-serif text-display font-semibold leading-tight">
           万物之结，由此而始
         </h1>
-        <p className="mx-auto mt-4 max-w-reading text-body text-secondary">
+        <p className="relative mx-auto mt-4 max-w-reading text-body text-secondary">
           《源初之结》的玩家 Wiki、攻略与讨论论坛。资料由社区共同维护。
         </p>
-        <div className="mt-8 flex flex-wrap justify-center gap-3">
+        <div className="relative mt-8 flex flex-wrap justify-center gap-3">
+          <Link
+            href="/world"
+            className="rounded-md bg-amber px-6 py-2.5 text-small font-medium text-amber-fg transition-opacity duration-fast hover:opacity-90"
+          >
+            世界观导览
+          </Link>
           <Link
             href="/wiki"
-            className="rounded-md bg-amber px-6 py-2.5 text-small font-medium text-amber-fg transition-opacity duration-fast hover:opacity-90"
+            className="rounded-md border border-border-subtle bg-raised px-6 py-2.5 text-small text-primary transition-colors duration-fast hover:border-amber-soft"
           >
             浏览 Wiki
           </Link>
           <Link
             href="/guides"
-            className="rounded-md border border-border-subtle bg-raised px-6 py-2.5 text-small text-primary transition-colors duration-fast hover:border-amber-soft"
+            className="rounded-md px-6 py-2.5 text-small text-secondary transition-colors duration-fast hover:text-primary"
           >
-            查看攻略
+            查看攻略 →
           </Link>
         </div>
       </section>

@@ -6,6 +6,7 @@ import { KnotMark } from "./knot-mark";
 
 export const NAV_ITEMS = [
   { href: "/", label: "首页" },
+  { href: "/world", label: "世界观" },
   { href: "/wiki", label: "Wiki" },
   { href: "/guides", label: "攻略" },
   { href: "/forum", label: "论坛" },

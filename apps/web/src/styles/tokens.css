@@ -24,14 +24,16 @@
   --semantic-info: #5b7b9a;
 
   /* ---------- 字体 ---------- */
+  /* --font-serif-web / --font-mono-web 由 next/font 在 <html> 注入；未加载时回落本地栈 */
   --font-sans:
     "Inter", -apple-system, "PingFang SC", "Hiragino Sans GB",
     "Microsoft YaHei", "Noto Sans SC", sans-serif;
   --font-serif:
-    "Source Han Serif SC", "Noto Serif SC", "Songti SC", "SimSun", serif;
+    var(--font-serif-web, "Noto Serif SC"), "Source Han Serif SC", "Songti SC",
+    "SimSun", serif;
   --font-mono:
-    "JetBrains Mono", ui-monospace, "SF Mono", "Cascadia Mono", Consolas,
-    monospace;
+    var(--font-mono-web, "JetBrains Mono"), ui-monospace, "SF Mono",
+    "Cascadia Mono", Consolas, monospace;
 
   /* ---------- 字号 / 行高（见提案 §3.2） ---------- */
   --text-display: 2.125rem; /* 34px */
