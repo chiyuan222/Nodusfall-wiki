@@ -1,6 +1,6 @@
 /**
- * 站点标识：节点-连线母题（「结绳源点」）。
- * 参数化 SVG，同一生成逻辑复用于 favicon、加载动画与空状态插画。
+ * 站点标识：「源初之结」——三环交织的结绳，被一刃斩断（呼应「诸神入刃，斩断死结」）。
+ * 参数化 SVG，同一生成逻辑复用于页头、页脚、favicon、加载动画与空状态插画。
  */
 export function KnotMark({
   size = 28,
@@ -19,21 +19,43 @@ export function KnotMark({
       aria-label="Nodusfall 站点标识"
       className={className}
     >
+      <defs>
+        <radialGradient id="km-glow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="var(--accent-amber)" stopOpacity="0.22" />
+          <stop offset="100%" stopColor="var(--accent-amber)" stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id="km-thread" x1="6" y1="6" x2="26" y2="26">
+          <stop offset="0%" stopColor="var(--accent-amber)" />
+          <stop offset="100%" stopColor="var(--accent-amber-soft)" />
+        </linearGradient>
+      </defs>
+
+      {/* 微光底晕 */}
+      <circle cx="16" cy="16" r="14" fill="url(#km-glow)" />
+
+      {/* 三环交织的结绳（波罗米环式） */}
+      <g stroke="url(#km-thread)" strokeWidth="1.7" strokeLinecap="round">
+        <circle cx="16" cy="11" r="6.5" />
+        <circle cx="11.4" cy="19" r="6.5" />
+        <circle cx="20.6" cy="19" r="6.5" />
+      </g>
+
+      {/* 斩断死结的一刃：先以底色开缝，再压刃线 */}
       <path
-        d="M6 22 C6 14, 12 10, 16 10 C20 10, 26 14, 26 22"
-        stroke="var(--accent-amber)"
-        strokeWidth="1.5"
+        d="M24.5 5.5 L8 26.5"
+        stroke="var(--bg-canvas)"
+        strokeWidth="4.2"
         strokeLinecap="round"
       />
       <path
-        d="M6 22 C10 26, 22 26, 26 22"
-        stroke="var(--accent-amber-soft)"
-        strokeWidth="1.5"
+        d="M24.5 5.5 L8 26.5"
+        stroke="var(--text-primary)"
+        strokeWidth="1.9"
         strokeLinecap="round"
       />
-      <circle cx="16" cy="10" r="2.5" fill="var(--accent-amber)" />
-      <circle cx="6" cy="22" r="2" fill="var(--text-secondary)" />
-      <circle cx="26" cy="22" r="2" fill="var(--text-secondary)" />
+
+      {/* 源点 */}
+      <circle cx="16" cy="16" r="2.1" fill="var(--accent-amber)" />
     </svg>
   );
 }

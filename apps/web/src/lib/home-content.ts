@@ -48,6 +48,8 @@ export interface HomeDigestItem {
   title: string;
   url: string;
   excerpt: string;
+  /** 缩略图路径（可留空）；显示在条目行右侧，与文字并列 */
+  image: string;
 }
 
 export interface HomeDigestColumn {

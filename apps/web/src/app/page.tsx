@@ -142,40 +142,72 @@ export default async function HomePage() {
                   {key === "latest" ? "NEWS" : "PICKS"}
                 </span>
               </div>
-              {col.items.length > 0 ? (
-                <ol className="mt-2 divide-y divide-border-subtle">
-                  {col.items.map((item, i) => (
-                    <li key={`${item.url}-${i}`}>
-                      <Link
-                        href={item.url || "/"}
-                        className="group flex items-baseline gap-3 py-3"
-                      >
-                        {item.tag && (
-                          <span className="shrink-0 rounded-sm border border-amber-soft/60 px-1.5 py-0.5 font-mono text-caption text-amber">
-                            {item.tag}
-                          </span>
-                        )}
-                        <span className="min-w-0">
-                          <span className="block truncate text-small font-medium text-primary group-hover:text-amber">
-                            {item.title || "（待填写标题）"}
-                          </span>
-                          {item.excerpt && (
-                            <span className="mt-0.5 line-clamp-1 block text-caption text-secondary">
-                              {item.excerpt}
+              {(() => {
+                const slots = Array.from(
+                  { length: Math.max(6, col.items.length) },
+                  (_, i) => col.items[i] ?? null,
+                );
+                return (
+                  <ol className="mt-2 divide-y divide-border-subtle">
+                    {slots.map((item, i) =>
+                      item ? (
+                        <li key={`${item.url}-${i}`}>
+                          <Link
+                            href={item.url || "/"}
+                            className="group flex items-center gap-4 py-3"
+                          >
+                            <span className="min-w-0 grow">
+                              <span className="flex items-center gap-2">
+                                {item.tag && (
+                                  <span className="shrink-0 rounded-sm border border-amber-soft/60 px-1.5 py-0.5 font-mono text-caption text-amber">
+                                    {item.tag}
+                                  </span>
+                                )}
+                                <span className="truncate text-body font-medium text-primary group-hover:text-amber">
+                                  {item.title || "（待填写标题）"}
+                                </span>
+                              </span>
+                              {item.excerpt && (
+                                <span className="mt-1 line-clamp-1 block text-small text-secondary">
+                                  {item.excerpt}
+                                </span>
+                              )}
+                              {item.date && (
+                                <time className="mt-1 block font-mono text-caption text-faint">
+                                  {item.date}
+                                </time>
+                              )}
                             </span>
-                          )}
-                        </span>
-                        {item.date && (
-                          <time className="ml-auto shrink-0 font-mono text-caption text-faint">
-                            {item.date}
-                          </time>
-                        )}
-                      </Link>
-                    </li>
-                  ))}
-                </ol>
-              ) : (
-                <p className="mt-4 rounded-sm border border-dashed border-border-subtle px-4 py-6 text-center font-mono text-caption text-faint">
+                            {item.image && (
+                              // eslint-disable-next-line @next/next/no-img-element -- 管理员自填的缩略图路径
+                              <img
+                                src={item.image}
+                                alt=""
+                                loading="lazy"
+                                className="h-14 w-24 shrink-0 rounded-sm border border-border-subtle object-cover"
+                              />
+                            )}
+                          </Link>
+                        </li>
+                      ) : (
+                        <li key={`empty-${i}`} aria-hidden>
+                          <span className="flex items-center gap-4 py-3 opacity-50">
+                            <span className="min-w-0 grow">
+                              <span className="block h-4 w-2/3 rounded-sm border border-dashed border-border-subtle" />
+                              <span className="mt-1.5 block h-3 w-1/3 rounded-sm border border-dashed border-border-subtle" />
+                            </span>
+                            <span className="flex h-14 w-24 shrink-0 items-center justify-center rounded-sm border border-dashed border-border-subtle font-mono text-caption text-faint">
+                              {String(i + 1).padStart(2, "0")}
+                            </span>
+                          </span>
+                        </li>
+                      ),
+                    )}
+                  </ol>
+                );
+              })()}
+              {col.items.length === 0 && (
+                <p className="mt-3 text-center font-mono text-caption text-faint">
                   {col.emptyText || "待管理员补充。"}
                 </p>
               )}

@@ -20,7 +20,8 @@
     "ctas": [
       { "label": "游戏总览", "href": "/world", "style": "primary" },
       { "label": "浏览 Wiki", "href": "/wiki", "style": "ghost" },
-      { "label": "查看攻略", "href": "/guides", "style": "ghost" }
+      { "label": "查看攻略", "href": "/guides", "style": "ghost" },
+      { "label": "浏览论坛", "href": "/forum", "style": "ghost" }
     ]
   },
   "notice": {

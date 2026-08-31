@@ -301,6 +301,9 @@ export function HomeEditor() {
                                   <div className="md:col-span-3">
                                     <Field label="简介（可留空）" value={item.excerpt} onChange={(v) => mutate((d) => void (d.digest[key].items[j]!.excerpt = v))} />
                                   </div>
+                                  <div className="md:col-span-3">
+                                    <Field label="缩略图路径（可留空，显示在条目右侧）" value={item.image} onChange={(v) => mutate((d) => void (d.digest[key].items[j]!.image = v))} placeholder="/content/thumb.webp" />
+                                  </div>
                                 </div>
                               </ItemCard>
                             ))}
@@ -310,7 +313,7 @@ export function HomeEditor() {
                             className={`${addBtnCls} mt-3`}
                             onClick={() =>
                               listOp((d) => d.digest[key].items, "add", {
-                                item: { date: "", tag: "", title: "", url: "", excerpt: "" },
+                                item: { date: "", tag: "", title: "", url: "", excerpt: "", image: "" },
                               })
                             }
                           >
