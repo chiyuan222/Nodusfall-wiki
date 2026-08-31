@@ -21,6 +21,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/content/pages/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 获取页面内容（home / world） */
+        get: operations["getContentPage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/content/pages/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** 保存页面内容（管理员写） */
+        put: operations["putContentPage"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/users": {
         parameters: {
             query?: never;
@@ -663,6 +697,8 @@ export interface components {
             average: number;
             /** @example 42 */
             count: number;
+            /** @example 4 */
+            myScore: number | null;
             /**
              * @example {
              *       "1": 1,
@@ -693,11 +729,15 @@ export interface components {
             id: string;
             boardSlug: string;
             title: string;
+            excerpt: string;
+            /** Format: uri */
+            coverImage: string | null;
             author: components["schemas"]["UserSummary"];
             pinned: boolean;
             locked: boolean;
             replyCount: number;
             likeCount: number;
+            bookmarkedByMe: boolean;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -783,6 +823,178 @@ export interface components {
             url: string;
             expiresIn: number;
         };
+        ContentMeta: {
+            pageId: string;
+            updatedAt: string;
+            maintainer: string;
+            note: string;
+        };
+        MediaSlot: {
+            /** @enum {string} */
+            kind: "image" | "video";
+            src: string;
+            alt: string;
+            poster: string;
+        };
+        Cta: {
+            label: string;
+            href: string;
+            /** @enum {string} */
+            style: "primary" | "ghost";
+        };
+        HomeHero: {
+            hidden?: boolean;
+            kicker: string;
+            title: string;
+            lead: string;
+            media: components["schemas"]["MediaSlot"];
+            ctas: components["schemas"]["Cta"][];
+        };
+        HomeNotice: {
+            hidden?: boolean;
+            text: string;
+            linkLabel: string;
+            linkHref: string;
+        };
+        HomeEntryCard: {
+            title: string;
+            desc: string;
+            href: string;
+            media: components["schemas"]["MediaSlot"];
+        };
+        HomeEntries: {
+            hidden?: boolean;
+            title: string;
+            cards: components["schemas"]["HomeEntryCard"][];
+        };
+        HomeDigestItem: {
+            date: string;
+            tag: string;
+            title: string;
+            url: string;
+            excerpt: string;
+            image: string;
+        };
+        HomeDigestColumn: {
+            title: string;
+            emptyText: string;
+            items: components["schemas"]["HomeDigestItem"][];
+        };
+        HomeDigest: {
+            hidden?: boolean;
+            latest: components["schemas"]["HomeDigestColumn"];
+            featured: components["schemas"]["HomeDigestColumn"];
+        };
+        HomePageContent: {
+            meta: components["schemas"]["ContentMeta"];
+            sections: ("hero" | "notice" | "digest" | "entries")[];
+            hero: components["schemas"]["HomeHero"];
+            notice: components["schemas"]["HomeNotice"];
+            digest: components["schemas"]["HomeDigest"];
+            entries: components["schemas"]["HomeEntries"];
+        };
+        WorldHero: {
+            hidden?: boolean;
+            kicker: string;
+            title: string;
+            subtitle: string;
+            lead: string;
+            art: components["schemas"]["MediaSlot"];
+            chips: {
+                label: string;
+                value: string;
+            }[];
+            ctas: components["schemas"]["Cta"][];
+        };
+        WorldOverview: {
+            hidden?: boolean;
+            title: string;
+            lead: string;
+            facts: {
+                label: string;
+                value: string;
+            }[];
+        };
+        WorldviewEntry: {
+            no: string;
+            title: string;
+            en: string;
+            body: string;
+            tag: string;
+            image: components["schemas"]["MediaSlot"];
+        };
+        WorldWorldview: {
+            hidden?: boolean;
+            title: string;
+            intro: string;
+            entries: components["schemas"]["WorldviewEntry"][];
+        };
+        GameplayFeature: {
+            no: string;
+            title: string;
+            body: string;
+            image: components["schemas"]["MediaSlot"];
+        };
+        WorldGameplay: {
+            hidden?: boolean;
+            title: string;
+            intro: string;
+            features: components["schemas"]["GameplayFeature"][];
+        };
+        WorldOfficialLink: {
+            label: string;
+            url: string;
+            desc: string;
+        };
+        WorldOfficial: {
+            hidden?: boolean;
+            title: string;
+            links: components["schemas"]["WorldOfficialLink"][];
+        };
+        RepostItem: {
+            date: string;
+            source: string;
+            title: string;
+            url: string;
+            excerpt: string;
+            media: components["schemas"]["MediaSlot"];
+        };
+        WorldReposts: {
+            hidden?: boolean;
+            title: string;
+            intro: string;
+            emptyText: string;
+            items: components["schemas"]["RepostItem"][];
+        };
+        NewsItem: {
+            date: string;
+            tag: string;
+            title: string;
+            url: string;
+            excerpt: string;
+            media: components["schemas"]["MediaSlot"];
+        };
+        WorldNews: {
+            hidden?: boolean;
+            title: string;
+            emptyText: string;
+            items: components["schemas"]["NewsItem"][];
+        };
+        WorldPageContent: {
+            meta: components["schemas"]["ContentMeta"];
+            sections: ("hero" | "overview" | "worldview" | "gameplay" | "official" | "reposts" | "news")[];
+            hero: components["schemas"]["WorldHero"];
+            overview: components["schemas"]["WorldOverview"];
+            worldview: components["schemas"]["WorldWorldview"];
+            gameplay: components["schemas"]["WorldGameplay"];
+            official: components["schemas"]["WorldOfficial"];
+            reposts: components["schemas"]["WorldReposts"];
+            news: components["schemas"]["WorldNews"];
+        };
+        ContentPageResponse: {
+            data: components["schemas"]["HomePageContent"] | components["schemas"]["WorldPageContent"];
+        };
+        ContentPageWrite: components["schemas"]["HomePageContent"] | components["schemas"]["WorldPageContent"];
     };
     responses: {
         /** @description 请求校验失败 */
@@ -1006,6 +1218,8 @@ export interface components {
                 "application/json": {
                     title: string;
                     content: string;
+                    /** Format: uri */
+                    coverImage?: string | null;
                 };
             };
         };
@@ -1015,6 +1229,8 @@ export interface components {
                     title?: string;
                     pinned?: boolean;
                     locked?: boolean;
+                    /** Format: uri */
+                    coverImage?: string | null;
                 };
             };
         };
@@ -1065,6 +1281,58 @@ export interface operations {
                     "application/json": components["schemas"]["Health"];
                 };
             };
+        };
+    };
+    getContentPage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: "home" | "world";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 页面内容 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContentPageResponse"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    putContentPage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: "home" | "world";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContentPageWrite"];
+            };
+        };
+        responses: {
+            /** @description 保存后的页面内容 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContentPageResponse"];
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     registerUser: {
