@@ -1,21 +1,57 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { DetailSkeleton } from "@/components/skeleton";
+import { notFound } from "next/navigation";
+import { guidesApi, type Guide, type RatingSummary } from "@/lib/api";
+import { ApiError } from "@/lib/errors";
+import { Markdown } from "@/components/markdown";
+import { CommentSection } from "@/components/comment-section";
+import { RatingPanel } from "@/components/rating-panel";
+import { RatingStars } from "@/components/rating-stars";
+
+async function loadGuide(slug: string): Promise<Guide> {
+  try {
+    return await guidesApi.get(slug);
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) notFound();
+    throw e;
+  }
+}
 
 export async function generateMetadata({
   params,
 }: {
   params: { slug: string };
 }): Promise<Metadata> {
-  return { title: `攻略 ${params.slug}` };
+  try {
+    const guide = await guidesApi.get(params.slug);
+    return { title: guide.title, description: guide.excerpt };
+  } catch {
+    return { title: "攻略" };
+  }
 }
 
-/** 攻略详情骨架：面包屑 + 正文 + 评分面板 + 评论区 */
-export default function GuideDetailPage({
+export default async function GuideDetailPage({
   params,
 }: {
   params: { slug: string };
 }) {
+  const guide = await loadGuide(params.slug);
+  const emptyPage = {
+    data: [],
+    pagination: { page: 1, perPage: 20, total: 0, totalPages: 0, hasMore: false },
+  };
+  const [rating, comments] = await Promise.all([
+    guidesApi.rating(params.slug).catch(
+      (): RatingSummary => ({
+        average: guide.rating,
+        count: guide.ratingCount ?? 0,
+        myScore: null,
+        distribution: {},
+      }),
+    ),
+    guidesApi.comments(params.slug).catch(() => emptyPage),
+  ]);
+
   return (
     <div className="mx-auto max-w-page">
       {/* 面包屑 */}
@@ -24,48 +60,50 @@ export default function GuideDetailPage({
           GUIDES
         </Link>
         <span aria-hidden>/</span>
-        <span className="truncate text-faint">{params.slug}</span>
+        <span className="truncate text-faint">{guide.title}</span>
       </nav>
 
       <div className="mt-6 space-y-10">
-        <article>
-          <DetailSkeleton />
+        <article className="space-y-6">
+          <header className="max-w-reading space-y-4">
+            <h1 className="font-serif text-display font-semibold">{guide.title}</h1>
+            {guide.excerpt && (
+              <p className="text-body text-secondary">{guide.excerpt}</p>
+            )}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-caption text-faint">
+              <span>{guide.author.displayName}</span>
+              <span aria-hidden>·</span>
+              <time dateTime={guide.updatedAt}>
+                更新于 {new Date(guide.updatedAt).toLocaleDateString("zh-CN")}
+              </time>
+              <span aria-hidden>·</span>
+              <RatingStars rating={guide.rating} count={guide.ratingCount} />
+            </div>
+            {guide.tags.length > 0 && (
+              <ul className="flex flex-wrap gap-2" aria-label="标签">
+                {guide.tags.map((tag) => (
+                  <li
+                    key={tag}
+                    className="rounded-sm border border-border-subtle px-2 py-0.5 font-mono text-caption text-secondary"
+                  >
+                    {tag}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </header>
+
+          <Markdown content={guide.content} />
         </article>
 
-        {/* 评分面板占位 */}
-        <section
-          aria-labelledby="rating-panel"
-          className="max-w-reading rounded-md border border-border-subtle bg-surface p-6"
-        >
-          <h2 id="rating-panel" className="font-serif text-h2 font-semibold">
-            评分
-          </h2>
-          <div className="mt-4 space-y-2" aria-hidden>
-            <span className="block h-4 w-1/4 rounded-sm border border-dashed border-border-subtle" />
-            {[5, 4, 3, 2, 1].map((star) => (
-              <span key={star} className="flex items-center gap-3">
-                <span className="w-6 text-right font-mono text-caption text-faint">{star}★</span>
-                <span className="block h-3 flex-1 rounded-sm border border-dashed border-border-subtle" />
-              </span>
-            ))}
-          </div>
-          <p className="mt-4 text-caption text-faint">
-            平均分、分布与「我的评分」将在契约确认 myScore 字段后启用。
-          </p>
-        </section>
+        <RatingPanel slug={params.slug} initial={rating} />
 
-        {/* 评论区占位 */}
-        <section
-          aria-labelledby="guide-comments"
-          className="rounded-md border border-border-subtle bg-surface p-6"
-        >
-          <h2 id="guide-comments" className="font-serif text-h2 font-semibold">
-            讨论
-          </h2>
-          <p className="mt-3 rounded-sm border border-dashed border-border-subtle px-4 py-6 text-center font-mono text-caption text-faint">
-            评论区将在后端数据接入后启用
-          </p>
-        </section>
+        <CommentSection
+          targetType="guide"
+          slug={params.slug}
+          initial={comments}
+          title="讨论"
+        />
       </div>
     </div>
   );

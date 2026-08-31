@@ -1,8 +1,9 @@
-"use client";
-
 /**
  * 认证会话存储：accessToken 放内存，refreshToken/sessionId 持久化到 localStorage。
  * 契约：AuthSession { accessToken, refreshToken, tokenType, expiresIn, sessionId, user }
+ *
+ * 注意：本模块是同构的（服务端渲染时所有 window 访问均已守卫，返回 null），
+ * 不得添加 "use client" —— 服务端组件经 api-client 间接引用本模块。
  */
 
 const STORAGE_KEY = "nodusfall.session.v1";
