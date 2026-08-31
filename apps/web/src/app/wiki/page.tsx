@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { KnotMark } from "@/components/knot-mark";
+import { WikiEditEntry } from "@/components/wiki/wiki-edit-entry";
 import { getWikiIndexData, USE_MOCK } from "@/lib/data";
 
 export const dynamic = "force-dynamic";
@@ -42,6 +43,9 @@ export default async function WikiIndexPage() {
             </span>
           )}
         </p>
+        <div className="mt-5">
+          <WikiEditEntry variant="new" />
+        </div>
       </header>
 
       <div className="grid gap-6 lg:grid-cols-12">

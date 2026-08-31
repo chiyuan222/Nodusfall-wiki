@@ -5,6 +5,7 @@ import { wikiApi, type WikiPage } from "@/lib/api";
 import { ApiError } from "@/lib/errors";
 import { Markdown, slugifyHeading } from "@/components/markdown";
 import { CommentSection } from "@/components/comment-section";
+import { WikiEditEntry } from "@/components/wiki/wiki-edit-entry";
 
 async function loadPage(slug: string): Promise<WikiPage> {
   try {
@@ -80,6 +81,7 @@ export default async function WikiPageDetail({
               </time>
               <span aria-hidden>·</span>
               <span>v{page.version} · {page.revisionCount} 次修订</span>
+              <WikiEditEntry variant="edit" slug={page.slug} />
             </div>
             {page.tags.length > 0 && (
               <ul className="flex flex-wrap gap-2" aria-label="标签">
