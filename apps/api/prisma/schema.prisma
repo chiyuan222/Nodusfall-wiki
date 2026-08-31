@@ -1,0 +1,233 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  GUEST
+  MEMBER
+  EDITOR
+  MODERATOR
+  ADMIN
+}
+
+enum ContentStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum CommentTargetType {
+  WIKI_PAGE
+  GUIDE
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  username     String   @unique
+  passwordHash String
+  displayName  String?
+  avatarUrl    String?
+  bio          String?
+  role         UserRole @default(MEMBER)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  sessions      Session[]
+  wikiPages     WikiPage[]        @relation("WikiPageAuthor")
+  wikiRevisions WikiPageRevision[] @relation("WikiRevisionAuthor")
+  guides        Guide[]           @relation("GuideAuthor")
+  ratings       Rating[]          @relation("RatingUser")
+  threads       ForumThread[]     @relation("ThreadAuthor")
+  posts         ForumPost[]       @relation("PostAuthor")
+  comments      Comment[]         @relation("CommentAuthor")
+  uploads       Upload[]          @relation("UploadUser")
+  postLikes     ForumPostLike[]   @relation("PostLikeUser")
+  bookmarks     ForumThreadBookmark[] @relation("ThreadBookmarkUser")
+  commentLikes  CommentLike[]     @relation("CommentLikeUser")
+}
+
+model Session {
+  id               String    @id @default(uuid())
+  userId           String
+  user             User      @relation(fields: [userId], references: [id])
+  refreshTokenHash String
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  createdAt        DateTime  @default(now())
+}
+
+model WikiCategory {
+  id          String      @id @default(uuid())
+  slug        String      @unique
+  name        String
+  description String?
+  sortOrder   Int         @default(0)
+  pages       WikiPage[]
+}
+
+model WikiPage {
+  id          String        @id @default(uuid())
+  slug        String        @unique
+  title       String
+  content     String
+  excerpt     String
+  categoryId  String
+  category    WikiCategory  @relation(fields: [categoryId], references: [id])
+  tags        String[]
+  status      ContentStatus @default(DRAFT)
+  version     Int           @default(1)
+  authorId    String
+  author      User          @relation("WikiPageAuthor", fields: [authorId], references: [id])
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  revisions   WikiPageRevision[]
+}
+
+model WikiPageRevision {
+  id        String    @id @default(uuid())
+  pageId    String
+  page      WikiPage  @relation(fields: [pageId], references: [id])
+  version   Int
+  title     String
+  content   String
+  changelog String?
+  authorId  String
+  author    User      @relation("WikiRevisionAuthor", fields: [authorId], references: [id])
+  createdAt DateTime  @default(now())
+}
+
+model Guide {
+  id               String        @id @default(uuid())
+  slug             String        @unique
+  title            String
+  content          String
+  excerpt          String
+  tags             String[]
+  status           ContentStatus @default(DRAFT)
+  relatedCharacter String?
+  ratingAvg        Float         @default(0)
+  ratingCount      Int           @default(0)
+  authorId         String
+  author           User          @relation("GuideAuthor", fields: [authorId], references: [id])
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  ratings          Rating[]
+}
+
+model Rating {
+  id        String   @id @default(uuid())
+  guideId   String
+  guide     Guide    @relation(fields: [guideId], references: [id])
+  userId    String
+  user      User     @relation("RatingUser", fields: [userId], references: [id])
+  score     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([guideId, userId])
+}
+
+model ForumBoard {
+  id          String        @id @default(uuid())
+  slug        String        @unique
+  name        String
+  description String?
+  sortOrder   Int           @default(0)
+  threads     ForumThread[]
+}
+
+model ForumThread {
+  id          String     @id @default(uuid())
+  boardId     String
+  board       ForumBoard @relation(fields: [boardId], references: [id])
+  title       String
+  content     String
+  authorId    String
+  author      User       @relation("ThreadAuthor", fields: [authorId], references: [id])
+  pinned      Boolean    @default(false)
+  locked      Boolean    @default(false)
+  replyCount  Int        @default(0)
+  likeCount   Int        @default(0)
+  lastPostAt  DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  posts       ForumPost[]
+  bookmarks   ForumThreadBookmark[]
+}
+
+model ForumPost {
+  id        String       @id @default(uuid())
+  threadId  String
+  thread    ForumThread  @relation(fields: [threadId], references: [id])
+  authorId  String
+  author    User         @relation("PostAuthor", fields: [authorId], references: [id])
+  content   String
+  floor     Int
+  likeCount Int          @default(0)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  likes     ForumPostLike[]
+}
+
+model ForumPostLike {
+  id        String     @id @default(uuid())
+  postId    String
+  post      ForumPost  @relation(fields: [postId], references: [id])
+  userId    String
+  user      User       @relation("PostLikeUser", fields: [userId], references: [id])
+  createdAt DateTime   @default(now())
+
+  @@unique([postId, userId])
+}
+
+model ForumThreadBookmark {
+  id        String      @id @default(uuid())
+  threadId  String
+  thread    ForumThread @relation(fields: [threadId], references: [id])
+  userId    String
+  user      User        @relation("ThreadBookmarkUser", fields: [userId], references: [id])
+  createdAt DateTime    @default(now())
+
+  @@unique([threadId, userId])
+}
+
+model Comment {
+  id         String            @id @default(uuid())
+  targetType CommentTargetType
+  targetId   String
+  authorId   String
+  author     User              @relation("CommentAuthor", fields: [authorId], references: [id])
+  content    String
+  likeCount  Int               @default(0)
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  likes      CommentLike[]
+}
+
+model CommentLike {
+  id        String   @id @default(uuid())
+  commentId String
+  comment   Comment  @relation(fields: [commentId], references: [id])
+  userId    String
+  user      User     @relation("CommentLikeUser", fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([commentId, userId])
+}
+
+model Upload {
+  id        String   @id @default(uuid())
+  url       String
+  key       String
+  mimeType  String
+  size      Int
+  userId    String
+  user      User     @relation("UploadUser", fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+}
