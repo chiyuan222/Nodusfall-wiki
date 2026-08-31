@@ -74,11 +74,13 @@ export interface ForumIndexData {
 }
 
 export async function getForumIndexData(): Promise<ForumIndexData | null> {
-  const [boards, threads] = await Promise.all([
-    tryFetch<{ data: ForumBoard[] }>("/forum/boards"),
-    tryFetch<ListResult<ForumThreadSummary>>("/forum/boards/mock-general/threads"),
-  ]);
+  const boards = await tryFetch<{ data: ForumBoard[] }>("/forum/boards");
   if (boards) {
+    // 契约冻结后：首个板块作为首页帖子流来源，slug 来自真实数据而非硬编码
+    const firstSlug = boards.data[0]?.slug;
+    const threads = firstSlug
+      ? await tryFetch<ListResult<ForumThreadSummary>>(`/forum/boards/${firstSlug}/threads`)
+      : null;
     return {
       boards: boards.data,
       threads: threads ?? { data: [], pagination: mockPagination(0) },
