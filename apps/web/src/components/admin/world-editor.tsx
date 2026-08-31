@@ -1,154 +1,35 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type {
-  WorldPageContent,
-  WorldSectionId,
+import Link from "next/link";
+import {
+  emptyMedia,
+  WORLD_SECTION_LABEL,
+  type WorldPageContent,
+  type WorldSectionId,
 } from "@/lib/world-content";
-import { WORLD_SECTION_LABEL } from "@/lib/world-content";
+import {
+  addBtnCls,
+  Field,
+  ItemCard,
+  MediaField,
+  RowActions,
+} from "./editor-controls";
 
 /**
  * /world 总览页内容编辑器（临时本地方案，待后端 CMS 契约冻结后替换为接口读写）
  *
  * 工作流：编辑 → 「下载 JSON」→ 替换 apps/web/public/content/world-page.json 并提交。
- * 图片：把图片文件放入 apps/web/public/content/，在图片字段填相对路径（如 /content/key-art.webp）。
+ * 媒体文件：把图片/视频放入 apps/web/public/content/，在媒体字段填相对路径。
  */
 
 type Draft = WorldPageContent;
 
-/* ---------- 基础控件 ---------- */
-
-function Field({
-  label,
-  value,
-  onChange,
-  textarea = false,
-  placeholder,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  textarea?: boolean;
-  placeholder?: string;
-}) {
-  return (
-    <label className="block">
-      <span className="mb-1 block font-mono text-caption text-faint">{label}</span>
-      {textarea ? (
-        <textarea
-          value={value}
-          placeholder={placeholder}
-          onChange={(e) => onChange(e.target.value)}
-          rows={3}
-          className="w-full rounded-md border border-border-subtle bg-raised px-3 py-2 text-small text-primary placeholder:text-faint focus:border-amber-soft"
-        />
-      ) : (
-        <input
-          value={value}
-          placeholder={placeholder}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-full rounded-md border border-border-subtle bg-raised px-3 py-2 text-small text-primary placeholder:text-faint focus:border-amber-soft"
-        />
-      )}
-    </label>
-  );
-}
-
-function ImageField({
-  value,
-  onChange,
-}: {
-  value: { src: string; alt: string };
-  onChange: (v: { src: string; alt: string }) => void;
-}) {
-  return (
-    <div className="rounded-md border border-border-subtle p-3">
-      <Field
-        label="图片路径（留空 = 占位画框；把图片放进 public/content/ 后填如 /content/xxx.webp）"
-        value={value.src}
-        onChange={(src) => onChange({ ...value, src })}
-        placeholder="/content/example.webp"
-      />
-      <div className="mt-2">
-        <Field
-          label="替代文本 alt"
-          value={value.alt}
-          onChange={(alt) => onChange({ ...value, alt })}
-        />
-      </div>
-      {value.src.trim() && (
-        // eslint-disable-next-line @next/next/no-img-element -- 编辑器内预览管理员自填路径
-        <img
-          src={value.src}
-          alt={value.alt || "预览"}
-          className="mt-3 max-h-40 rounded-md border border-border-subtle object-cover"
-        />
-      )}
-    </div>
-  );
-}
-
-function RowActions({
-  index,
-  length,
-  onMove,
-  onRemove,
-}: {
-  index: number;
-  length: number;
-  onMove: (from: number, to: number) => void;
-  onRemove?: (index: number) => void;
-}) {
-  const btn =
-    "rounded-sm border border-border-subtle px-2 py-0.5 text-caption text-secondary hover:border-amber-soft hover:text-amber disabled:opacity-30";
-  return (
-    <span className="flex items-center gap-1">
-      <button type="button" className={btn} disabled={index === 0} onClick={() => onMove(index, index - 1)} aria-label="上移">
-        ↑
-      </button>
-      <button type="button" className={btn} disabled={index === length - 1} onClick={() => onMove(index, index + 1)} aria-label="下移">
-        ↓
-      </button>
-      {onRemove && (
-        <button type="button" className={`${btn} text-danger`} onClick={() => onRemove(index)} aria-label="删除">
-          删
-        </button>
-      )}
-    </span>
-  );
-}
-
-/** 泛型数组编辑器外壳 */
-function ItemCard({
-  title,
-  index,
-  length,
-  onMove,
-  onRemove,
-  children,
-}: {
-  title: string;
-  index: number;
-  length: number;
-  onMove: (from: number, to: number) => void;
-  onRemove?: (index: number) => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="rounded-md border border-border-subtle bg-surface p-4">
-      <div className="mb-3 flex items-center justify-between">
-        <span className="font-mono text-caption text-faint">{title}</span>
-        <RowActions index={index} length={length} onMove={onMove} onRemove={onRemove} />
-      </div>
-      <div className="space-y-3">{children}</div>
-    </div>
-  );
-}
-
-const addBtnCls =
-  "rounded-md border border-dashed border-border-subtle px-4 py-2 text-caption text-faint hover:border-amber-soft hover:text-amber";
-
-/* ---------- 主编辑器 ---------- */
+type ListOp = <T>(
+  get: (d: Draft) => T[],
+  op: "move" | "remove" | "add",
+  payload: { index?: number; to?: number; item?: T },
+) => void;
 
 export function WorldEditor() {
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -183,12 +64,7 @@ export function WorldEditor() {
     setDirty(true);
   };
 
-  /** 数组通用操作 */
-  const listOp = <T,>(
-    get: (d: Draft) => T[],
-    op: "move" | "remove" | "add",
-    payload: { index?: number; to?: number; item?: T },
-  ) =>
+  const listOp: ListOp = (get, op, payload) =>
     mutate((d) => {
       const arr = get(d);
       if (op === "move" && payload.index !== undefined && payload.to !== undefined) {
@@ -261,6 +137,12 @@ export function WorldEditor() {
           </span>
         )}
         <span className="grow" />
+        <Link
+          href="/admin/home"
+          className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary hover:border-amber-soft hover:text-primary"
+        >
+          首页内容管理 →
+        </Link>
         <a
           href="/world"
           target="_blank"
@@ -286,9 +168,9 @@ export function WorldEditor() {
           这是后端 CMS 接口就绪前的<strong className="text-primary">临时本地工作流</strong>：
           在此处编辑 → 点击「下载 JSON」→ 用下载的文件替换仓库中的
           <code className="font-mono text-amber"> apps/web/public/content/world-page.json </code>
-          并提交。图片请先把文件放入
+          并提交。图片/视频请先把文件放入
           <code className="font-mono text-amber"> apps/web/public/content/ </code>
-          再在此填写路径。接口冻结后，本页将改为直接读写后端（契约问题已随 PR 提交给后端 Agent）。
+          再在此填写路径（契约已含 POST /uploads，后端确认管理员用途后本页将改为直传直存）。
         </p>
       </div>
 
@@ -334,6 +216,7 @@ export function WorldEditor() {
                   {id === "worldview" && <WorldviewForm draft={draft} mutate={mutate} listOp={listOp} />}
                   {id === "gameplay" && <GameplayForm draft={draft} mutate={mutate} listOp={listOp} />}
                   {id === "official" && <OfficialForm draft={draft} mutate={mutate} listOp={listOp} />}
+                  {id === "reposts" && <RepostsForm draft={draft} mutate={mutate} listOp={listOp} />}
                   {id === "news" && <NewsForm draft={draft} mutate={mutate} listOp={listOp} />}
                 </div>
               )}
@@ -369,11 +252,7 @@ export function WorldEditor() {
 type FormProps = {
   draft: Draft;
   mutate: (fn: (d: Draft) => void) => void;
-  listOp: <T>(
-    get: (d: Draft) => T[],
-    op: "move" | "remove" | "add",
-    payload: { index?: number; to?: number; item?: T },
-  ) => void;
+  listOp: ListOp;
 };
 
 function HeroForm({ draft, mutate, listOp }: FormProps) {
@@ -386,7 +265,7 @@ function HeroForm({ draft, mutate, listOp }: FormProps) {
       </div>
       <Field label="主标题" value={h.title} onChange={(v) => mutate((d) => void (d.hero.title = v))} />
       <Field label="导语 lead" value={h.lead} textarea onChange={(v) => mutate((d) => void (d.hero.lead = v))} />
-      <ImageField value={h.art} onChange={(v) => mutate((d) => void (d.hero.art = v))} />
+      <MediaField value={h.art} onChange={(v) => mutate((d) => void (d.hero.art = v))} />
 
       <div>
         <p className="mb-2 font-mono text-caption text-faint">信息条 chips</p>
@@ -505,7 +384,7 @@ function WorldviewForm({ draft, mutate, listOp }: FormProps) {
               <Field label="来源标注" value={entry.tag} onChange={(v) => mutate((d) => void (d.worldview.entries[i]!.tag = v))} />
             </div>
             <Field label="正文" value={entry.body} textarea onChange={(v) => mutate((d) => void (d.worldview.entries[i]!.body = v))} />
-            <ImageField value={entry.image} onChange={(v) => mutate((d) => void (d.worldview.entries[i]!.image = v))} />
+            <MediaField value={entry.image} onChange={(v) => mutate((d) => void (d.worldview.entries[i]!.image = v))} />
           </ItemCard>
         ))}
       </div>
@@ -514,7 +393,7 @@ function WorldviewForm({ draft, mutate, listOp }: FormProps) {
         className={`${addBtnCls} mt-3`}
         onClick={() =>
           listOp((d) => d.worldview.entries, "add", {
-            item: { no: String(draft.worldview.entries.length + 1).padStart(2, "0"), title: "", en: "", body: "", tag: "待确认", image: { src: "", alt: "" } },
+            item: { no: String(draft.worldview.entries.length + 1).padStart(2, "0"), title: "", en: "", body: "", tag: "待确认", image: emptyMedia() },
           })
         }
       >
@@ -549,7 +428,7 @@ function GameplayForm({ draft, mutate, listOp }: FormProps) {
                 <Field label="说明" value={feature.body} textarea onChange={(v) => mutate((d) => void (d.gameplay.features[i]!.body = v))} />
               </div>
             </div>
-            <ImageField value={feature.image} onChange={(v) => mutate((d) => void (d.gameplay.features[i]!.image = v))} />
+            <MediaField value={feature.image} onChange={(v) => mutate((d) => void (d.gameplay.features[i]!.image = v))} />
           </ItemCard>
         ))}
       </div>
@@ -558,7 +437,7 @@ function GameplayForm({ draft, mutate, listOp }: FormProps) {
         className={`${addBtnCls} mt-3`}
         onClick={() =>
           listOp((d) => d.gameplay.features, "add", {
-            item: { no: "新", title: "", body: "", image: { src: "", alt: "" } },
+            item: { no: "新", title: "", body: "", image: emptyMedia() },
           })
         }
       >
@@ -573,6 +452,9 @@ function OfficialForm({ draft, mutate, listOp }: FormProps) {
   return (
     <>
       <Field label="板块标题" value={o.title} onChange={(v) => mutate((d) => void (d.official.title = v))} />
+      <p className="text-caption text-faint">
+        URL 留空的链接会在页面上显示为「待补充」态（虚线卡片、不可点击），不会误导访客。
+      </p>
       <div className="space-y-3">
         {o.links.map((link, i) => (
           <ItemCard
@@ -585,7 +467,7 @@ function OfficialForm({ draft, mutate, listOp }: FormProps) {
           >
             <div className="grid gap-3 md:grid-cols-3">
               <Field label="名称" value={link.label} onChange={(v) => mutate((d) => void (d.official.links[i]!.label = v))} />
-              <Field label="URL" value={link.url} onChange={(v) => mutate((d) => void (d.official.links[i]!.url = v))} />
+              <Field label="URL（官方抖音等待补充）" value={link.url} onChange={(v) => mutate((d) => void (d.official.links[i]!.url = v))} />
               <Field label="说明" value={link.desc} onChange={(v) => mutate((d) => void (d.official.links[i]!.desc = v))} />
             </div>
           </ItemCard>
@@ -593,6 +475,54 @@ function OfficialForm({ draft, mutate, listOp }: FormProps) {
       </div>
       <button type="button" className={`${addBtnCls} mt-3`} onClick={() => listOp((d) => d.official.links, "add", { item: { label: "", url: "", desc: "" } })}>
         + 添加链接
+      </button>
+    </>
+  );
+}
+
+function RepostsForm({ draft, mutate, listOp }: FormProps) {
+  const r = draft.reposts;
+  return (
+    <>
+      <div className="grid gap-3 md:grid-cols-2">
+        <Field label="板块标题" value={r.title} onChange={(v) => mutate((d) => void (d.reposts.title = v))} />
+        <Field label="空列表提示语" value={r.emptyText} onChange={(v) => mutate((d) => void (d.reposts.emptyText = v))} />
+      </div>
+      <Field label="板块引言" value={r.intro} onChange={(v) => mutate((d) => void (d.reposts.intro = v))} />
+      <p className="text-caption text-faint">
+        转载条目以「图片/视频 + 标题 + 简介」卡片展示；请务必填写来源渠道与原文链接。
+      </p>
+      <div className="space-y-3">
+        {r.items.map((item, i) => (
+          <ItemCard
+            key={i}
+            title={`items[${i}]`}
+            index={i}
+            length={r.items.length}
+            onMove={(f, t) => listOp((d) => d.reposts.items, "move", { index: f, to: t })}
+            onRemove={(x) => listOp((d) => d.reposts.items, "remove", { index: x })}
+          >
+            <div className="grid gap-3 md:grid-cols-3">
+              <Field label="日期（如 2026-08-20）" value={item.date} onChange={(v) => mutate((d) => void (d.reposts.items[i]!.date = v))} />
+              <Field label="来源渠道（官网 / 哔哩哔哩 / 抖音…）" value={item.source} onChange={(v) => mutate((d) => void (d.reposts.items[i]!.source = v))} />
+              <Field label="原文链接" value={item.url} onChange={(v) => mutate((d) => void (d.reposts.items[i]!.url = v))} />
+            </div>
+            <Field label="标题" value={item.title} onChange={(v) => mutate((d) => void (d.reposts.items[i]!.title = v))} />
+            <Field label="摘要" value={item.excerpt} textarea onChange={(v) => mutate((d) => void (d.reposts.items[i]!.excerpt = v))} />
+            <MediaField value={item.media} onChange={(v) => mutate((d) => void (d.reposts.items[i]!.media = v))} />
+          </ItemCard>
+        ))}
+      </div>
+      <button
+        type="button"
+        className={`${addBtnCls} mt-3`}
+        onClick={() =>
+          listOp((d) => d.reposts.items, "add", {
+            item: { date: "", source: "", title: "", url: "", excerpt: "", media: emptyMedia() },
+          })
+        }
+      >
+        + 添加转载
       </button>
     </>
   );
@@ -606,6 +536,9 @@ function NewsForm({ draft, mutate, listOp }: FormProps) {
         <Field label="板块标题" value={n.title} onChange={(v) => mutate((d) => void (d.news.title = v))} />
         <Field label="空列表提示语" value={n.emptyText} onChange={(v) => mutate((d) => void (d.news.emptyText = v))} />
       </div>
+      <p className="text-caption text-faint">
+        填了图片/视频的动态会以「媒体 + 标题 + 简介」卡片展示；纯文字动态为简洁文字卡。
+      </p>
       <div className="space-y-3">
         {n.items.map((item, i) => (
           <ItemCard
@@ -623,13 +556,18 @@ function NewsForm({ draft, mutate, listOp }: FormProps) {
             </div>
             <Field label="标题" value={item.title} onChange={(v) => mutate((d) => void (d.news.items[i]!.title = v))} />
             <Field label="摘要（可留空）" value={item.excerpt} textarea onChange={(v) => mutate((d) => void (d.news.items[i]!.excerpt = v))} />
+            <MediaField value={item.media ?? emptyMedia()} onChange={(v) => mutate((d) => void (d.news.items[i]!.media = v))} />
           </ItemCard>
         ))}
       </div>
       <button
         type="button"
         className={`${addBtnCls} mt-3`}
-        onClick={() => listOp((d) => d.news.items, "add", { item: { date: "", tag: "", title: "", url: "", excerpt: "" } })}
+        onClick={() =>
+          listOp((d) => d.news.items, "add", {
+            item: { date: "", tag: "", title: "", url: "", excerpt: "", media: emptyMedia() },
+          })
+        }
       >
         + 添加动态
       </button>

@@ -1,8 +1,9 @@
-import type { WorldImage } from "@/lib/world-content";
+import type { MediaSlot } from "@/lib/world-content";
 
 /**
- * 图片槽位：管理员在内容配置里填入 src 即显示真实图片；
+ * 媒体槽位：管理员在内容配置里填入 src 即显示真实图片或视频；
  * 留空时渲染原创线稿占位画（细线结绳 + 星点，随主题变色），并标注「待替换」。
+ * 视频使用原生 <video controls>，无第三方依赖；poster 留空时浏览器取首帧。
  */
 
 type Variant = "hero" | "entry" | "card";
@@ -77,37 +78,50 @@ function PlaceholderArt({ variant }: { variant: Variant }) {
   );
 }
 
-export function ArtSlot({
-  image,
+export function MediaSlotView({
+  media,
   variant,
   hint = true,
   priority = false,
 }: {
-  image: WorldImage;
+  media: MediaSlot;
   variant: Variant;
-  /** 是否显示「待替换」角标（编辑提示，可在大图关闭） */
+  /** 是否显示「待替换」角标（编辑提示） */
   hint?: boolean;
   priority?: boolean;
 }) {
-  const hasImage = image.src.trim().length > 0;
+  const kind = media.kind ?? "image";
+  const hasMedia = media.src.trim().length > 0;
   return (
     <figure
       className={`relative w-full overflow-hidden rounded-md border border-border-subtle bg-raised ${ASPECT[variant]}`}
     >
-      {hasImage ? (
-        // eslint-disable-next-line @next/next/no-img-element -- 管理员自选外链/本地图，运行时路径不固定
-        <img
-          src={image.src}
-          alt={image.alt || ""}
-          loading={priority ? "eager" : "lazy"}
-          className="h-full w-full object-cover"
-        />
+      {hasMedia ? (
+        kind === "video" ? (
+          <video
+            src={media.src}
+            poster={media.poster || undefined}
+            controls
+            playsInline
+            preload="metadata"
+            aria-label={media.alt || undefined}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element -- 管理员自选外链/本地图，运行时路径不固定
+          <img
+            src={media.src}
+            alt={media.alt || ""}
+            loading={priority ? "eager" : "lazy"}
+            className="h-full w-full object-cover"
+          />
+        )
       ) : (
         <PlaceholderArt variant={variant} />
       )}
-      {!hasImage && hint && (
+      {!hasMedia && hint && (
         <figcaption className="absolute bottom-2 right-2 rounded-sm border border-border-subtle bg-canvas/80 px-2 py-0.5 font-mono text-caption text-faint backdrop-blur-sm">
-          图片待管理员替换
+          {kind === "video" ? "视频待管理员替换" : "图片待管理员替换"}
         </figcaption>
       )}
     </figure>

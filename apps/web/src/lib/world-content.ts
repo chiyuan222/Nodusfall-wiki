@@ -8,10 +8,15 @@
  * 读取 JSON 的服务端加载器在 ./world-content.server.ts。
  */
 
-export interface WorldImage {
-  /** 相对 public 的路径，如 /content/hero-key-art.webp；留空则渲染占位画框 */
+/** 媒体槽位：图片或视频（二选一）。src 留空时渲染占位画框。 */
+export interface MediaSlot {
+  kind: "image" | "video";
+  /** 相对 public 的路径（如 /content/hero.webp / /content/pv.mp4）或外链；留空 = 占位 */
   src: string;
+  /** 图片替代文本 / 视频无障碍标签 */
   alt: string;
+  /** 仅视频：封面图路径（留空则浏览器取首帧） */
+  poster: string;
 }
 
 export interface WorldHero {
@@ -20,7 +25,7 @@ export interface WorldHero {
   title: string;
   subtitle: string;
   lead: string;
-  art: WorldImage;
+  art: MediaSlot;
   chips: { label: string; value: string }[];
   ctas: { label: string; href: string; style: "primary" | "ghost" }[];
 }
@@ -39,7 +44,7 @@ export interface WorldviewEntry {
   body: string;
   /** 来源标注：官方已确认 / 画面观测 / 待确认 */
   tag: string;
-  image: WorldImage;
+  image: MediaSlot;
 }
 
 export interface WorldWorldview {
@@ -53,7 +58,7 @@ export interface GameplayFeature {
   no: string;
   title: string;
   body: string;
-  image: WorldImage;
+  image: MediaSlot;
 }
 
 export interface WorldGameplay {
@@ -69,11 +74,41 @@ export interface WorldOfficial {
   links: { label: string; url: string; desc: string }[];
 }
 
+/** 官方信息转载条目：本站转载自官方渠道的内容存档 */
+export interface RepostItem {
+  date: string;
+  /** 来源渠道：官网 / 哔哩哔哩 / 抖音 / 微博… */
+  source: string;
+  title: string;
+  /** 原文链接（可留空） */
+  url: string;
+  excerpt: string;
+  media: MediaSlot;
+}
+
+export interface WorldReposts {
+  hidden?: boolean;
+  title: string;
+  intro: string;
+  emptyText: string;
+  items: RepostItem[];
+}
+
+export interface NewsItem {
+  date: string;
+  tag: string;
+  title: string;
+  url: string;
+  excerpt: string;
+  /** 可选：带图/带视频时，该动态以「媒体 + 标题 + 简介」卡片形式展示 */
+  media: MediaSlot;
+}
+
 export interface WorldNews {
   hidden?: boolean;
   title: string;
   emptyText: string;
-  items: { date: string; tag: string; title: string; url: string; excerpt: string }[];
+  items: NewsItem[];
 }
 
 export type WorldSectionId =
@@ -82,6 +117,7 @@ export type WorldSectionId =
   | "worldview"
   | "gameplay"
   | "official"
+  | "reposts"
   | "news";
 
 export interface WorldPageContent {
@@ -93,6 +129,7 @@ export interface WorldPageContent {
   worldview: WorldWorldview;
   gameplay: WorldGameplay;
   official: WorldOfficial;
+  reposts: WorldReposts;
   news: WorldNews;
 }
 
@@ -102,5 +139,14 @@ export const WORLD_SECTION_LABEL: Record<WorldSectionId, string> = {
   worldview: "世界观",
   gameplay: "玩法",
   official: "官方",
+  reposts: "转载",
   news: "动态",
 };
+
+/** 生成一个空媒体槽位（编辑器新增条目时使用） */
+export const emptyMedia = (): MediaSlot => ({
+  kind: "image",
+  src: "",
+  alt: "",
+  poster: "",
+});

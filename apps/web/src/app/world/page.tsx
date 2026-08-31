@@ -7,7 +7,7 @@ import {
   type WorldSectionId,
 } from "@/lib/world-content";
 import { loadWorldContent } from "@/lib/world-content.server";
-import { ArtSlot } from "@/components/world/art-slot";
+import { MediaSlotView } from "@/components/world/media-slot";
 
 export const dynamic = "force-dynamic";
 
@@ -96,7 +96,7 @@ function HeroSection({ content }: { content: WorldPageContent }) {
       </div>
 
       <div className="mt-8">
-        <ArtSlot image={hero.art} variant="hero" priority />
+        <MediaSlotView media={hero.art} variant="hero" priority />
       </div>
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
@@ -115,7 +115,7 @@ function HeroSection({ content }: { content: WorldPageContent }) {
           cta.style === "primary" ? (
             <Link
               key={`${cta.href}-${i}`}
-              href={cta.href}
+              href={cta.href || "/"}
               className="rounded-md bg-amber px-6 py-2.5 text-small font-medium text-amber-fg transition-opacity duration-fast hover:opacity-90"
             >
               {cta.label}
@@ -123,7 +123,7 @@ function HeroSection({ content }: { content: WorldPageContent }) {
           ) : (
             <a
               key={`${cta.href}-${i}`}
-              href={cta.href}
+              href={cta.href || undefined}
               target="_blank"
               rel="noopener noreferrer"
               className="rounded-md border border-border-subtle bg-raised px-6 py-2.5 text-small text-primary transition-colors duration-fast hover:border-amber-soft"
@@ -174,7 +174,7 @@ function WorldviewSection({ content }: { content: WorldPageContent }) {
           <div
             className={`md:col-span-5 ${i % 2 === 1 ? "md:order-2" : ""}`}
           >
-            <ArtSlot image={entry.image} variant="entry" />
+            <MediaSlotView media={entry.image} variant="entry" />
           </div>
           <div
             className={`relative md:col-span-7 ${i % 2 === 1 ? "md:order-1" : ""}`}
@@ -220,7 +220,7 @@ function GameplaySection({ content }: { content: WorldPageContent }) {
           key={`${feature.no}-${i}`}
           className="group rounded-md border border-border-subtle bg-surface shadow-card transition-colors duration-fast hover:border-amber-soft"
         >
-          <ArtSlot image={feature.image} variant="card" hint={false} />
+          <MediaSlotView media={feature.image} variant="card" hint={false} />
           <div className="p-5">
             <div className="flex items-center gap-3">
               <span className="flex h-8 w-8 items-center justify-center rounded-full border border-amber-soft font-serif text-caption text-amber">
@@ -240,19 +240,15 @@ function GameplaySection({ content }: { content: WorldPageContent }) {
   );
 }
 
-/* ---------- 官方信息：链接卡 ---------- */
+/* ---------- 官方信息：链接卡（含待补充态） ---------- */
 function OfficialSection({ content }: { content: WorldPageContent }) {
   const { official } = content;
   return (
     <ul className="grid gap-4 md:grid-cols-2">
-      {official.links.map((link, i) => (
-        <li key={`${link.url}-${i}`}>
-          <a
-            href={link.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group flex items-center justify-between gap-4 rounded-md border border-border-subtle bg-surface p-5 transition-colors duration-fast hover:border-amber-soft"
-          >
+      {official.links.map((link, i) => {
+        const hasUrl = link.url.trim().length > 0;
+        const inner = (
+          <>
             <span>
               <span className="block text-body font-medium text-primary group-hover:text-amber">
                 {link.label || "（待填写名称）"}
@@ -265,16 +261,95 @@ function OfficialSection({ content }: { content: WorldPageContent }) {
               aria-hidden
               className="font-mono text-h2 text-faint transition-colors duration-fast group-hover:text-amber"
             >
-              ↗
+              {hasUrl ? "↗" : "—"}
             </span>
-          </a>
-        </li>
-      ))}
+          </>
+        );
+        const cls =
+          "group flex items-center justify-between gap-4 rounded-md border border-border-subtle bg-surface p-5 transition-colors duration-fast";
+        return (
+          <li key={`${link.label}-${i}`}>
+            {hasUrl ? (
+              <a
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`${cls} hover:border-amber-soft`}
+              >
+                {inner}
+              </a>
+            ) : (
+              <span className={`${cls} border-dashed opacity-70`} title="链接待管理员补充">
+                {inner}
+              </span>
+            )}
+          </li>
+        );
+      })}
     </ul>
   );
 }
 
-/* ---------- 最新动态：时间线 ---------- */
+/* ---------- 官方信息转载：媒体卡（图片/视频 + 标题 + 简介） ---------- */
+function RepostsSection({ content }: { content: WorldPageContent }) {
+  const { reposts } = content;
+  if (reposts.items.length === 0) {
+    return (
+      <div className="rounded-md border border-dashed border-border-subtle p-8 text-center text-small text-faint">
+        {reposts.emptyText || "管理员尚未转载官方信息。"}
+      </div>
+    );
+  }
+  return (
+    <ol className="grid gap-5 md:grid-cols-2">
+      {reposts.items.map((item, i) => {
+        const card = (
+          <>
+            <MediaSlotView media={item.media} variant="card" hint={false} />
+            <div className="p-5">
+              <div className="flex flex-wrap items-center gap-2 text-caption">
+                {item.source && (
+                  <span className="rounded-sm border border-amber-soft px-1.5 py-0.5 text-amber">
+                    {item.source}
+                  </span>
+                )}
+                {item.date && (
+                  <time className="font-mono text-faint">{item.date}</time>
+                )}
+              </div>
+              <h3 className="mt-2 text-h3 font-semibold text-primary group-hover:text-amber">
+                {item.title || "（待填写标题）"}
+              </h3>
+              <div className="mt-2 text-small leading-relaxed text-secondary">
+                {item.excerpt ? <p>{item.excerpt}</p> : <EmptySlot label="转载摘要" />}
+              </div>
+            </div>
+          </>
+        );
+        return (
+          <li key={`${item.date}-${item.title}-${i}`}>
+            {item.url ? (
+              <a
+                href={item.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group block overflow-hidden rounded-md border border-border-subtle bg-surface shadow-card transition-colors duration-fast hover:border-amber-soft"
+              >
+                {card}
+              </a>
+            ) : (
+              <div className="group overflow-hidden rounded-md border border-border-subtle bg-surface shadow-card">
+                {card}
+              </div>
+            )}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+/* ---------- 最新动态：带媒体为卡片，纯文字为时间线行 ---------- */
 function NewsSection({ content }: { content: WorldPageContent }) {
   const { news } = content;
   if (news.items.length === 0) {
@@ -285,41 +360,51 @@ function NewsSection({ content }: { content: WorldPageContent }) {
     );
   }
   return (
-    <ol className="space-y-0">
-      {news.items.map((item, i) => (
-        <li
-          key={`${item.date}-${item.title}-${i}`}
-          className="flex gap-5 border-b border-border-subtle py-5 first:pt-0 last:border-0"
-        >
-          <time className="w-24 shrink-0 pt-0.5 font-mono text-caption text-faint">
-            {item.date || "——"}
-          </time>
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              {item.tag && (
-                <span className="rounded-sm border border-amber-soft px-1.5 py-0.5 text-caption text-amber">
-                  {item.tag}
-                </span>
-              )}
-              {item.url ? (
-                <a
-                  href={item.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-body font-medium text-primary hover:text-amber"
-                >
-                  {item.title}
-                </a>
+    <ol className="grid gap-5 md:grid-cols-2">
+      {news.items.map((item, i) => {
+        const hasMedia = !!item.media && item.media.src.trim().length > 0;
+        const body = (
+          <>
+            {hasMedia && (
+              <MediaSlotView media={item.media} variant="card" hint={false} />
+            )}
+            <div className={hasMedia ? "p-5" : ""}>
+              <div className="flex flex-wrap items-center gap-2 text-caption">
+                {item.tag && (
+                  <span className="rounded-sm border border-amber-soft px-1.5 py-0.5 text-amber">
+                    {item.tag}
+                  </span>
+                )}
+                <time className="font-mono text-faint">{item.date || "——"}</time>
+              </div>
+              <h3 className="mt-2 text-h3 font-semibold text-primary group-hover:text-amber">
+                {item.title || "（待填写标题）"}
+              </h3>
+              {item.excerpt ? (
+                <p className="mt-2 text-small leading-relaxed text-secondary">
+                  {item.excerpt}
+                </p>
               ) : (
-                <span className="text-body font-medium text-primary">{item.title}</span>
+                hasMedia && <EmptySlot label="动态简介" />
               )}
             </div>
-            {item.excerpt && (
-              <p className="mt-1 text-small text-secondary">{item.excerpt}</p>
+          </>
+        );
+        const cls = hasMedia
+          ? "group block overflow-hidden rounded-md border border-border-subtle bg-surface shadow-card transition-colors duration-fast hover:border-amber-soft"
+          : "group block rounded-md border border-border-subtle bg-surface p-5 transition-colors duration-fast hover:border-amber-soft";
+        return (
+          <li key={`${item.date}-${item.title}-${i}`}>
+            {item.url ? (
+              <a href={item.url} target="_blank" rel="noopener noreferrer" className={cls}>
+                {body}
+              </a>
+            ) : (
+              <div className={cls}>{body}</div>
             )}
-          </div>
-        </li>
-      ))}
+          </li>
+        );
+      })}
     </ol>
   );
 }
@@ -332,6 +417,7 @@ const SECTION_BODY: Record<
   worldview: WorldviewSection,
   gameplay: GameplaySection,
   official: OfficialSection,
+  reposts: RepostsSection,
   news: NewsSection,
 };
 

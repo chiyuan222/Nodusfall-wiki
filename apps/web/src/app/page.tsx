@@ -1,84 +1,147 @@
+import type { Metadata } from "next";
 import Link from "next/link";
-import { EmptyState } from "@/components/empty-state";
+import { loadHomeContent } from "@/lib/home-content.server";
+import { MediaSlotView } from "@/components/world/media-slot";
 
-export default function HomePage() {
+export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "首页",
+  description: "《源初之结》（Nodusfall）非官方玩家 Wiki、攻略与论坛。",
+};
+
+/** 空槽位：未填写内容的占位（不显示任何虚构文案） */
+function EmptySlot({ label }: { label: string }) {
+  return (
+    <span className="block rounded-sm border border-dashed border-border-subtle px-3 py-2 font-mono text-caption text-faint">
+      待管理员补充 · {label}
+    </span>
+  );
+}
+
+export default async function HomePage() {
+  const content = await loadHomeContent();
+
+  if (!content) {
+    return (
+      <div className="mx-auto max-w-reading py-24 text-center">
+        <h1 className="font-serif text-h1 font-semibold">内容配置缺失</h1>
+        <p className="mt-4 text-body text-secondary">
+          未找到 <code className="font-mono text-amber">public/content/home-page.json</code>
+          ，或文件格式有误。请管理员在 /admin/home 重新导出并替换该文件。
+        </p>
+      </div>
+    );
+  }
+
+  const visible = (id: "hero" | "notice" | "entries") =>
+    content.sections.includes(id) && !content[id].hidden;
+
   return (
     <div className="space-y-12">
-      {/* 首屏：节点母题主视觉 */}
-      <section className="relative overflow-hidden rounded-lg border border-border-subtle bg-surface px-6 py-16 text-center shadow-card md:py-24">
-        {/* 琥珀辉光 */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute left-1/2 top-0 h-72 w-[42rem] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-25 blur-3xl"
-          style={{ background: "radial-gradient(closest-side, var(--accent-amber), transparent)" }}
-        />
-        <p className="relative text-caption uppercase tracking-[0.4em] text-faint">
-          Nodusfall · 非官方玩家社区
-        </p>
-        <h1 className="relative mx-auto mt-4 max-w-reading font-serif text-display font-semibold leading-tight">
-          万物之结，由此而始
-        </h1>
-        <p className="relative mx-auto mt-4 max-w-reading text-body text-secondary">
-          《源初之结》的玩家 Wiki、攻略与讨论论坛。资料由社区共同维护。
-        </p>
-        <div className="relative mt-8 flex flex-wrap justify-center gap-3">
-          <Link
-            href="/world"
-            className="rounded-md bg-amber px-6 py-2.5 text-small font-medium text-amber-fg transition-opacity duration-fast hover:opacity-90"
-          >
-            游戏总览
-          </Link>
-          <Link
-            href="/wiki"
-            className="rounded-md border border-border-subtle bg-raised px-6 py-2.5 text-small text-primary transition-colors duration-fast hover:border-amber-soft"
-          >
-            浏览 Wiki
-          </Link>
-          <Link
-            href="/guides"
-            className="rounded-md px-6 py-2.5 text-small text-secondary transition-colors duration-fast hover:text-primary"
-          >
-            查看攻略 →
-          </Link>
-        </div>
-      </section>
+      {/* 公告条 */}
+      {visible("notice") && (content.notice.text || content.notice.linkLabel) && (
+        <aside
+          aria-label="站点公告"
+          className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border border-amber-soft/60 bg-surface px-5 py-3"
+        >
+          <span className="font-mono text-caption uppercase tracking-[0.3em] text-amber">
+            公告
+          </span>
+          <p className="text-small text-secondary">{content.notice.text}</p>
+          {content.notice.linkHref && content.notice.linkLabel && (
+            <Link
+              href={content.notice.linkHref}
+              className="ml-auto text-small text-amber hover:underline"
+            >
+              {content.notice.linkLabel} →
+            </Link>
+          )}
+        </aside>
+      )}
 
-      {/* 三个内容域入口：契约冻结后接入数据（见 docs/design/frontend-review.md §1.2） */}
-      <div className="grid gap-6 md:grid-cols-3">
-        <section aria-labelledby="home-wiki">
-          <h2 id="home-wiki" className="mb-4 font-serif text-h2 font-medium">
-            <Link href="/wiki" className="hover:text-amber">
-              Wiki 条目 →
-            </Link>
-          </h2>
-          <EmptyState
-            title="资料编目进行中"
-            description="Wiki 条目列表将在后端接口就绪后展示。数据来自 GET /v1/wiki/pages。"
-          />
+      {/* 首屏横幅：文案 + 媒体（图片或视频） */}
+      {visible("hero") && (
+        <section aria-label="首屏" className="pt-4 lg:pt-8">
+          <div className="grid items-center gap-8 lg:grid-cols-12">
+            <div className="lg:col-span-5">
+              {content.hero.kicker ? (
+                <p className="font-mono text-caption uppercase tracking-[0.4em] text-faint">
+                  {content.hero.kicker}
+                </p>
+              ) : (
+                <EmptySlot label="眉题" />
+              )}
+              <h1 className="mt-4 font-serif text-[2.5rem] font-semibold leading-tight text-primary md:text-display lg:text-[2.75rem]">
+                {content.hero.title || "（待填写主标题）"}
+              </h1>
+              <div className="mt-4 max-w-reading text-body leading-relaxed text-secondary">
+                {content.hero.lead ? (
+                  <p>{content.hero.lead}</p>
+                ) : (
+                  <EmptySlot label="首屏导语" />
+                )}
+              </div>
+              <div className="mt-8 flex flex-wrap gap-3">
+                {content.hero.ctas.map((cta, i) =>
+                  cta.style === "primary" ? (
+                    <Link
+                      key={`${cta.href}-${i}`}
+                      href={cta.href || "/"}
+                      className="rounded-md bg-amber px-6 py-2.5 text-small font-medium text-amber-fg transition-opacity duration-fast hover:opacity-90"
+                    >
+                      {cta.label}
+                    </Link>
+                  ) : (
+                    <Link
+                      key={`${cta.href}-${i}`}
+                      href={cta.href || "/"}
+                      className="rounded-md border border-border-subtle bg-raised px-6 py-2.5 text-small text-primary transition-colors duration-fast hover:border-amber-soft"
+                    >
+                      {cta.label}
+                    </Link>
+                  ),
+                )}
+              </div>
+            </div>
+            <div className="lg:col-span-7">
+              <MediaSlotView media={content.hero.media} variant="hero" priority />
+            </div>
+          </div>
         </section>
-        <section aria-labelledby="home-guides">
-          <h2 id="home-guides" className="mb-4 font-serif text-h2 font-medium">
-            <Link href="/guides" className="hover:text-amber">
-              热门攻略 →
-            </Link>
+      )}
+
+      {/* 入口卡：媒体 + 标题 + 简介 */}
+      {visible("entries") && (
+        <section aria-labelledby="home-entries">
+          <h2 id="home-entries" className="font-serif text-h1 font-semibold">
+            {content.entries.title || "内容分区"}
           </h2>
-          <EmptyState
-            title="等待第一篇攻略"
-            description="攻略按评分排序展示。数据来自 GET /v1/guides?sort=rating。"
-          />
+          <ol className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+            {content.entries.cards.map((card, i) => (
+              <li key={`${card.href}-${i}`}>
+                <Link
+                  href={card.href || "/"}
+                  className="group block h-full overflow-hidden rounded-md border border-border-subtle bg-surface shadow-card transition-colors duration-fast hover:border-amber-soft"
+                >
+                  <MediaSlotView media={card.media} variant="card" hint={false} />
+                  <div className="p-5">
+                    <h3 className="flex items-center justify-between text-h3 font-semibold text-primary group-hover:text-amber">
+                      {card.title || "（待填写名称）"}
+                      <span aria-hidden className="font-mono text-faint transition-colors duration-fast group-hover:text-amber">
+                        →
+                      </span>
+                    </h3>
+                    <div className="mt-2 text-small leading-relaxed text-secondary">
+                      {card.desc ? <p>{card.desc}</p> : <EmptySlot label="入口简介" />}
+                    </div>
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ol>
         </section>
-        <section aria-labelledby="home-forum">
-          <h2 id="home-forum" className="mb-4 font-serif text-h2 font-medium">
-            <Link href="/forum" className="hover:text-amber">
-              论坛讨论 →
-            </Link>
-          </h2>
-          <EmptyState
-            title="集结讨论区"
-            description="板块列表来自 GET /v1/forum/boards。跨板块最新动态待契约补充端点（提案 §6.4）。"
-          />
-        </section>
-      </div>
+      )}
     </div>
   );
 }

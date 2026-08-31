@@ -1,19 +1,23 @@
 {
-  "$schema": "./world-page.schema.json",
   "meta": {
     "pageId": "world",
     "updatedAt": "",
     "maintainer": "",
-    "note": "本文件驱动 /world 游戏总览页的全部文案、图片与板块结构。管理员可在 /admin/world 可视化编辑后导出替换本文件；待后端 CMS 契约冻结后改由接口下发。除 meta 外，sections 数组控制板块顺序与显隐。"
+    "note": "本文件驱动 /world 游戏总览页的全部文案、图片/视频与板块结构。管理员可在 /admin/world 可视化编辑后导出替换本文件；待后端 CMS 契约冻结后改由接口下发。sections 数组控制板块顺序与显隐。"
   },
-  "sections": ["hero", "overview", "worldview", "gameplay", "official", "news"],
+  "sections": ["hero", "overview", "worldview", "gameplay", "official", "reposts", "news"],
   "hero": {
     "hidden": false,
     "kicker": "NODUSFALL · 非官方玩家 Wiki 总览页",
     "title": "源初之结",
     "subtitle": "",
     "lead": "",
-    "art": { "src": "", "alt": "《源初之结》主视觉（待管理员替换为官方美术图）" },
+    "art": {
+      "kind": "image",
+      "src": "",
+      "alt": "《源初之结》主视觉（待管理员替换为官方美术图或宣传视频）",
+      "poster": ""
+    },
     "chips": [
       { "label": "类型", "value": "写实奇幻 · 多人共斗动作" },
       { "label": "引擎", "value": "Unreal Engine 5" },
@@ -51,7 +55,7 @@
         "en": "Weaver",
         "body": "",
         "tag": "官方已确认",
-        "image": { "src": "", "alt": "" }
+        "image": { "kind": "image", "src": "", "alt": "", "poster": "" }
       },
       {
         "no": "02",
@@ -59,7 +63,7 @@
         "en": "Dreadnodi",
         "body": "",
         "tag": "官方已确认",
-        "image": { "src": "", "alt": "" }
+        "image": { "kind": "image", "src": "", "alt": "", "poster": "" }
       },
       {
         "no": "03",
@@ -67,7 +71,7 @@
         "en": "Divinity",
         "body": "",
         "tag": "官方已确认",
-        "image": { "src": "", "alt": "" }
+        "image": { "kind": "image", "src": "", "alt": "", "poster": "" }
       },
       {
         "no": "04",
@@ -75,7 +79,7 @@
         "en": "Primordial Myth",
         "body": "",
         "tag": "官方已确认",
-        "image": { "src": "", "alt": "" }
+        "image": { "kind": "image", "src": "", "alt": "", "poster": "" }
       }
     ]
   },
@@ -88,25 +92,25 @@
         "no": "壹",
         "title": "流派构筑",
         "body": "",
-        "image": { "src": "", "alt": "" }
+        "image": { "kind": "image", "src": "", "alt": "", "poster": "" }
       },
       {
         "no": "贰",
         "title": "联手压制",
         "body": "",
-        "image": { "src": "", "alt": "" }
+        "image": { "kind": "image", "src": "", "alt": "", "poster": "" }
       },
       {
         "no": "叁",
         "title": "逼出破绽",
         "body": "",
-        "image": { "src": "", "alt": "" }
+        "image": { "kind": "image", "src": "", "alt": "", "poster": "" }
       },
       {
         "no": "肆",
         "title": "讨伐与配装",
         "body": "",
-        "image": { "src": "", "alt": "" }
+        "image": { "kind": "image", "src": "", "alt": "", "poster": "" }
       }
     ]
   },
@@ -123,8 +127,20 @@
         "label": "官方哔哩哔哩",
         "url": "https://space.bilibili.com/3706979079949044/dynamic",
         "desc": "中文官方动态"
+      },
+      {
+        "label": "官方抖音",
+        "url": "",
+        "desc": "待管理员补充官方抖音链接"
       }
     ]
+  },
+  "reposts": {
+    "hidden": false,
+    "title": "官方信息转载",
+    "intro": "",
+    "emptyText": "管理员尚未转载官方信息。转载时请附原文链接与来源渠道。",
+    "items": []
   },
   "news": {
     "hidden": false,
