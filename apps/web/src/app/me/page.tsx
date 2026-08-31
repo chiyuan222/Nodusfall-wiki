@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { ThemeSwitcher } from "@/components/theme-switcher";
-import { EmptyState } from "@/components/empty-state";
+import { ProfilePanel } from "@/components/me/profile-panel";
 
 export const metadata: Metadata = { title: "用户中心" };
 
@@ -8,6 +8,14 @@ export default function MePage() {
   return (
     <div className="space-y-6">
       <h1 className="font-serif text-h1 font-semibold">用户中心</h1>
+
+      {/* 个人资料：GET /users/me + PATCH /users/me + 头像上传 */}
+      <section aria-labelledby="profile">
+        <h2 id="profile" className="sr-only">
+          个人资料
+        </h2>
+        <ProfilePanel />
+      </section>
 
       {/* 移动端的外观设置入口（桌面端在顶部导航） */}
       <section
@@ -20,11 +28,9 @@ export default function MePage() {
         <ThemeSwitcher />
       </section>
 
-      <EmptyState
-        title="需要登录"
-        description="我的攻略、帖子与收藏将在契约补充对应端点后开放（提案 §6.2）。"
-        action={{ href: "/login", label: "去登录" }}
-      />
+      <p className="text-caption text-faint">
+        「我的帖子 / 我的收藏」需要后端补充对应查询端点（提案 §6.2），已在 Issue 跟进。
+      </p>
     </div>
   );
 }
