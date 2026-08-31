@@ -141,6 +141,9 @@ export async function request<T>(
       method,
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
+      // Next 14 服务端组件的 fetch 默认进 Data Cache；内容型站点必须每次直读后端，
+      // 否则编辑/评论后详情页会展示过期数据（客户端调用不受影响）
+      cache: "no-store",
     });
   } catch {
     throw new ApiError(fallbackProblem(0, "网络连接失败，请稍后重试"));
