@@ -93,7 +93,7 @@ export default async function ForumIndexPage() {
               {data.threads.data.map((t) => (
                 <li key={t.id}>
                   <Link
-                    href={`/forum/${t.boardSlug}?thread=${t.id}`}
+                    href={`/forum/threads/${t.id}`}
                     className="group flex items-center gap-4 px-5 py-4 transition-colors duration-fast hover:bg-raised"
                   >
                     <span className="min-w-0 grow">
