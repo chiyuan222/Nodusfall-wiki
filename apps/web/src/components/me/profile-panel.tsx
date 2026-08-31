@@ -192,6 +192,35 @@ export function ProfilePanel() {
         </button>
       </div>
 
+      {/* 管理入口（仅管理员可见） */}
+      {me.role?.toLowerCase() === "admin" && (
+        <div className="mt-6 rounded-md border border-amber-soft bg-raised p-4">
+          <p className="font-mono text-caption uppercase tracking-[0.3em] text-amber">
+            内容管理
+          </p>
+          <div className="mt-3 flex flex-wrap gap-3">
+            <Link
+              href="/admin/home"
+              className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary transition-colors duration-fast hover:border-amber-soft hover:text-amber"
+            >
+              首页内容管理
+            </Link>
+            <Link
+              href="/admin/world"
+              className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary transition-colors duration-fast hover:border-amber-soft hover:text-amber"
+            >
+              总览页内容管理
+            </Link>
+            <Link
+              href="/wiki/new"
+              className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary transition-colors duration-fast hover:border-amber-soft hover:text-amber"
+            >
+              新建 Wiki 条目
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* 编辑表单 */}
       <div className="mt-6 space-y-4 border-t border-border-subtle pt-6">
         <div className="grid gap-4 md:grid-cols-2">
