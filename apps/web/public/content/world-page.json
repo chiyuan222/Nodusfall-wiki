@@ -1,0 +1,151 @@
+{
+  "meta": {
+    "pageId": "world",
+    "updatedAt": "",
+    "maintainer": "",
+    "note": "本文件驱动 /world 游戏总览页的全部文案、图片/视频与板块结构。管理员可在 /admin/world 可视化编辑后导出替换本文件；待后端 CMS 契约冻结后改由接口下发。sections 数组控制板块顺序与显隐。"
+  },
+  "sections": ["hero", "overview", "worldview", "gameplay", "official", "reposts", "news"],
+  "hero": {
+    "hidden": false,
+    "kicker": "NODUSFALL · 非官方玩家 Wiki 总览页",
+    "title": "源初之结",
+    "subtitle": "",
+    "lead": "",
+    "art": {
+      "kind": "image",
+      "src": "",
+      "alt": "《源初之结》主视觉（待管理员替换为官方美术图或宣传视频）",
+      "poster": ""
+    },
+    "chips": [
+      { "label": "类型", "value": "写实奇幻 · 多人共斗动作" },
+      { "label": "引擎", "value": "Unreal Engine 5" },
+      { "label": "状态", "value": "已全球首曝 · 预约开启" }
+    ],
+    "ctas": [
+      { "label": "进入 Wiki", "href": "/wiki", "style": "primary" },
+      { "label": "官方网站 ↗", "href": "https://nodusfall.mihoyo.com/", "style": "ghost" }
+    ]
+  },
+  "overview": {
+    "hidden": false,
+    "title": "游戏概览",
+    "lead": "",
+    "facts": [
+      { "label": "中文名", "value": "源初之结" },
+      { "label": "原名", "value": "NODUSFALL" },
+      { "label": "开发 / 发行", "value": "米哈游（miHoYo / HoYoverse）" },
+      { "label": "游戏类型", "value": "写实奇幻多人共斗动作游戏" },
+      { "label": "开发引擎", "value": "Unreal Engine 5" },
+      { "label": "首次公开", "value": "2026 年 8 月 · 科隆游戏展开幕之夜" },
+      { "label": "登陆平台", "value": "待官方公布" },
+      { "label": "上线时间", "value": "待官方公布" },
+      { "label": "商业模式", "value": "待官方公布" }
+    ]
+  },
+  "worldview": {
+    "hidden": false,
+    "title": "世界观设定",
+    "intro": "",
+    "entries": [
+      {
+        "no": "01",
+        "title": "织者",
+        "en": "Weaver",
+        "body": "",
+        "tag": "官方已确认",
+        "image": { "kind": "image", "src": "", "alt": "", "poster": "" }
+      },
+      {
+        "no": "02",
+        "title": "死结",
+        "en": "Dreadnodi",
+        "body": "",
+        "tag": "官方已确认",
+        "image": { "kind": "image", "src": "", "alt": "", "poster": "" }
+      },
+      {
+        "no": "03",
+        "title": "神格力量",
+        "en": "Divinity",
+        "body": "",
+        "tag": "官方已确认",
+        "image": { "kind": "image", "src": "", "alt": "", "poster": "" }
+      },
+      {
+        "no": "04",
+        "title": "原初神话",
+        "en": "Primordial Myth",
+        "body": "",
+        "tag": "官方已确认",
+        "image": { "kind": "image", "src": "", "alt": "", "poster": "" }
+      }
+    ]
+  },
+  "gameplay": {
+    "hidden": false,
+    "title": "玩法介绍",
+    "intro": "",
+    "features": [
+      {
+        "no": "壹",
+        "title": "流派构筑",
+        "body": "",
+        "image": { "kind": "image", "src": "", "alt": "", "poster": "" }
+      },
+      {
+        "no": "贰",
+        "title": "联手压制",
+        "body": "",
+        "image": { "kind": "image", "src": "", "alt": "", "poster": "" }
+      },
+      {
+        "no": "叁",
+        "title": "逼出破绽",
+        "body": "",
+        "image": { "kind": "image", "src": "", "alt": "", "poster": "" }
+      },
+      {
+        "no": "肆",
+        "title": "讨伐与配装",
+        "body": "",
+        "image": { "kind": "image", "src": "", "alt": "", "poster": "" }
+      }
+    ]
+  },
+  "official": {
+    "hidden": false,
+    "title": "官方信息",
+    "links": [
+      {
+        "label": "官方网站",
+        "url": "https://nodusfall.mihoyo.com/",
+        "desc": "预约与首曝物料"
+      },
+      {
+        "label": "官方哔哩哔哩",
+        "url": "https://space.bilibili.com/3706979079949044/dynamic",
+        "desc": "中文官方动态"
+      },
+      {
+        "label": "官方抖音",
+        "url": "",
+        "desc": "待管理员补充官方抖音链接"
+      }
+    ]
+  },
+  "reposts": {
+    "hidden": false,
+    "title": "官方信息转载",
+    "intro": "",
+    "emptyText": "管理员尚未转载官方信息。转载时请附原文链接与来源渠道。",
+    "items": []
+  },
+  "news": {
+    "hidden": false,
+    "title": "最新动态",
+    "emptyText": "管理员尚未发布动态。官方有新情报时，会在本页与论坛同步更新。",
+    "items": []
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "meta": {
+    "pageId": "home",
+    "updatedAt": "",
+    "maintainer": "",
+    "note": "本文件驱动首页的横幅、公告条与入口卡。管理员可在 /admin/home 可视化编辑后导出替换本文件；待后端 CMS 契约冻结后改由接口下发。sections 数组控制板块顺序与显隐。"
+  },
+  "sections": ["hero", "notice", "digest", "entries"],
+  "hero": {
+    "hidden": false,
+    "kicker": "NODUSFALL · 非官方玩家社区",
+    "title": "诸神入刃，斩断死结",
+    "lead": "《源初之结》的玩家 Wiki、攻略与讨论论坛。资料由社区共同维护。",
+    "media": {
+      "kind": "image",
+      "src": "",
+      "alt": "首页主视觉（待管理员替换，支持图片或视频）",
+      "poster": ""
+    },
+    "ctas": [
+      { "label": "游戏总览", "href": "/world", "style": "primary" },
+      { "label": "浏览 Wiki", "href": "/wiki", "style": "ghost" },
+      { "label": "查看攻略", "href": "/guides", "style": "ghost" },
+      { "label": "浏览论坛", "href": "/forum", "style": "ghost" }
+    ]
+  },
+  "notice": {
+    "hidden": false,
+    "text": "",
+    "linkLabel": "",
+    "linkHref": ""
+  },
+  "digest": {
+    "hidden": false,
+    "latest": {
+      "title": "最新动态",
+      "emptyText": "管理员尚未发布动态。",
+      "items": []
+    },
+    "featured": {
+      "title": "精华推荐",
+      "emptyText": "管理员尚未推荐内容。",
+      "items": []
+    }
+  },
+  "entries": {
+    "hidden": false,
+    "title": "内容分区",
+    "cards": [
+      {
+        "title": "游戏总览",
+        "desc": "一页看懂《源初之结》：概览、世界观、玩法与官方动态。",
+        "href": "/world",
+        "media": { "kind": "image", "src": "", "alt": "", "poster": "" }
+      },
+      {
+        "title": "Wiki",
+        "desc": "设定、物品、任务与系统词条，由社区共同编目。",
+        "href": "/wiki",
+        "media": { "kind": "image", "src": "", "alt": "", "poster": "" }
+      },
+      {
+        "title": "攻略",
+        "desc": "流派构筑、讨伐心得与配装指南，按评分排序。",
+        "href": "/guides",
+        "media": { "kind": "image", "src": "", "alt": "", "poster": "" }
+      },
+      {
+        "title": "论坛",
+        "desc": "讨论、求助与分享，织者的集结地。",
+        "href": "/forum",
+        "media": { "kind": "image", "src": "", "alt": "", "poster": "" }
+      }
+    ]
+  }
+}

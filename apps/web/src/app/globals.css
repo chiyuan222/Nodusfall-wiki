@@ -1,0 +1,70 @@
+@import "../styles/tokens.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    color-scheme: dark;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-canvas font-sans text-body text-primary antialiased;
+  }
+
+  /* 胶片颗粒质感：极淡噪点覆盖全站，制造「织物/银幕」底纹 */
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    pointer-events: none;
+    opacity: 0.045;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  h1, h2, h3 {
+    text-wrap: balance;
+  }
+
+  ::selection {
+    background: var(--accent-amber-soft);
+    color: var(--text-primary);
+  }
+
+  a {
+    @apply transition-colors duration-fast ease-out;
+  }
+
+  /* 键盘可达性：聚焦环统一为琥珀色 */
+  :focus-visible {
+    outline: 2px solid var(--accent-amber);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+}
+
+@layer components {
+  /* 阅读版心：长文正文 */
+  .prose-nodusfall {
+    @apply max-w-reading text-body leading-relaxed text-primary;
+  }
+
+  .prose-nodusfall h2 {
+    @apply mt-8 mb-3 font-serif text-h2 font-medium;
+  }
+
+  .prose-nodusfall h3 {
+    @apply mt-6 mb-2 text-h3 font-semibold;
+  }
+
+  .prose-nodusfall p {
+    @apply my-4;
+  }
+
+  .prose-nodusfall code {
+    @apply rounded-sm bg-raised px-1 font-mono text-small text-amber;
+  }
+}
