@@ -90,6 +90,40 @@ export interface paths {
         patch: operations["updateCurrentUser"];
         trace?: never;
     };
+    "/users/me/threads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 我发布的主题 */
+        get: operations["listMyThreads"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/me/bookmarks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 我收藏的主题 */
+        get: operations["listMyBookmarks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/users/{userId}": {
         parameters: {
             query?: never;
@@ -156,6 +190,76 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/admin/wiki/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 新建 Wiki 分类（管理员） */
+        post: operations["createWikiCategory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/wiki/categories/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** 删除 Wiki 分类（管理员，非空返回 409） */
+        delete: operations["deleteWikiCategory"];
+        options?: never;
+        head?: never;
+        /** 更新 Wiki 分类（管理员） */
+        patch: operations["updateWikiCategory"];
+        trace?: never;
+    };
+    "/admin/forum/boards": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 新建论坛板块（管理员） */
+        post: operations["createForumBoard"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/forum/boards/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** 删除论坛板块（管理员，非空返回 409） */
+        delete: operations["deleteForumBoard"];
+        options?: never;
+        head?: never;
+        /** 更新论坛板块（管理员） */
+        patch: operations["updateForumBoard"];
         trace?: never;
     };
     "/wiki/pages": {
@@ -1116,6 +1220,44 @@ export interface components {
         PerPage: number;
     };
     requestBodies: {
+        AdminWikiCategoryCreate: {
+            content: {
+                "application/json": {
+                    slug: string;
+                    name: string;
+                    description?: string;
+                    sortOrder: number;
+                };
+            };
+        };
+        AdminWikiCategoryUpdate: {
+            content: {
+                "application/json": {
+                    name?: string;
+                    description?: string;
+                    sortOrder?: number;
+                };
+            };
+        };
+        AdminForumBoardCreate: {
+            content: {
+                "application/json": {
+                    slug: string;
+                    name: string;
+                    description?: string;
+                    sortOrder: number;
+                };
+            };
+        };
+        AdminForumBoardUpdate: {
+            content: {
+                "application/json": {
+                    name?: string;
+                    description?: string;
+                    sortOrder?: number;
+                };
+            };
+        };
         RegisterRequest: {
             content: {
                 "application/json": {
@@ -1400,6 +1542,54 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
         };
     };
+    listMyThreads: {
+        parameters: {
+            query?: {
+                page?: components["parameters"]["Page"];
+                perPage?: components["parameters"]["PerPage"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 我的主题列表 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForumThreadList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    listMyBookmarks: {
+        parameters: {
+            query?: {
+                page?: components["parameters"]["Page"];
+                perPage?: components["parameters"]["PerPage"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 我的收藏列表 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForumThreadList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
     getUser: {
         parameters: {
             query?: never;
@@ -1484,6 +1674,156 @@ export interface operations {
                     "application/json": components["schemas"]["WikiCategoryList"];
                 };
             };
+        };
+    };
+    createWikiCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["AdminWikiCategoryCreate"];
+        responses: {
+            /** @description 创建成功 */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WikiCategory"];
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    deleteWikiCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 已删除 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    updateWikiCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["AdminWikiCategoryUpdate"];
+        responses: {
+            /** @description 更新后的分类 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WikiCategory"];
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    createForumBoard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["AdminForumBoardCreate"];
+        responses: {
+            /** @description 创建成功 */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForumBoard"];
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    deleteForumBoard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 已删除 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    updateForumBoard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["AdminForumBoardUpdate"];
+        responses: {
+            /** @description 更新后的板块 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForumBoard"];
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     listWikiPages: {
