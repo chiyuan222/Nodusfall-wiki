@@ -21,7 +21,13 @@ import { CommentsService } from './comments.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 
 interface AuthenticatedRequest extends Request {
-  user: { sub: string };
+  user: {
+    sub: string;
+    role: string;
+    permissions: string[];
+    group: string;
+    status: string;
+  };
 }
 
 @Controller()
@@ -47,7 +53,12 @@ export class CommentsController {
     @Body() dto: CreateCommentDto,
   ) {
     return this.commentsService
-      .create(req.user.sub, 'WIKI_PAGE', slug, dto.content)
+      .create(req.user.sub, 'WIKI_PAGE', slug, dto.content, {
+        role: req.user.role,
+        permissions: req.user.permissions,
+        group: req.user.group,
+        status: req.user.status,
+      })
       .then((data) => ({ data }));
   }
 
@@ -70,7 +81,12 @@ export class CommentsController {
     @Body() dto: CreateCommentDto,
   ) {
     return this.commentsService
-      .create(req.user.sub, 'GUIDE', slug, dto.content)
+      .create(req.user.sub, 'GUIDE', slug, dto.content, {
+        role: req.user.role,
+        permissions: req.user.permissions,
+        group: req.user.group,
+        status: req.user.status,
+      })
       .then((data) => ({ data }));
   }
 
@@ -93,7 +109,10 @@ export class CommentsController {
     @Req() req: AuthenticatedRequest,
     @Param('commentId') commentId: string,
   ): Promise<void> {
-    await this.commentsService.delete(req.user.sub, commentId);
+    await this.commentsService.delete(req.user.sub, commentId, {
+      role: req.user.role,
+      permissions: req.user.permissions,
+    });
   }
 
   @UseGuards(JwtAuthGuard)

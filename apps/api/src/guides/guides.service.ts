@@ -1,7 +1,12 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { ContentStatus, Guide, User } from '@prisma/client';
 import { pageInfo } from '../common/pagination';
 import { extractFirstImage } from '../common/markdown';
+import { hasPermission, isManagerRole, PERMISSIONS } from '../common/roles';
 import { PrismaService } from '../prisma/prisma.service';
 import { toUserSummary } from '../users/users.service';
 
@@ -19,7 +24,11 @@ function excerpt(content: string): string {
   return content.replace(/[#>*_`~\-[\]()!]/g, '').replace(/\s+/g, ' ').trim().slice(0, 160);
 }
 
-function summary(guide: GuideWithAuthor) {
+function summary(
+  guide: GuideWithAuthor,
+  likedByMe = false,
+  bookmarkedByMe = false,
+) {
   return {
     id: guide.id,
     slug: guide.slug,
@@ -32,12 +41,20 @@ function summary(guide: GuideWithAuthor) {
     rating: guide.ratingAvg,
     ratingCount: guide.ratingCount,
     updatedAt: guide.updatedAt,
+    viewCount: guide.viewCount,
+    likeCount: guide.likeCount,
+    likedByMe,
+    bookmarkedByMe,
   };
 }
 
-function detail(guide: GuideWithAuthor) {
+function detail(
+  guide: GuideWithAuthor,
+  likedByMe = false,
+  bookmarkedByMe = false,
+) {
   return {
-    ...summary(guide),
+    ...summary(guide, likedByMe, bookmarkedByMe),
     content: guide.content,
     relatedCharacter: guide.relatedCharacter,
     createdAt: guide.createdAt,
@@ -69,7 +86,7 @@ export class GuidesService {
     sort?: 'rating' | 'updatedAt' | 'createdAt';
     page: number;
     perPage: number;
-  }) {
+  }, userId?: string) {
     const where: any = {};
     if (query.tag) where.tags = { has: query.tag };
     if (query.status) where.status = query.status;
@@ -94,13 +111,21 @@ export class GuidesService {
         include: { author: true },
       }),
     ]);
+    const { likes, bookmarks } = await this.interactions(
+      guides.map((g) => g.id),
+      userId,
+    );
     return {
-      data: guides.map(summary),
+      data: guides.map((g) =>
+        summary(g, likes.has(g.id), bookmarks.has(g.id)),
+      ),
       pagination: pageInfo(query.page, query.perPage, total),
     };
   }
 
-  async create(userId: string, dto: {
+  async create(
+    userId: string,
+    dto: {
     title: string;
     slug?: string;
     content: string;
@@ -108,7 +133,18 @@ export class GuidesService {
     status?: 'draft' | 'published';
     relatedCharacter?: string;
     coverImage?: string | null;
-  }) {
+    },
+    auth?: { role: string; permissions: string[]; status: string; wikiCreateGranted?: boolean },
+  ) {
+    if (auth?.status === 'MUTED' || auth?.status === 'BANNED') {
+      throw new ForbiddenException('account restricted');
+    }
+    if (
+      !auth?.wikiCreateGranted &&
+      !hasPermission(auth?.role, auth?.permissions, PERMISSIONS.MANAGE_CONTENT)
+    ) {
+      throw new ForbiddenException('guide create not granted');
+    }
     const guide = await this.prisma.guide.create({
       data: {
         slug: dto.slug ?? slugify(dto.title),
@@ -126,16 +162,24 @@ export class GuidesService {
     return detail(guide);
   }
 
-  async get(slug: string) {
+  async get(slug: string, userId?: string) {
+    await this.prisma.guide.updateMany({
+      where: { slug },
+      data: { viewCount: { increment: 1 } },
+    });
     const guide = await this.prisma.guide.findUnique({
       where: { slug },
       include: { author: true },
     });
     if (!guide) throw new NotFoundException('guide not found');
-    return detail(guide);
+    const { likes, bookmarks } = await this.interactions([guide.id], userId);
+    return detail(guide, likes.has(guide.id), bookmarks.has(guide.id));
   }
 
-  async update(userId: string, slug: string, dto: {
+  async update(
+    userId: string,
+    slug: string,
+    dto: {
     title?: string;
     content?: string;
     tags?: string[];
@@ -144,9 +188,17 @@ export class GuidesService {
     coverImage?: string | null;
     featured?: boolean;
     featuredAt?: string | null;
-  }) {
+    },
+    auth?: { role: string; permissions: string[] },
+  ) {
     const existing = await this.prisma.guide.findUnique({ where: { slug } });
     if (!existing) throw new NotFoundException('guide not found');
+    if (
+      existing.authorId !== userId &&
+      !hasPermission(auth?.role, auth?.permissions, PERMISSIONS.MANAGE_CONTENT)
+    ) {
+      throw new ForbiddenException('not your guide');
+    }
     const guide = await this.prisma.guide.update({
       where: { id: existing.id },
       data: {
@@ -170,16 +222,95 @@ export class GuidesService {
     return detail(guide);
   }
 
-  async delete(slug: string): Promise<void> {
+  async delete(
+    userId: string,
+    slug: string,
+    auth?: { role: string; permissions: string[] },
+  ): Promise<void> {
     const guide = await this.prisma.guide.findUnique({ where: { slug } });
     if (!guide) {
       throw new NotFoundException('guide not found');
+    }
+    if (
+      guide.authorId !== userId &&
+      !hasPermission(auth?.role, auth?.permissions, PERMISSIONS.MANAGE_DELETION)
+    ) {
+      throw new ForbiddenException('not your guide');
     }
     await this.prisma.rating.deleteMany({ where: { guideId: guide.id } });
     await this.prisma.comment.deleteMany({
       where: { targetType: 'GUIDE', targetId: guide.id },
     });
     await this.prisma.guide.delete({ where: { id: guide.id } });
+  }
+
+  async likeGuide(userId: string, slug: string): Promise<void> {
+    const guide = await this.prisma.guide.findUnique({ where: { slug } });
+    if (!guide) throw new NotFoundException('guide not found');
+    const existing = await this.prisma.guideLike.findUnique({
+      where: { guideId_userId: { guideId: guide.id, userId } },
+    });
+    if (!existing) {
+      await this.prisma.guideLike.create({
+        data: { guideId: guide.id, userId },
+      });
+      await this.prisma.guide.update({
+        where: { id: guide.id },
+        data: { likeCount: { increment: 1 } },
+      });
+    }
+  }
+
+  async unlikeGuide(userId: string, slug: string): Promise<void> {
+    const guide = await this.prisma.guide.findUnique({ where: { slug } });
+    if (!guide) throw new NotFoundException('guide not found');
+    const result = await this.prisma.guideLike.deleteMany({
+      where: { guideId: guide.id, userId },
+    });
+    if (result.count > 0) {
+      await this.prisma.guide.update({
+        where: { id: guide.id },
+        data: { likeCount: { decrement: 1 } },
+      });
+    }
+  }
+
+  async bookmarkGuide(userId: string, slug: string): Promise<void> {
+    const guide = await this.prisma.guide.findUnique({ where: { slug } });
+    if (!guide) throw new NotFoundException('guide not found');
+    await this.prisma.guideBookmark.upsert({
+      where: { guideId_userId: { guideId: guide.id, userId } },
+      create: { guideId: guide.id, userId },
+      update: {},
+    });
+  }
+
+  async unbookmarkGuide(userId: string, slug: string): Promise<void> {
+    const guide = await this.prisma.guide.findUnique({ where: { slug } });
+    if (!guide) throw new NotFoundException('guide not found');
+    await this.prisma.guideBookmark.deleteMany({
+      where: { guideId: guide.id, userId },
+    });
+  }
+
+  private async interactions(guideIds: string[], userId?: string) {
+    if (!userId || guideIds.length === 0) {
+      return { likes: new Set<string>(), bookmarks: new Set<string>() };
+    }
+    const [likes, bookmarks] = await Promise.all([
+      this.prisma.guideLike.findMany({
+        where: { guideId: { in: guideIds }, userId },
+        select: { guideId: true },
+      }),
+      this.prisma.guideBookmark.findMany({
+        where: { guideId: { in: guideIds }, userId },
+        select: { guideId: true },
+      }),
+    ]);
+    return {
+      likes: new Set(likes.map((l) => l.guideId)),
+      bookmarks: new Set(bookmarks.map((b) => b.guideId)),
+    };
   }
 
   async getRating(slug: string, userId?: string) {

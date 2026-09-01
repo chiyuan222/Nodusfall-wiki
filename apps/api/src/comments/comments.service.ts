@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { Comment, User } from '@prisma/client';
 import { pageInfo } from '../common/pagination';
+import { hasPermission, PERMISSIONS } from '../common/roles';
 import { PrismaService } from '../prisma/prisma.service';
 import { toUserSummary } from '../users/users.service';
 
@@ -73,7 +74,22 @@ export class CommentsService {
     };
   }
 
-  async create(userId: string, type: 'WIKI_PAGE' | 'GUIDE', slug: string, content: string) {
+  async create(
+    userId: string,
+    type: 'WIKI_PAGE' | 'GUIDE',
+    slug: string,
+    content: string,
+    auth?: { role: string; permissions: string[]; group: string; status: string },
+  ) {
+    if (auth?.status === 'MUTED' || auth?.status === 'BANNED') {
+      throw new ForbiddenException('account restricted');
+    }
+    if (
+      auth?.group !== 'VERIFIED' &&
+      !hasPermission(auth?.role, auth?.permissions, PERMISSIONS.MANAGE_CONTENT)
+    ) {
+      throw new ForbiddenException('verified account required');
+    }
     const targetId = await this.resolveTarget(type, slug);
     const comment = await this.prisma.comment.create({
       data: { targetType: type, targetId, authorId: userId, content },
@@ -94,10 +110,19 @@ export class CommentsService {
     return commentView(updated);
   }
 
-  async delete(userId: string, commentId: string): Promise<void> {
+  async delete(
+    userId: string,
+    commentId: string,
+    auth?: { role: string; permissions: string[] },
+  ): Promise<void> {
     const comment = await this.prisma.comment.findUnique({ where: { id: commentId } });
     if (!comment) throw new NotFoundException('comment not found');
-    if (comment.authorId !== userId) throw new ForbiddenException('not your comment');
+    if (
+      comment.authorId !== userId &&
+      !hasPermission(auth?.role, auth?.permissions, PERMISSIONS.MANAGE_DELETION)
+    ) {
+      throw new ForbiddenException('not your comment');
+    }
     await this.prisma.comment.delete({ where: { id: commentId } });
   }
 

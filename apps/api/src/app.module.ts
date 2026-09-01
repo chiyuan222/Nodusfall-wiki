@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
 import { HealthModule } from './health/health.module';
@@ -12,6 +12,8 @@ import { SearchModule } from './search/search.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { ContentModule } from './content/content.module';
 import { HomeModule } from './home/home.module';
+import { StatsModule } from './stats/stats.module';
+import { StatsMiddleware } from './stats/stats.middleware';
 
 @Module({
   imports: [
@@ -28,6 +30,11 @@ import { HomeModule } from './home/home.module';
     UploadsModule,
     ContentModule,
     HomeModule,
+    StatsModule,
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(StatsMiddleware).forRoutes('*');
+  }
+}

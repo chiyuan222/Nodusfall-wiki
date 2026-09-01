@@ -22,6 +22,8 @@ export interface UserSummary {
   role: 'guest' | 'member' | 'editor' | 'moderator' | 'admin';
   createdAt: Date;
   status: 'active' | 'deleted';
+  group: 'normal' | 'verified' | 'premium';
+  level: number;
 }
 
 export interface UserResponse extends UserSummary {
@@ -29,6 +31,11 @@ export interface UserResponse extends UserSummary {
   updatedAt: Date;
   emailMasked: string | null;
   phoneMasked: string | null;
+  permissions: string[];
+  wikiCreateGranted: boolean;
+  banReason: string | null;
+  banUntil: Date | null;
+  mutedUntil: Date | null;
 }
 
 export function toUserSummary(user: User): UserSummary {
@@ -40,6 +47,8 @@ export function toUserSummary(user: User): UserSummary {
     role: user.role.toLowerCase() as UserSummary['role'],
     createdAt: user.createdAt,
     status: user.status.toLowerCase() as UserSummary['status'],
+    group: user.group.toLowerCase() as UserSummary['group'],
+    level: user.level,
   };
 }
 
@@ -50,6 +59,11 @@ export function toUserResponse(user: User): UserResponse {
     updatedAt: user.updatedAt,
     emailMasked: maskEmail(user.email),
     phoneMasked: maskPhone(user.phone),
+    permissions: user.permissions,
+    wikiCreateGranted: user.wikiCreateGranted,
+    banReason: user.banReason,
+    banUntil: user.banUntil,
+    mutedUntil: user.mutedUntil,
   };
 }
 
@@ -299,6 +313,124 @@ export class UsersService {
 
   async clearHistory(userId: string): Promise<void> {
     await this.prisma.browseHistory.deleteMany({ where: { userId } });
+  }
+
+  async listAdminUsers(query: {
+    q?: string;
+    group?: string;
+    role?: string;
+    status?: string;
+    level?: number;
+    page: number;
+    perPage: number;
+  }) {
+    const where: Record<string, unknown> = {};
+    if (query.q) {
+      where.OR = [
+        { username: { contains: query.q, mode: 'insensitive' } },
+        { email: { contains: query.q, mode: 'insensitive' } },
+        { phone: { contains: query.q } },
+      ];
+    }
+    if (query.group) where.group = query.group.toUpperCase();
+    if (query.role) where.role = query.role.toUpperCase();
+    if (query.status) where.status = query.status.toUpperCase();
+    if (query.level) where.level = query.level;
+
+    const [total, users] = await this.prisma.$transaction([
+      this.prisma.user.count({ where }),
+      this.prisma.user.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (query.page - 1) * query.perPage,
+        take: query.perPage,
+      }),
+    ]);
+    const sessions = await this.prisma.session.findMany({
+      where: {
+        userId: { in: users.map((u) => u.id) },
+        revokedAt: null,
+        lastActiveAt: { not: null },
+      },
+      select: { userId: true, lastActiveAt: true },
+      orderBy: { lastActiveAt: 'desc' },
+    });
+    const lastActive = new Map<string, Date | null>();
+    for (const s of sessions) {
+      if (!lastActive.has(s.userId)) lastActive.set(s.userId, s.lastActiveAt);
+    }
+    return {
+      data: users.map((u) => ({
+        ...toUserResponse(u),
+        email: u.email,
+        phone: u.phone,
+        lastActiveAt: lastActive.get(u.id) ?? null,
+      })),
+      pagination: pageInfo(query.page, query.perPage, total),
+    };
+  }
+
+  async getAdminUser(id: string) {
+    const user = await this.findById(id);
+    if (!user) throw new NotFoundException('user not found');
+    const lastSession = await this.prisma.session.findFirst({
+      where: { userId: id, revokedAt: null },
+      orderBy: { lastActiveAt: 'desc' },
+      select: { lastActiveAt: true },
+    });
+    return {
+      ...toUserResponse(user),
+      email: user.email,
+      phone: user.phone,
+      lastActiveAt: lastSession?.lastActiveAt ?? null,
+    };
+  }
+
+  async updateAdminUser(
+    id: string,
+    dto: {
+      group?: string;
+      level?: number;
+      status?: string;
+      banReason?: string;
+      banUntil?: string | null;
+      mutedUntil?: string | null;
+      wikiCreateGranted?: boolean;
+      permissions?: string[];
+      role?: string;
+    },
+  ) {
+    const user = await this.findById(id);
+    if (!user) throw new NotFoundException('user not found');
+
+    const data: Record<string, unknown> = {};
+    if (dto.group) data.group = dto.group.toUpperCase();
+    if (dto.level !== undefined) data.level = dto.level;
+    if (dto.status) {
+      data.status = dto.status.toUpperCase();
+      if (dto.status === 'banned') {
+        data.banReason = dto.banReason ?? user.banReason;
+        data.banUntil = dto.banUntil ?? null;
+      } else if (dto.status === 'muted') {
+        data.mutedUntil = dto.mutedUntil ?? null;
+      } else if (dto.status === 'active') {
+        data.banReason = null;
+        data.banUntil = null;
+        data.mutedUntil = null;
+      }
+    }
+    if (dto.wikiCreateGranted !== undefined) data.wikiCreateGranted = dto.wikiCreateGranted;
+    if (dto.permissions !== undefined) data.permissions = dto.permissions;
+    if (dto.role) data.role = dto.role.toUpperCase();
+
+    await this.prisma.user.update({ where: { id }, data });
+    if (dto.status === 'banned') {
+      await this.prisma.session.updateMany({
+        where: { userId: id, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+    }
+    return this.getAdminUser(id);
   }
 
   private async pruneHistory(userId: string): Promise<void> {

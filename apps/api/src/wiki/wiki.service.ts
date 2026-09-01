@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -12,6 +13,7 @@ import {
 } from '@prisma/client';
 import { pageInfo } from '../common/pagination';
 import { extractFirstImage } from '../common/markdown';
+import { hasPermission, isManagerRole, PERMISSIONS } from '../common/roles';
 import { PrismaService } from '../prisma/prisma.service';
 import { toUserSummary } from '../users/users.service';
 
@@ -35,7 +37,11 @@ function excerpt(content: string): string {
   return content.replace(/[#>*_`~\-[\]()!]/g, '').replace(/\s+/g, ' ').trim().slice(0, 160);
 }
 
-function pageSummary(page: PageWithRelations) {
+function pageSummary(
+  page: PageWithRelations,
+  likedByMe = false,
+  bookmarkedByMe = false,
+) {
   return {
     id: page.id,
     slug: page.slug,
@@ -47,12 +53,20 @@ function pageSummary(page: PageWithRelations) {
     status: page.status.toLowerCase(),
     author: toUserSummary(page.author),
     updatedAt: page.updatedAt,
+    viewCount: page.viewCount,
+    likeCount: page.likeCount,
+    likedByMe,
+    bookmarkedByMe,
   };
 }
 
-function pageDetail(page: PageWithRelations) {
+function pageDetail(
+  page: PageWithRelations,
+  likedByMe = false,
+  bookmarkedByMe = false,
+) {
   return {
-    ...pageSummary(page),
+    ...pageSummary(page, likedByMe, bookmarkedByMe),
     content: page.content,
     version: page.version,
     createdAt: page.createdAt,
@@ -147,7 +161,7 @@ export class WikiService {
     page: number;
     perPage: number;
     sort?: 'updatedAt' | 'createdAt' | 'title';
-  }) {
+  }, userId?: string) {
     const where: any = {};
     if (query.category) where.category = { slug: query.category };
     if (query.tag) where.tags = { has: query.tag };
@@ -173,13 +187,21 @@ export class WikiService {
         include: { author: true, category: true },
       }),
     ]);
+    const { likes, bookmarks } = await this.pageInteractions(
+      pages.map((p) => p.id),
+      userId,
+    );
     return {
-      data: pages.map(pageSummary),
+      data: pages.map((p) =>
+        pageSummary(p, likes.has(p.id), bookmarks.has(p.id)),
+      ),
       pagination: pageInfo(query.page, query.perPage, total),
     };
   }
 
-  async createPage(userId: string, dto: {
+  async createPage(
+    userId: string,
+    dto: {
     title: string;
     slug?: string;
     categorySlug: string;
@@ -188,7 +210,18 @@ export class WikiService {
     status?: 'draft' | 'published';
     changelog?: string;
     coverImage?: string | null;
-  }) {
+    },
+    auth?: { role: string; permissions: string[]; status: string; wikiCreateGranted?: boolean },
+  ) {
+    if (auth?.status === 'MUTED' || auth?.status === 'BANNED') {
+      throw new ForbiddenException('account restricted');
+    }
+    if (
+      !auth?.wikiCreateGranted &&
+      !hasPermission(auth?.role, auth?.permissions, PERMISSIONS.MANAGE_CONTENT)
+    ) {
+      throw new ForbiddenException('wiki create not granted');
+    }
     const category = await this.prisma.wikiCategory.findUnique({
       where: { slug: dto.categorySlug },
     });
@@ -223,16 +256,24 @@ export class WikiService {
     return pageDetail({ ...page, _count: { revisions: 1 } });
   }
 
-  async getPage(slug: string) {
+  async getPage(slug: string, userId?: string) {
+    await this.prisma.wikiPage.updateMany({
+      where: { slug },
+      data: { viewCount: { increment: 1 } },
+    });
     const page = await this.prisma.wikiPage.findUnique({
       where: { slug },
       include: { author: true, category: true, _count: { select: { revisions: true } } },
     });
     if (!page) throw new NotFoundException('page not found');
-    return pageDetail(page);
+    const { likes, bookmarks } = await this.pageInteractions([page.id], userId);
+    return pageDetail(page, likes.has(page.id), bookmarks.has(page.id));
   }
 
-  async updatePage(userId: string, slug: string, dto: {
+  async updatePage(
+    userId: string,
+    slug: string,
+    dto: {
     title?: string;
     categorySlug?: string;
     tags?: string[];
@@ -242,9 +283,17 @@ export class WikiService {
     coverImage?: string | null;
     featured?: boolean;
     featuredAt?: string | null;
-  }) {
+    },
+    auth?: { role: string; permissions: string[] },
+  ) {
     const existing = await this.prisma.wikiPage.findUnique({ where: { slug } });
     if (!existing) throw new NotFoundException('page not found');
+    if (
+      existing.authorId !== userId &&
+      !hasPermission(auth?.role, auth?.permissions, PERMISSIONS.MANAGE_CONTENT)
+    ) {
+      throw new ForbiddenException('not your page');
+    }
 
     let categoryId = existing.categoryId;
     if (dto.categorySlug) {
@@ -291,16 +340,95 @@ export class WikiService {
     return pageDetail(page);
   }
 
-  async deletePage(slug: string): Promise<void> {
+  async deletePage(
+    userId: string,
+    slug: string,
+    auth?: { role: string; permissions: string[] },
+  ): Promise<void> {
     const page = await this.prisma.wikiPage.findUnique({ where: { slug } });
     if (!page) {
       throw new NotFoundException('page not found');
+    }
+    if (
+      page.authorId !== userId &&
+      !hasPermission(auth?.role, auth?.permissions, PERMISSIONS.MANAGE_DELETION)
+    ) {
+      throw new ForbiddenException('not your page');
     }
     await this.prisma.comment.deleteMany({
       where: { targetType: 'WIKI_PAGE', targetId: page.id },
     });
     await this.prisma.wikiPageRevision.deleteMany({ where: { pageId: page.id } });
     await this.prisma.wikiPage.delete({ where: { id: page.id } });
+  }
+
+  async likePage(userId: string, slug: string): Promise<void> {
+    const page = await this.prisma.wikiPage.findUnique({ where: { slug } });
+    if (!page) throw new NotFoundException('page not found');
+    const existing = await this.prisma.wikiPageLike.findUnique({
+      where: { pageId_userId: { pageId: page.id, userId } },
+    });
+    if (!existing) {
+      await this.prisma.wikiPageLike.create({
+        data: { pageId: page.id, userId },
+      });
+      await this.prisma.wikiPage.update({
+        where: { id: page.id },
+        data: { likeCount: { increment: 1 } },
+      });
+    }
+  }
+
+  async unlikePage(userId: string, slug: string): Promise<void> {
+    const page = await this.prisma.wikiPage.findUnique({ where: { slug } });
+    if (!page) throw new NotFoundException('page not found');
+    const result = await this.prisma.wikiPageLike.deleteMany({
+      where: { pageId: page.id, userId },
+    });
+    if (result.count > 0) {
+      await this.prisma.wikiPage.update({
+        where: { id: page.id },
+        data: { likeCount: { decrement: 1 } },
+      });
+    }
+  }
+
+  async bookmarkPage(userId: string, slug: string): Promise<void> {
+    const page = await this.prisma.wikiPage.findUnique({ where: { slug } });
+    if (!page) throw new NotFoundException('page not found');
+    await this.prisma.wikiPageBookmark.upsert({
+      where: { pageId_userId: { pageId: page.id, userId } },
+      create: { pageId: page.id, userId },
+      update: {},
+    });
+  }
+
+  async unbookmarkPage(userId: string, slug: string): Promise<void> {
+    const page = await this.prisma.wikiPage.findUnique({ where: { slug } });
+    if (!page) throw new NotFoundException('page not found');
+    await this.prisma.wikiPageBookmark.deleteMany({
+      where: { pageId: page.id, userId },
+    });
+  }
+
+  private async pageInteractions(pageIds: string[], userId?: string) {
+    if (!userId || pageIds.length === 0) {
+      return { likes: new Set<string>(), bookmarks: new Set<string>() };
+    }
+    const [likes, bookmarks] = await Promise.all([
+      this.prisma.wikiPageLike.findMany({
+        where: { pageId: { in: pageIds }, userId },
+        select: { pageId: true },
+      }),
+      this.prisma.wikiPageBookmark.findMany({
+        where: { pageId: { in: pageIds }, userId },
+        select: { pageId: true },
+      }),
+    ]);
+    return {
+      likes: new Set(likes.map((l) => l.pageId)),
+      bookmarks: new Set(bookmarks.map((b) => b.pageId)),
+    };
   }
 
   async listRevisions(slug: string, page: number, perPage: number) {

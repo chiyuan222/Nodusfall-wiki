@@ -8,6 +8,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Query,
   Req,
   UseGuards,
@@ -22,7 +23,17 @@ import { UpdateGuideDto } from './dto/update-guide.dto';
 import { GuidesService } from './guides.service';
 
 interface AuthenticatedRequest extends Request {
-  user: { sub: string };
+  user: {
+    sub: string;
+    role: string;
+    permissions: string[];
+    status: string;
+    wikiCreateGranted: boolean;
+  };
+}
+
+interface OptionalRequest extends Request {
+  user?: { sub: string };
 }
 
 @Controller('guides')
@@ -30,7 +41,8 @@ export class GuidesController {
   constructor(private readonly guidesService: GuidesService) {}
 
   @Get()
-  list(@Query() query: ListGuidesQueryDto) {
+  @UseGuards(OptionalJwtAuthGuard)
+  list(@Req() req: OptionalRequest, @Query() query: ListGuidesQueryDto) {
     return this.guidesService.list({
       tag: query.tag,
       q: query.q,
@@ -38,18 +50,26 @@ export class GuidesController {
       sort: query.sort,
       page: query.page,
       perPage: query.perPage,
-    });
+    }, req.user?.sub);
   }
 
   @UseGuards(JwtAuthGuard)
   @Post()
   create(@Req() req: AuthenticatedRequest, @Body() dto: CreateGuideDto) {
-    return this.guidesService.create(req.user.sub, dto).then((data) => ({ data }));
+    return this.guidesService
+      .create(req.user.sub, dto, {
+        role: req.user.role,
+        permissions: req.user.permissions,
+        status: req.user.status,
+        wikiCreateGranted: req.user.wikiCreateGranted,
+      })
+      .then((data) => ({ data }));
   }
 
   @Get(':slug')
-  get(@Param('slug') slug: string) {
-    return this.guidesService.get(slug).then((data) => ({ data }));
+  @UseGuards(OptionalJwtAuthGuard)
+  get(@Req() req: OptionalRequest, @Param('slug') slug: string) {
+    return this.guidesService.get(slug, req.user?.sub).then((data) => ({ data }));
   }
 
   @UseGuards(JwtAuthGuard)
@@ -59,14 +79,65 @@ export class GuidesController {
     @Param('slug') slug: string,
     @Body() dto: UpdateGuideDto,
   ) {
-    return this.guidesService.update(req.user.sub, slug, dto).then((data) => ({ data }));
+    return this.guidesService
+      .update(req.user.sub, slug, dto, {
+        role: req.user.role,
+        permissions: req.user.permissions,
+      })
+      .then((data) => ({ data }));
   }
 
   @UseGuards(JwtAuthGuard)
   @Delete(':slug')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async delete(@Param('slug') slug: string): Promise<void> {
-    await this.guidesService.delete(slug);
+  async delete(
+    @Req() req: AuthenticatedRequest,
+    @Param('slug') slug: string,
+  ): Promise<void> {
+    await this.guidesService.delete(req.user.sub, slug, {
+      role: req.user.role,
+      permissions: req.user.permissions,
+    });
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Put(':slug/like')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async like(
+    @Req() req: AuthenticatedRequest,
+    @Param('slug') slug: string,
+  ): Promise<void> {
+    await this.guidesService.likeGuide(req.user.sub, slug);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete(':slug/like')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async unlike(
+    @Req() req: AuthenticatedRequest,
+    @Param('slug') slug: string,
+  ): Promise<void> {
+    await this.guidesService.unlikeGuide(req.user.sub, slug);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Put(':slug/bookmark')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async bookmark(
+    @Req() req: AuthenticatedRequest,
+    @Param('slug') slug: string,
+  ): Promise<void> {
+    await this.guidesService.bookmarkGuide(req.user.sub, slug);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete(':slug/bookmark')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async unbookmark(
+    @Req() req: AuthenticatedRequest,
+    @Param('slug') slug: string,
+  ): Promise<void> {
+    await this.guidesService.unbookmarkGuide(req.user.sub, slug);
   }
 
   @Get(':slug/ratings')
