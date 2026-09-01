@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { ProfilePanel } from "@/components/me/profile-panel";
 import { MyContent } from "@/components/me/my-content";
 import { MyHistory } from "@/components/me/my-history";
@@ -8,7 +9,8 @@ import { AccountSettings } from "@/components/me/account-settings";
 
 /**
  * 用户中心四 Tab（契约 PR #45）：
- * 我的主页（资料/管理入口/退出）｜我的内容（主题/收藏）｜浏览记录｜账号设置（外观/软注销）
+ * 我的主页（资料/管理入口/退出）｜我的内容（主题/收藏/评论）｜浏览记录｜账号设置（外观/软注销）
+ * 支持 ?tab=profile|content|history|settings 直达（顶栏 AuthMenu 下拉使用）。
  * 各面板自行处理未登录门禁。
  */
 
@@ -23,6 +25,15 @@ const TABS: { key: Tab; label: string }[] = [
 
 export function MeTabs() {
   const [tab, setTab] = useState<Tab>("profile");
+  const searchParams = useSearchParams();
+
+  // 顶栏下拉 /me?tab=xxx 直达：查询参数变化时同步
+  useEffect(() => {
+    const q = searchParams.get("tab");
+    if (q && (TABS as { key: string }[]).some((t) => t.key === q)) {
+      setTab(q as Tab);
+    }
+  }, [searchParams]);
 
   return (
     <div className="space-y-6">
