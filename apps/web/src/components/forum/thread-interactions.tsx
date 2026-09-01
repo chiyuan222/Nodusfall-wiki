@@ -36,9 +36,78 @@ function describeError(e: unknown, fallback: string): string {
   return fallback;
 }
 
-/** 收藏按钮（客户端）：PUT/DELETE /forum/threads/:id/bookmark */
-export function BookmarkButton({
+/**
+ * 管理员帖子操作（客户端）：置顶 / 锁定切换。
+ * 仅 admin 渲染；PATCH /forum/threads/:id（pinned/locked 仅管理员可改，契约 §论坛）。
+ */
+export function AdminThreadControls({
   threadId,
+  initialPinned,
+  initialLocked,
+}: {
+  threadId: string;
+  initialPinned: boolean;
+  initialLocked: boolean;
+}) {
+  const router = useRouter();
+  const { me } = useMe();
+  const [pinned, setPinned] = useState(initialPinned);
+  const [locked, setLocked] = useState(initialLocked);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  if (me?.role?.toLowerCase() !== "admin") return null;
+
+  const toggle = (field: "pinned" | "locked", next: boolean) => {
+    if (busy) return;
+    setBusy(true);
+    setMsg("");
+    forumApi
+      .updateThread(threadId, { [field]: next })
+      .then(() => {
+        if (field === "pinned") setPinned(next);
+        else setLocked(next);
+        router.refresh();
+      })
+      .catch((e: unknown) => setMsg(describeError(e, "操作失败，请稍后重试。")))
+      .finally(() => setBusy(false));
+  };
+
+  return (
+    <span className="inline-flex items-center gap-2">
+      <button
+        type="button"
+        disabled={busy}
+        aria-pressed={pinned}
+        onClick={() => toggle("pinned", !pinned)}
+        className={`rounded-md border px-3 py-1.5 text-small transition-colors duration-fast disabled:opacity-40 ${
+          pinned
+            ? "border-amber bg-amber text-amber-fg"
+            : "border-border-subtle text-secondary hover:border-amber-soft hover:text-amber"
+        }`}
+      >
+        {pinned ? "取消置顶" : "置顶"}
+      </button>
+      <button
+        type="button"
+        disabled={busy}
+        aria-pressed={locked}
+        onClick={() => toggle("locked", !locked)}
+        className={`rounded-md border px-3 py-1.5 text-small transition-colors duration-fast disabled:opacity-40 ${
+          locked
+            ? "border-danger text-danger"
+            : "border-border-subtle text-secondary hover:border-danger hover:text-danger"
+        }`}
+      >
+        {locked ? "解锁" : "锁定"}
+      </button>
+      {msg && <span className="text-caption text-secondary">{msg}</span>}
+    </span>
+  );
+}
+
+/** 收藏按钮（客户端）：PUT/DELETE /forum/threads/:id/bookmark */
+export function BookmarkButton({  threadId,
   initialBookmarked,
 }: {
   threadId: string;

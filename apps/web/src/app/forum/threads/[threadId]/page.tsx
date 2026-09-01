@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { forumApi, type ForumThread } from "@/lib/api";
 import { ApiError } from "@/lib/errors";
 import { Markdown } from "@/components/markdown";
-import { BookmarkButton, PostSection } from "@/components/forum/thread-interactions";
+import { AdminThreadControls, BookmarkButton, PostSection } from "@/components/forum/thread-interactions";
 
 export const dynamic = "force-dynamic";
 
@@ -84,6 +84,11 @@ export default async function ThreadPage({
             <span aria-hidden>·</span>
             <span>回复 {thread.replyCount} · 喜欢 {thread.likeCount}</span>
             <span className="grow" />
+            <AdminThreadControls
+              threadId={thread.id}
+              initialPinned={thread.pinned}
+              initialLocked={thread.locked}
+            />
             <BookmarkButton
               threadId={thread.id}
               initialBookmarked={thread.bookmarkedByMe}

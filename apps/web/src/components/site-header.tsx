@@ -29,8 +29,10 @@ export function SiteHeader() {
           className="flex items-center gap-2 font-serif text-h3 font-semibold text-primary hover:text-amber"
         >
           <KnotMark size={24} />
-          源初之结
-          <span className="text-caption font-normal text-faint">非官方 Wiki</span>
+          源神小窝
+          <span className="text-caption font-normal text-faint">
+            源初之结非官方wiki
+          </span>
         </Link>
 
         <nav aria-label="主导航" className="flex items-center gap-1">

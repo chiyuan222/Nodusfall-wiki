@@ -217,6 +217,18 @@ export function ProfilePanel() {
             >
               新建 Wiki 条目
             </Link>
+            <Link
+              href="/admin/wiki"
+              className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary transition-colors duration-fast hover:border-amber-soft hover:text-amber"
+            >
+              Wiki 内容管理
+            </Link>
+            <Link
+              href="/admin/guides"
+              className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary transition-colors duration-fast hover:border-amber-soft hover:text-amber"
+            >
+              攻略内容管理
+            </Link>
           </div>
         </div>
       )}
