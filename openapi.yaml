@@ -786,6 +786,66 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /wiki/pages/{slug}/like:
+    put:
+      tags: [Wiki]
+      operationId: likeWikiPage
+      summary: 点赞 Wiki 页面（幂等）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Slug"
+      responses:
+        "204":
+          description: 已点赞
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Wiki]
+      operationId: unlikeWikiPage
+      summary: 取消点赞
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Slug"
+      responses:
+        "204":
+          description: 已取消
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /wiki/pages/{slug}/bookmark:
+    put:
+      tags: [Wiki]
+      operationId: bookmarkWikiPage
+      summary: 收藏 Wiki 页面（幂等）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Slug"
+      responses:
+        "204":
+          description: 已收藏
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Wiki]
+      operationId: unbookmarkWikiPage
+      summary: 取消收藏
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Slug"
+      responses:
+        "204":
+          description: 已取消
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /wiki/pages/{slug}/revisions:
     get:
       tags: [Wiki]
@@ -939,6 +999,66 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /guides/{slug}/like:
+    put:
+      tags: [Guides]
+      operationId: likeGuide
+      summary: 点赞攻略（幂等）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Slug"
+      responses:
+        "204":
+          description: 已点赞
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Guides]
+      operationId: unlikeGuide
+      summary: 取消点赞
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Slug"
+      responses:
+        "204":
+          description: 已取消
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /guides/{slug}/bookmark:
+    put:
+      tags: [Guides]
+      operationId: bookmarkGuide
+      summary: 收藏攻略（幂等）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Slug"
+      responses:
+        "204":
+          description: 已收藏
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Guides]
+      operationId: unbookmarkGuide
+      summary: 取消收藏
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Slug"
+      responses:
+        "204":
+          description: 已取消
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -1291,6 +1411,46 @@ paths:
       tags: [Forum]
       operationId: unbookmarkThread
       summary: 取消收藏
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: threadId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: 已取消
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /forum/threads/{threadId}/like:
+    put:
+      tags: [Forum]
+      operationId: likeThread
+      summary: 点赞主题（幂等）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: threadId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: 已点赞
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Forum]
+      operationId: unlikeThread
+      summary: 取消点赞
       security: [{ bearerAuth: [] }]
       parameters:
         - name: threadId
@@ -2151,7 +2311,7 @@ components:
 
     WikiPageSummary:
       type: object
-      required: [id, slug, title, excerpt, coverImage, categorySlug, tags, status, author, updatedAt]
+      required: [id, slug, title, excerpt, coverImage, categorySlug, tags, status, author, updatedAt, viewCount, likeCount, likedByMe, bookmarkedByMe]
       properties:
         id: { type: string, format: uuid }
         slug: { type: string }
@@ -2168,6 +2328,10 @@ components:
         author:
           $ref: "#/components/schemas/UserSummary"
         updatedAt: { type: string, format: date-time }
+        viewCount: { type: integer }
+        likeCount: { type: integer }
+        likedByMe: { type: boolean }
+        bookmarkedByMe: { type: boolean }
 
     WikiPage:
       allOf:
@@ -2219,7 +2383,7 @@ components:
 
     GuideSummary:
       type: object
-      required: [id, slug, title, excerpt, coverImage, tags, status, author, rating, updatedAt]
+      required: [id, slug, title, excerpt, coverImage, tags, status, author, rating, updatedAt, viewCount, likeCount, likedByMe, bookmarkedByMe]
       properties:
         id: { type: string, format: uuid }
         slug: { type: string }
@@ -2241,6 +2405,10 @@ components:
         ratingCount:
           type: integer
         updatedAt: { type: string, format: date-time }
+        viewCount: { type: integer }
+        likeCount: { type: integer }
+        likedByMe: { type: boolean }
+        bookmarkedByMe: { type: boolean }
 
     Guide:
       allOf:
@@ -2312,7 +2480,7 @@ components:
 
     ForumThreadSummary:
       type: object
-      required: [id, boardSlug, title, excerpt, coverImage, author, pinned, locked, replyCount, likeCount, bookmarkedByMe, createdAt, updatedAt, lastPostAt]
+      required: [id, boardSlug, title, excerpt, coverImage, author, pinned, locked, replyCount, likeCount, likedByMe, bookmarkedByMe, viewCount, createdAt, updatedAt, lastPostAt]
       properties:
         id: { type: string, format: uuid }
         boardSlug: { type: string }
@@ -2325,7 +2493,9 @@ components:
         locked: { type: boolean }
         replyCount: { type: integer }
         likeCount: { type: integer }
+        likedByMe: { type: boolean }
         bookmarkedByMe: { type: boolean }
+        viewCount: { type: integer }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
         lastPostAt: { type: string, format: date-time }
