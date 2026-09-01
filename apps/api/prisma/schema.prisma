@@ -441,3 +441,10 @@ model VideoEntry {
 
   @@index([kind, published, sortOrder])
 }
+
+model SiteConfig {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  data      Json
+  updatedAt DateTime @updatedAt
+}
