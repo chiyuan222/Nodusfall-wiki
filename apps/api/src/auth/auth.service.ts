@@ -30,7 +30,10 @@ export class AuthService {
     user: UserResponse;
   }> {
     if (dto.grantType === 'password') {
-      return this.loginWithPassword(dto.email!, dto.password!);
+      return this.loginWithPassword(
+        { email: dto.email, phone: dto.phone },
+        dto.password!,
+      );
     }
     return this.refresh(dto.refreshToken!);
   }
@@ -51,9 +54,22 @@ export class AuthService {
     });
   }
 
-  private async loginWithPassword(email: string, password: string) {
-    const user = await this.prisma.user.findUnique({ where: { email } });
-    if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+  private async loginWithPassword(
+    identifier: { email?: string; phone?: string },
+    password: string,
+  ) {
+    const user = identifier.email
+      ? await this.prisma.user.findUnique({
+          where: { email: identifier.email.trim().toLowerCase() },
+        })
+      : await this.prisma.user.findUnique({
+          where: { phone: identifier.phone },
+        });
+    if (
+      !user ||
+      user.status !== 'ACTIVE' ||
+      !(await bcrypt.compare(password, user.passwordHash))
+    ) {
       throw new UnauthorizedException('invalid credentials');
     }
     return this.issueTokens(user);

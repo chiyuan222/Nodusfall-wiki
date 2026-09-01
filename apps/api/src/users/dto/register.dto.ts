@@ -1,9 +1,13 @@
-import { IsEmail, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsString,
+  Matches,
+  MaxLength,
+  MinLength,
+  ValidateIf,
+} from 'class-validator';
 
 export class RegisterDto {
-  @IsEmail()
-  email!: string;
-
   @IsString()
   @MinLength(2)
   @MaxLength(32)
@@ -14,4 +18,17 @@ export class RegisterDto {
   @MinLength(8)
   @MaxLength(128)
   password!: string;
+
+  @ValidateIf((o: RegisterDto) => !o.phone)
+  @IsEmail()
+  email?: string;
+
+  @ValidateIf((o: RegisterDto) => Boolean(o.email))
+  @IsString()
+  @Matches(/^\d{6}$/)
+  emailCode?: string;
+
+  @ValidateIf((o: RegisterDto) => !o.email)
+  @Matches(/^1[3-9]\d{9}$/)
+  phone?: string;
 }

@@ -15,6 +15,11 @@ enum UserRole {
   ADMIN
 }
 
+enum UserStatus {
+  ACTIVE
+  DELETED
+}
+
 enum ContentStatus {
   DRAFT
   PUBLISHED
@@ -28,17 +33,21 @@ enum CommentTargetType {
 
 model User {
   id           String   @id @default(uuid())
-  email        String   @unique
+  email        String?  @unique
+  phone        String?  @unique
   username     String   @unique
   passwordHash String
   displayName  String?
   avatarUrl    String?
   bio          String?
   role         UserRole @default(MEMBER)
+  status       UserStatus @default(ACTIVE)
+  emailVerifiedAt DateTime?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   sessions      Session[]
+  history       BrowseHistory[]
   wikiPages     WikiPage[]        @relation("WikiPageAuthor")
   wikiRevisions WikiPageRevision[] @relation("WikiRevisionAuthor")
   guides        Guide[]           @relation("GuideAuthor")
@@ -60,6 +69,34 @@ model Session {
   expiresAt        DateTime
   revokedAt        DateTime?
   createdAt        DateTime  @default(now())
+}
+
+model EmailCode {
+  id         String    @id @default(uuid())
+  email      String
+  codeHash   String
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([email, createdAt])
+}
+
+model BrowseHistory {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  kind       String
+  slug       String
+  title      String
+  boardSlug  String?
+  coverImage String?
+  excerpt    String?
+  viewedAt   DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, kind, slug])
+  @@index([userId, viewedAt])
 }
 
 model WikiCategory {
