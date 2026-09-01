@@ -54,17 +54,16 @@ npm --prefix apps/api run dev
 
 ## 测试账号（seed 生成）
 
-| 角色 | 邮箱 | 密码 |
+| 角色 | 用户名 / 邮箱 | 密码 |
 | --- | --- | --- |
-| 管理员 | `admin@nodusfall.local` | `Admin12345!` |
-| 普通成员 | `member@nodusfall.local` | `Member12345!` |
+| 站长 | `chiyuan222` / `chiyuan222@nodusfall.local` | `Lxy529586517` |
 
 登录：
 
 ```bash
 curl -X POST http://127.0.0.1:4000/v1/auth/sessions \
   -H 'Content-Type: application/json' \
-  -d '{"grantType":"password","email":"admin@nodusfall.local","password":"Admin12345!"}'
+  -d '{"grantType":"password","email":"chiyuan222@nodusfall.local","password":"Lxy529586517"}'
 ```
 
 ## 目录
