@@ -16,6 +16,7 @@ import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PaginationQueryDto } from '../common/pagination';
 import { CreateWikiPageDto } from './dto/create-wiki-page.dto';
+import { ListWikiPagesQueryDto } from './dto/list-wiki-pages-query.dto';
 import { UpdateWikiPageDto } from './dto/update-wiki-page.dto';
 import { WikiService } from './wiki.service';
 
@@ -33,22 +34,15 @@ export class WikiController {
   }
 
   @Get('pages')
-  listPages(
-    @Query() pagination: PaginationQueryDto,
-    @Query('category') category?: string,
-    @Query('tag') tag?: string,
-    @Query('q') q?: string,
-    @Query('status') status?: any,
-    @Query('sort') sort?: any,
-  ) {
+  listPages(@Query() query: ListWikiPagesQueryDto) {
     return this.wikiService.listPages({
-      category,
-      tag,
-      q,
-      status,
-      page: pagination.page,
-      perPage: pagination.perPage,
-      sort,
+      category: query.category,
+      tag: query.tag,
+      q: query.q,
+      status: query.status?.toUpperCase() as any,
+      page: query.page,
+      perPage: query.perPage,
+      sort: query.sort,
     });
   }
 

@@ -41,7 +41,7 @@ function pageSummary(page: PageWithRelations) {
     excerpt: page.excerpt,
     categorySlug: page.category.slug,
     tags: page.tags,
-    status: page.status,
+    status: page.status.toLowerCase(),
     author: toUserSummary(page.author),
     updatedAt: page.updatedAt,
   };
@@ -220,9 +220,15 @@ export class WikiService {
   }
 
   async deletePage(slug: string): Promise<void> {
-    await this.prisma.wikiPage.delete({ where: { slug } }).catch(() => {
+    const page = await this.prisma.wikiPage.findUnique({ where: { slug } });
+    if (!page) {
       throw new NotFoundException('page not found');
+    }
+    await this.prisma.comment.deleteMany({
+      where: { targetType: 'WIKI_PAGE', targetId: page.id },
     });
+    await this.prisma.wikiPageRevision.deleteMany({ where: { pageId: page.id } });
+    await this.prisma.wikiPage.delete({ where: { id: page.id } });
   }
 
   async listRevisions(slug: string, page: number, perPage: number) {

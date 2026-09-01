@@ -25,7 +25,7 @@ function summary(guide: GuideWithAuthor) {
     title: guide.title,
     excerpt: guide.excerpt,
     tags: guide.tags,
-    status: guide.status,
+    status: guide.status.toLowerCase(),
     author: toUserSummary(guide.author),
     rating: guide.ratingAvg,
     ratingCount: guide.ratingCount,
@@ -155,9 +155,15 @@ export class GuidesService {
   }
 
   async delete(slug: string): Promise<void> {
-    await this.prisma.guide.delete({ where: { slug } }).catch(() => {
+    const guide = await this.prisma.guide.findUnique({ where: { slug } });
+    if (!guide) {
       throw new NotFoundException('guide not found');
+    }
+    await this.prisma.rating.deleteMany({ where: { guideId: guide.id } });
+    await this.prisma.comment.deleteMany({
+      where: { targetType: 'GUIDE', targetId: guide.id },
     });
+    await this.prisma.guide.delete({ where: { id: guide.id } });
   }
 
   async getRating(slug: string, userId?: string) {

@@ -17,6 +17,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
 import { PaginationQueryDto } from '../common/pagination';
 import { CreateGuideDto } from './dto/create-guide.dto';
+import { ListGuidesQueryDto } from './dto/list-guides-query.dto';
 import { UpdateGuideDto } from './dto/update-guide.dto';
 import { GuidesService } from './guides.service';
 
@@ -29,20 +30,14 @@ export class GuidesController {
   constructor(private readonly guidesService: GuidesService) {}
 
   @Get()
-  list(
-    @Query() pagination: PaginationQueryDto,
-    @Query('tag') tag?: string,
-    @Query('q') q?: string,
-    @Query('status') status?: any,
-    @Query('sort') sort?: any,
-  ) {
+  list(@Query() query: ListGuidesQueryDto) {
     return this.guidesService.list({
-      tag,
-      q,
-      status,
-      sort,
-      page: pagination.page,
-      perPage: pagination.perPage,
+      tag: query.tag,
+      q: query.q,
+      status: query.status?.toUpperCase() as any,
+      sort: query.sort,
+      page: query.page,
+      perPage: query.perPage,
     });
   }
 
