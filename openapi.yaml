@@ -448,6 +448,57 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
+  /users/me/checkin:
+    get:
+      tags: [Users]
+      operationId: getCheckInStatus
+      summary: 今日签到状态与连续签到天数
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: 签到状态
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckInStatus"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      tags: [Users]
+      operationId: checkIn
+      summary: 每日签到（+10 经验，连续 7 天额外 +30；重复签到 409）
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: 签到成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckInResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /users/me/exp-log:
+    get:
+      tags: [Users]
+      operationId: listExpLog
+      summary: 我的经验记录（来源/数值/时间，分页）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+      responses:
+        "200":
+          description: 经验记录
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExpLogList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
   /users/me/messages/read-all:
     post:
       tags: [Users]
@@ -2576,6 +2627,12 @@ components:
             updatedAt: { type: string, format: date-time }
             emailMasked: { type: string }
             phoneMasked: { type: [string, "null"] }
+            exp:
+              type: integer
+              description: 累计经验（等级由经验换算）
+            nextLevelExp:
+              type: [integer, "null"]
+              description: 升到下一级所需累计经验；满级为 null
             permissions:
               type: array
               items:
@@ -3071,6 +3128,49 @@ components:
       required: [unread]
       properties:
         unread: { type: integer }
+
+    CheckInStatus:
+      type: object
+      required: [today, streak, total]
+      properties:
+        today: { type: boolean }
+        streak: { type: integer, description: 连续签到天数（今日未签则按截至昨日） }
+        total: { type: integer, description: 累计签到天数 }
+
+    CheckInResult:
+      type: object
+      required: [today, streak, total, gainedExp, exp, level, nextLevelExp]
+      properties:
+        today: { type: boolean }
+        streak: { type: integer }
+        total: { type: integer }
+        gainedExp: { type: integer }
+        exp: { type: integer }
+        level: { type: integer }
+        nextLevelExp: { type: [integer, "null"] }
+
+    ExpLogEntry:
+      type: object
+      required: [id, amount, reason, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        amount: { type: integer }
+        reason:
+          type: string
+          enum: [checkin, wiki, guide, thread, reply, comment, bookmark, like]
+        refId: { type: [string, "null"] }
+        createdAt: { type: string, format: date-time }
+
+    ExpLogList:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExpLogEntry"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
 
     SearchResult:
       type: object
