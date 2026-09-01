@@ -236,6 +236,146 @@ paths:
               schema:
                 $ref: "#/components/schemas/WikiCategoryList"
 
+  /admin/wiki/categories:
+    post:
+      tags: [Wiki]
+      operationId: createWikiCategory
+      summary: 新建 Wiki 分类（管理员）
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        $ref: "#/components/requestBodies/AdminWikiCategoryCreate"
+      responses:
+        "201":
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WikiCategory"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /admin/wiki/categories/{slug}:
+    patch:
+      tags: [Wiki]
+      operationId: updateWikiCategory
+      summary: 更新 Wiki 分类（管理员）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Slug"
+      requestBody:
+        $ref: "#/components/requestBodies/AdminWikiCategoryUpdate"
+      responses:
+        "200":
+          description: 更新后的分类
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WikiCategory"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+    delete:
+      tags: [Wiki]
+      operationId: deleteWikiCategory
+      summary: 删除 Wiki 分类（管理员，非空返回 409）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Slug"
+      responses:
+        "204":
+          description: 已删除
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /admin/forum/boards:
+    post:
+      tags: [Forum]
+      operationId: createForumBoard
+      summary: 新建论坛板块（管理员）
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        $ref: "#/components/requestBodies/AdminForumBoardCreate"
+      responses:
+        "201":
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForumBoard"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /admin/forum/boards/{slug}:
+    patch:
+      tags: [Forum]
+      operationId: updateForumBoard
+      summary: 更新论坛板块（管理员）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Slug"
+      requestBody:
+        $ref: "#/components/requestBodies/AdminForumBoardUpdate"
+      responses:
+        "200":
+          description: 更新后的板块
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForumBoard"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+    delete:
+      tags: [Forum]
+      operationId: deleteForumBoard
+      summary: 删除论坛板块（管理员，非空返回 409）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Slug"
+      responses:
+        "204":
+          description: 已删除
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
   /wiki/pages:
     get:
       tags: [Wiki]
@@ -1167,6 +1307,50 @@ components:
         default: 20
 
   requestBodies:
+    AdminWikiCategoryCreate:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [slug, name, sortOrder]
+            properties:
+              slug: { type: string, pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$" }
+              name: { type: string, maxLength: 64 }
+              description: { type: string }
+              sortOrder: { type: integer }
+    AdminWikiCategoryUpdate:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              name: { type: string, maxLength: 64 }
+              description: { type: string }
+              sortOrder: { type: integer }
+    AdminForumBoardCreate:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [slug, name, sortOrder]
+            properties:
+              slug: { type: string, pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$" }
+              name: { type: string, maxLength: 64 }
+              description: { type: string }
+              sortOrder: { type: integer }
+    AdminForumBoardUpdate:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              name: { type: string, maxLength: 64 }
+              description: { type: string }
+              sortOrder: { type: integer }
     RegisterRequest:
       required: true
       content:
