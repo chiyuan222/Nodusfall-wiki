@@ -24,7 +24,13 @@ import { UpdateForumThreadDto } from './dto/update-forum-thread.dto';
 import { ForumService } from './forum.service';
 
 interface AuthenticatedRequest extends Request {
-  user: { sub: string };
+  user: {
+    sub: string;
+    role: string;
+    permissions: string[];
+    status: string;
+    group: string;
+  };
 }
 
 @Controller('forum')
@@ -60,7 +66,14 @@ export class ForumController {
     @Param('boardSlug') boardSlug: string,
     @Body() dto: CreateForumThreadDto,
   ) {
-    return this.forumService.createThread(req.user.sub, boardSlug, dto).then((data) => ({ data }));
+    return this.forumService
+      .createThread(req.user.sub, boardSlug, dto, {
+        role: req.user.role,
+        permissions: req.user.permissions,
+        group: req.user.group,
+        status: req.user.status,
+      })
+      .then((data) => ({ data }));
   }
 
   @Get('threads/:threadId')
@@ -77,14 +90,45 @@ export class ForumController {
     @Param('threadId') threadId: string,
     @Body() dto: UpdateForumThreadDto,
   ) {
-    return this.forumService.updateThread(req.user.sub, threadId, dto).then((data) => ({ data }));
+    return this.forumService
+      .updateThread(req.user.sub, threadId, dto, {
+        role: req.user.role,
+        permissions: req.user.permissions,
+      })
+      .then((data) => ({ data }));
   }
 
   @UseGuards(JwtAuthGuard)
   @Delete('threads/:threadId')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteThread(@Param('threadId') threadId: string): Promise<void> {
-    await this.forumService.deleteThread(threadId);
+  async deleteThread(
+    @Req() req: AuthenticatedRequest,
+    @Param('threadId') threadId: string,
+  ): Promise<void> {
+    await this.forumService.deleteThread(req.user.sub, threadId, {
+      role: req.user.role,
+      permissions: req.user.permissions,
+    });
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Put('threads/:threadId/like')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async likeThread(
+    @Req() req: AuthenticatedRequest,
+    @Param('threadId') threadId: string,
+  ): Promise<void> {
+    await this.forumService.likeThread(req.user.sub, threadId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('threads/:threadId/like')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async unlikeThread(
+    @Req() req: AuthenticatedRequest,
+    @Param('threadId') threadId: string,
+  ): Promise<void> {
+    await this.forumService.unlikeThread(req.user.sub, threadId);
   }
 
   @Get('threads/:threadId/posts')
@@ -105,7 +149,14 @@ export class ForumController {
     @Param('threadId') threadId: string,
     @Body() dto: CreateForumPostDto,
   ) {
-    return this.forumService.createPost(req.user.sub, threadId, dto).then((data) => ({ data }));
+    return this.forumService
+      .createPost(req.user.sub, threadId, dto, {
+        role: req.user.role,
+        permissions: req.user.permissions,
+        group: req.user.group,
+        status: req.user.status,
+      })
+      .then((data) => ({ data }));
   }
 
   @UseGuards(JwtAuthGuard)
@@ -125,7 +176,10 @@ export class ForumController {
     @Req() req: AuthenticatedRequest,
     @Param('postId') postId: string,
   ): Promise<void> {
-    await this.forumService.deletePost(req.user.sub, postId);
+    await this.forumService.deletePost(req.user.sub, postId, {
+      role: req.user.role,
+      permissions: req.user.permissions,
+    });
   }
 
   @UseGuards(JwtAuthGuard)

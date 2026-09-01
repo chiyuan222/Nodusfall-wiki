@@ -13,10 +13,19 @@ enum UserRole {
   EDITOR
   MODERATOR
   ADMIN
+  OWNER
+}
+
+enum UserGroup {
+  NORMAL
+  VERIFIED
+  PREMIUM
 }
 
 enum UserStatus {
   ACTIVE
+  MUTED
+  BANNED
   DELETED
 }
 
@@ -42,12 +51,25 @@ model User {
   bio          String?
   role         UserRole @default(MEMBER)
   status       UserStatus @default(ACTIVE)
+  group        UserGroup @default(NORMAL)
+  level        Int       @default(1)
+  permissions  String[]
+  wikiCreateGranted Boolean @default(false)
+  banReason    String?
+  banUntil     DateTime?
+  mutedUntil   DateTime?
+  phoneVerifiedAt DateTime?
   emailVerifiedAt DateTime?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   sessions      Session[]
   history       BrowseHistory[]
+  wikiPageLikes WikiPageLike[] @relation("WikiPageLikeUser")
+  wikiPageBookmarks WikiPageBookmark[] @relation("WikiPageBookmarkUser")
+  guideLikes    GuideLike[]    @relation("GuideLikeUser")
+  guideBookmarks GuideBookmark[] @relation("GuideBookmarkUser")
+  threadLikes   ForumThreadLike[] @relation("ThreadLikeUser")
   wikiPages     WikiPage[]        @relation("WikiPageAuthor")
   wikiRevisions WikiPageRevision[] @relation("WikiRevisionAuthor")
   guides        Guide[]           @relation("GuideAuthor")
@@ -68,6 +90,7 @@ model Session {
   refreshTokenHash String
   expiresAt        DateTime
   revokedAt        DateTime?
+  lastActiveAt     DateTime?
   createdAt        DateTime  @default(now())
 }
 
@@ -116,6 +139,8 @@ model WikiPage {
   excerpt     String
   coverImage  String?
   featuredAt  DateTime?
+  viewCount   Int         @default(0)
+  likeCount   Int         @default(0)
   categoryId  String
   category    WikiCategory  @relation(fields: [categoryId], references: [id])
   tags        String[]
@@ -126,6 +151,30 @@ model WikiPage {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   revisions   WikiPageRevision[]
+  likes       WikiPageLike[]
+  bookmarks   WikiPageBookmark[]
+}
+
+model WikiPageLike {
+  id        String   @id @default(uuid())
+  pageId    String
+  page      WikiPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation("WikiPageLikeUser", fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([pageId, userId])
+}
+
+model WikiPageBookmark {
+  id        String   @id @default(uuid())
+  pageId    String
+  page      WikiPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation("WikiPageBookmarkUser", fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([pageId, userId])
 }
 
 model WikiPageRevision {
@@ -149,6 +198,8 @@ model Guide {
   excerpt          String
   coverImage       String?
   featuredAt       DateTime?
+  viewCount        Int         @default(0)
+  likeCount        Int         @default(0)
   tags             String[]
   status           ContentStatus @default(DRAFT)
   relatedCharacter String?
@@ -159,6 +210,30 @@ model Guide {
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
   ratings          Rating[]
+  likes            GuideLike[]
+  bookmarks        GuideBookmark[]
+}
+
+model GuideLike {
+  id        String @id @default(uuid())
+  guideId   String
+  guide     Guide  @relation(fields: [guideId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User   @relation("GuideLikeUser", fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([guideId, userId])
+}
+
+model GuideBookmark {
+  id        String @id @default(uuid())
+  guideId   String
+  guide     Guide  @relation(fields: [guideId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User   @relation("GuideBookmarkUser", fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([guideId, userId])
 }
 
 model Rating {
@@ -197,11 +272,24 @@ model ForumThread {
   locked      Boolean    @default(false)
   replyCount  Int        @default(0)
   likeCount   Int        @default(0)
+  viewCount   Int        @default(0)
   lastPostAt  DateTime?
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   posts       ForumPost[]
   bookmarks   ForumThreadBookmark[]
+  likes       ForumThreadLike[]
+}
+
+model ForumThreadLike {
+  id        String       @id @default(uuid())
+  threadId  String
+  thread    ForumThread  @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User         @relation("ThreadLikeUser", fields: [userId], references: [id])
+  createdAt DateTime     @default(now())
+
+  @@unique([threadId, userId])
 }
 
 model ForumPost {
@@ -280,4 +368,23 @@ model ContentPage {
   slug      String   @unique
   data      Json
   updatedAt DateTime @updatedAt
+}
+
+model DailyStat {
+  id        String   @id @default(uuid())
+  date      DateTime @unique
+  pv        Int      @default(0)
+  uv        Int      @default(0)
+  dau       Int      @default(0)
+  updatedAt DateTime @updatedAt
+}
+
+model DailyActiveUser {
+  id        String   @id @default(uuid())
+  userId    String
+  date      DateTime
+  createdAt DateTime @default(now())
+
+  @@unique([userId, date])
+  @@index([date])
 }

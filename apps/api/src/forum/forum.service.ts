@@ -7,6 +7,7 @@ import {
 import { ForumBoard, ForumPost, ForumThread, User } from '@prisma/client';
 import { pageInfo } from '../common/pagination';
 import { extractFirstImage } from '../common/markdown';
+import { hasPermission, PERMISSIONS } from '../common/roles';
 import { PrismaService } from '../prisma/prisma.service';
 import { toUserSummary } from '../users/users.service';
 
@@ -25,7 +26,11 @@ function boardView(board: BoardWithCount) {
   };
 }
 
-function threadSummary(thread: ThreadWithAuthor) {
+function threadSummary(
+  thread: ThreadWithAuthor,
+  likedByMe = false,
+  bookmarkedByMe = false,
+) {
   return {
     id: thread.id,
     boardSlug: '', // patched by caller
@@ -37,7 +42,9 @@ function threadSummary(thread: ThreadWithAuthor) {
     locked: thread.locked,
     replyCount: thread.replyCount,
     likeCount: thread.likeCount,
-    bookmarkedByMe: false,
+    likedByMe,
+    bookmarkedByMe,
+    viewCount: thread.viewCount,
     createdAt: thread.createdAt,
     updatedAt: thread.updatedAt,
     lastPostAt: thread.lastPostAt,
@@ -164,11 +171,19 @@ export class ForumService {
           ).map((b) => b.threadId),
         )
       : new Set<string>();
+    const likes = userId
+      ? new Set(
+          (
+            await this.prisma.forumThreadLike.findMany({
+              where: { userId, threadId: { in: threads.map((t) => t.id) } },
+            })
+          ).map((l) => l.threadId),
+        )
+      : new Set<string>();
     return {
       data: threads.map((thread) => ({
-        ...threadSummary(thread),
+        ...threadSummary(thread, likes.has(thread.id), bookmarks.has(thread.id)),
         boardSlug,
-        bookmarkedByMe: bookmarks.has(thread.id),
       })),
       pagination: pageInfo(page, perPage, total),
     };
@@ -178,7 +193,14 @@ export class ForumService {
     userId: string,
     boardSlug: string,
     dto: { title: string; content: string; coverImage?: string | null },
+    auth?: { role: string; permissions: string[]; group: string; status: string },
   ) {
+    if (auth?.status === 'MUTED' || auth?.status === 'BANNED') {
+      throw new ForbiddenException('account restricted');
+    }
+    if (auth?.group !== 'VERIFIED' && !hasPermission(auth?.role, auth?.permissions, PERMISSIONS.MANAGE_FORUM)) {
+      throw new ForbiddenException('verified account required');
+    }
     const board = await this.prisma.forumBoard.findUnique({ where: { slug: boardSlug } });
     if (!board) throw new NotFoundException('board not found');
     const thread = await this.prisma.forumThread.create({
@@ -195,6 +217,10 @@ export class ForumService {
   }
 
   async getThread(threadId: string, userId?: string) {
+    await this.prisma.forumThread.updateMany({
+      where: { id: threadId },
+      data: { viewCount: { increment: 1 } },
+    });
     const thread = await this.prisma.forumThread.findUnique({
       where: { id: threadId },
       include: { author: true, board: true },
@@ -205,25 +231,42 @@ export class ForumService {
           where: { threadId_userId: { threadId, userId } },
         }))
       : false;
+    const liked = userId
+      ? !!(await this.prisma.forumThreadLike.findUnique({
+          where: { threadId_userId: { threadId, userId } },
+        }))
+      : false;
     return {
-      ...threadSummary(thread),
+      ...threadSummary(thread, liked, bookmarked),
       boardSlug: thread.board.slug,
-      bookmarkedByMe: bookmarked,
       content: thread.content,
       featuredAt: thread.featuredAt,
     };
   }
 
-  async updateThread(userId: string, threadId: string, dto: {
+  async updateThread(
+    userId: string,
+    threadId: string,
+    dto: {
     title?: string;
     pinned?: boolean;
     locked?: boolean;
     coverImage?: string | null;
     featured?: boolean;
     featuredAt?: string | null;
-  }) {
+    },
+    auth?: { role: string; permissions: string[] },
+  ) {
     const existing = await this.prisma.forumThread.findUnique({ where: { id: threadId } });
     if (!existing) throw new NotFoundException('thread not found');
+    const isManager = hasPermission(auth?.role, auth?.permissions, PERMISSIONS.MANAGE_FORUM);
+    const isModerator = hasPermission(auth?.role, auth?.permissions, PERMISSIONS.MANAGE_CONTENT);
+    if (existing.authorId !== userId && !isManager && !isModerator) {
+      throw new ForbiddenException('not your thread');
+    }
+    if ((dto.pinned !== undefined || dto.locked !== undefined) && !isManager) {
+      throw new ForbiddenException('admin only');
+    }
     const thread = await this.prisma.forumThread.update({
       where: { id: threadId },
       data: {
@@ -249,10 +292,64 @@ export class ForumService {
     };
   }
 
-  async deleteThread(threadId: string): Promise<void> {
-    await this.prisma.forumThread.delete({ where: { id: threadId } }).catch(() => {
-      throw new NotFoundException('thread not found');
+  async deleteThread(
+    userId: string,
+    threadId: string,
+    auth?: { role: string; permissions: string[] },
+  ): Promise<void> {
+    const thread = await this.prisma.forumThread.findUnique({
+      where: { id: threadId },
     });
+    if (!thread) throw new NotFoundException('thread not found');
+    if (
+      thread.authorId !== userId &&
+      !hasPermission(auth?.role, auth?.permissions, PERMISSIONS.MANAGE_DELETION)
+    ) {
+      throw new ForbiddenException('not your thread');
+    }
+    await this.prisma.$transaction([
+      this.prisma.forumPostLike.deleteMany({
+        where: { post: { threadId } },
+      }),
+      this.prisma.forumPost.deleteMany({ where: { threadId } }),
+      this.prisma.forumThreadBookmark.deleteMany({ where: { threadId } }),
+      this.prisma.forumThread.delete({ where: { id: threadId } }),
+    ]);
+  }
+
+  async likeThread(userId: string, threadId: string): Promise<void> {
+    const thread = await this.prisma.forumThread.findUnique({
+      where: { id: threadId },
+    });
+    if (!thread) throw new NotFoundException('thread not found');
+    const existing = await this.prisma.forumThreadLike.findUnique({
+      where: { threadId_userId: { threadId, userId } },
+    });
+    if (!existing) {
+      await this.prisma.forumThreadLike.create({
+        data: { threadId, userId },
+      });
+      await this.prisma.forumThread.update({
+        where: { id: threadId },
+        data: { likeCount: { increment: 1 } },
+      });
+    }
+  }
+
+  async unlikeThread(userId: string, threadId: string): Promise<void> {
+    const thread = await this.prisma.forumThread.findUnique({
+      where: { id: threadId },
+    });
+    if (!thread) throw new NotFoundException('thread not found');
+    const result = await this.prisma.forumThreadLike.deleteMany({
+      where: { threadId, userId },
+    });
+    if (result.count > 0) {
+      await this.prisma.forumThread.update({
+        where: { id: threadId },
+        data: { likeCount: { decrement: 1 } },
+      });
+    }
   }
 
   async listPosts(threadId: string, page: number, perPage: number, userId?: string) {
@@ -284,7 +381,18 @@ export class ForumService {
     };
   }
 
-  async createPost(userId: string, threadId: string, dto: { content: string }) {
+  async createPost(
+    userId: string,
+    threadId: string,
+    dto: { content: string },
+    auth?: { role: string; permissions: string[]; group: string; status: string },
+  ) {
+    if (auth?.status === 'MUTED' || auth?.status === 'BANNED') {
+      throw new ForbiddenException('account restricted');
+    }
+    if (auth?.group !== 'VERIFIED' && !hasPermission(auth?.role, auth?.permissions, PERMISSIONS.MANAGE_FORUM)) {
+      throw new ForbiddenException('verified account required');
+    }
     const thread = await this.prisma.forumThread.findUnique({ where: { id: threadId } });
     if (!thread) throw new NotFoundException('thread not found');
     if (thread.locked) throw new ForbiddenException('thread is locked');
@@ -314,10 +422,19 @@ export class ForumService {
     return postView(updated);
   }
 
-  async deletePost(userId: string, postId: string): Promise<void> {
+  async deletePost(
+    userId: string,
+    postId: string,
+    auth?: { role: string; permissions: string[] },
+  ): Promise<void> {
     const post = await this.prisma.forumPost.findUnique({ where: { id: postId } });
     if (!post) throw new NotFoundException('post not found');
-    if (post.authorId !== userId) throw new ForbiddenException('not your post');
+    if (
+      post.authorId !== userId &&
+      !hasPermission(auth?.role, auth?.permissions, PERMISSIONS.MANAGE_DELETION)
+    ) {
+      throw new ForbiddenException('not your post');
+    }
     await this.prisma.forumPost.delete({ where: { id: postId } });
   }
 

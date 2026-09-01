@@ -8,12 +8,14 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
 import { PaginationQueryDto } from '../common/pagination';
 import { CreateWikiPageDto } from './dto/create-wiki-page.dto';
 import { ListWikiPagesQueryDto } from './dto/list-wiki-pages-query.dto';
@@ -21,7 +23,17 @@ import { UpdateWikiPageDto } from './dto/update-wiki-page.dto';
 import { WikiService } from './wiki.service';
 
 interface AuthenticatedRequest extends Request {
-  user: { sub: string };
+  user: {
+    sub: string;
+    role: string;
+    permissions: string[];
+    status: string;
+    wikiCreateGranted: boolean;
+  };
+}
+
+interface OptionalRequest extends Request {
+  user?: { sub: string };
 }
 
 @Controller('wiki')
@@ -34,7 +46,8 @@ export class WikiController {
   }
 
   @Get('pages')
-  listPages(@Query() query: ListWikiPagesQueryDto) {
+  @UseGuards(OptionalJwtAuthGuard)
+  listPages(@Req() req: OptionalRequest, @Query() query: ListWikiPagesQueryDto) {
     return this.wikiService.listPages({
       category: query.category,
       tag: query.tag,
@@ -43,18 +56,26 @@ export class WikiController {
       page: query.page,
       perPage: query.perPage,
       sort: query.sort,
-    });
+    }, req.user?.sub);
   }
 
   @UseGuards(JwtAuthGuard)
   @Post('pages')
   createPage(@Req() req: AuthenticatedRequest, @Body() dto: CreateWikiPageDto) {
-    return this.wikiService.createPage(req.user.sub, dto).then((data) => ({ data }));
+    return this.wikiService
+      .createPage(req.user.sub, dto, {
+        role: req.user.role,
+        permissions: req.user.permissions,
+        status: req.user.status,
+        wikiCreateGranted: req.user.wikiCreateGranted,
+      })
+      .then((data) => ({ data }));
   }
 
   @Get('pages/:slug')
-  getPage(@Param('slug') slug: string) {
-    return this.wikiService.getPage(slug).then((data) => ({ data }));
+  @UseGuards(OptionalJwtAuthGuard)
+  getPage(@Req() req: OptionalRequest, @Param('slug') slug: string) {
+    return this.wikiService.getPage(slug, req.user?.sub).then((data) => ({ data }));
   }
 
   @UseGuards(JwtAuthGuard)
@@ -64,14 +85,65 @@ export class WikiController {
     @Param('slug') slug: string,
     @Body() dto: UpdateWikiPageDto,
   ) {
-    return this.wikiService.updatePage(req.user.sub, slug, dto).then((data) => ({ data }));
+    return this.wikiService
+      .updatePage(req.user.sub, slug, dto, {
+        role: req.user.role,
+        permissions: req.user.permissions,
+      })
+      .then((data) => ({ data }));
   }
 
   @UseGuards(JwtAuthGuard)
   @Delete('pages/:slug')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async deletePage(@Param('slug') slug: string): Promise<void> {
-    await this.wikiService.deletePage(slug);
+  async deletePage(
+    @Req() req: AuthenticatedRequest,
+    @Param('slug') slug: string,
+  ): Promise<void> {
+    await this.wikiService.deletePage(req.user.sub, slug, {
+      role: req.user.role,
+      permissions: req.user.permissions,
+    });
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Put('pages/:slug/like')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async likePage(
+    @Req() req: AuthenticatedRequest,
+    @Param('slug') slug: string,
+  ): Promise<void> {
+    await this.wikiService.likePage(req.user.sub, slug);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('pages/:slug/like')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async unlikePage(
+    @Req() req: AuthenticatedRequest,
+    @Param('slug') slug: string,
+  ): Promise<void> {
+    await this.wikiService.unlikePage(req.user.sub, slug);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Put('pages/:slug/bookmark')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async bookmarkPage(
+    @Req() req: AuthenticatedRequest,
+    @Param('slug') slug: string,
+  ): Promise<void> {
+    await this.wikiService.bookmarkPage(req.user.sub, slug);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('pages/:slug/bookmark')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async unbookmarkPage(
+    @Req() req: AuthenticatedRequest,
+    @Param('slug') slug: string,
+  ): Promise<void> {
+    await this.wikiService.unbookmarkPage(req.user.sub, slug);
   }
 
   @Get('pages/:slug/revisions')
