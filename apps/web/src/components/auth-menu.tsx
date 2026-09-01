@@ -5,11 +5,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { logout, request } from "@/lib/api-client";
 import { getAccessToken } from "@/lib/session";
+import { useUnreadMessages } from "@/lib/messages";
 
 /**
- * 顶栏登录态菜单（契约 PR #45）：
+ * 顶栏登录态菜单（契约 PR #45 / #59）：
  * - 未登录：登录 / 注册按钮
- * - 已登录：头像/昵称下拉（我的主页、我的内容、浏览记录、账号设置、退出登录）
+ * - 已登录：头像/昵称下拉（我的主页、我的内容、我的消息、浏览记录、账号设置、退出登录）
+ * - 有未读消息：头像右上角 + 「我的消息」入口红点（轮询 unread-count，进消息页即消）
  * 挂载与每次路由变化时探测会话（登录/登出跳转后顶栏即时刷新）；/users/me 401 视为未登录。
  */
 
@@ -22,6 +24,7 @@ interface MeBrief {
 const MENU_ITEMS = [
   { href: "/me", label: "我的主页" },
   { href: "/me?tab=content", label: "我的内容" },
+  { href: "/me?tab=messages", label: "我的消息", messages: true },
   { href: "/me?tab=history", label: "浏览记录" },
   { href: "/me?tab=settings", label: "账号设置" },
 ];
@@ -32,6 +35,7 @@ export function AuthMenu() {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
+  const unread = useUnreadMessages();
 
   useEffect(() => {
     setOpen(false);
@@ -96,7 +100,7 @@ export function AuthMenu() {
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-2 rounded-md border border-border-subtle py-1 pl-1 pr-3 transition-colors duration-fast hover:border-amber-soft"
+        className="relative flex items-center gap-2 rounded-md border border-border-subtle py-1 pl-1 pr-3 transition-colors duration-fast hover:border-amber-soft"
       >
         {me.avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- 用户自传头像
@@ -116,6 +120,15 @@ export function AuthMenu() {
         <span className="max-w-24 truncate text-small text-primary">
           {me.displayName}
         </span>
+        {/* 未读消息红点（头像右上角） */}
+        {unread > 0 && (
+          <span
+            aria-label={`${unread} 条未读消息`}
+            className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 font-mono text-[10px] leading-none text-white"
+          >
+            {unread > 99 ? "99+" : unread}
+          </span>
+        )}
       </button>
 
       {open && (
@@ -129,9 +142,17 @@ export function AuthMenu() {
               role="menuitem"
               href={item.href}
               onClick={() => setOpen(false)}
-              className="block rounded-sm px-3 py-2 text-small text-primary transition-colors duration-fast hover:bg-raised hover:text-amber"
+              className="flex items-center justify-between rounded-sm px-3 py-2 text-small text-primary transition-colors duration-fast hover:bg-raised hover:text-amber"
             >
               {item.label}
+              {"messages" in item && unread > 0 && (
+                <span
+                  aria-hidden
+                  className="flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 font-mono text-[10px] leading-none text-white"
+                >
+                  {unread > 99 ? "99+" : unread}
+                </span>
+              )}
             </Link>
           ))}
           <button

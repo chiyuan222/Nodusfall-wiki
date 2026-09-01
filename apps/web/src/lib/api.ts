@@ -22,6 +22,8 @@ export type ForumThread = Schemas["ForumThread"];
 export type ForumPost = Schemas["ForumPost"];
 export type Comment = Schemas["Comment"];
 export type SearchResult = Schemas["SearchResult"];
+export type MessageItem = Schemas["MessageItem"];
+export type UnreadCount = Schemas["UnreadCount"];
 
 interface ListEnvelope<S> {
   data: S[];
@@ -219,4 +221,40 @@ export const commentApi = {
 export const searchApi = {
   search: (q: string, kind?: "all" | "wiki" | "guide" | "forum", page?: number) =>
     list<SearchResult>("/search", { q, kind, page }),
+};
+
+// ---------- 我的消息（私信 + 全站公告，契约 PR #59） ----------
+
+export const messageApi = {
+  /** 我的消息（私信 + 公告，时间倒序，分页） */
+  list: (page?: number, perPage?: number) =>
+    list<MessageItem>("/users/me/messages", { page, perPage }),
+
+  /** 未读数（头像/入口红点）。契约 200 直接返回 UnreadCount，兼容 { data } 信封 */
+  unreadCount: () =>
+    request<UnreadCount | { data: UnreadCount }>(
+      "/users/me/messages/unread-count",
+    ).then((r) => ("data" in r ? r.data.unread : r.unread)),
+
+  /** 发送私信（仅站长与注册用户之间；普通用户间/管理员间 403） */
+  send: (recipientId: string, content: string) =>
+    request<{ data: MessageItem }>("/users/me/messages", {
+      method: "POST",
+      body: { recipientId, content },
+    }).then((r) => r.data),
+
+  /** 全部标记已读（进入消息页后调用，红点消除，幂等 204） */
+  readAll: () =>
+    request<void>("/users/me/messages/read-all", { method: "POST" }),
+
+  /** 公告历史（仅站长） */
+  announcements: (page?: number) =>
+    list<MessageItem>("/admin/announcements", { page }),
+
+  /** 发布全站公告（仅站长，广播到所有用户收件箱） */
+  announce: (title: string, content: string) =>
+    request<{ data: MessageItem }>("/admin/announcements", {
+      method: "POST",
+      body: { title, content },
+    }).then((r) => r.data),
 };
