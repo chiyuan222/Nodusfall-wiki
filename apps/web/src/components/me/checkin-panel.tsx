@@ -105,7 +105,11 @@ export function CheckinPanel({
       .then((r) => {
         setStatus({ today: true, streak: r.data.streak, total: r.data.total });
         onExpChange?.(r.data.exp, r.data.level, r.data.nextLevelExp);
-        setToast(`签到成功，经验 +${r.data.gainedExp}`);
+        setToast(
+          r.data.gainedExp > 0
+            ? `签到成功，经验 +${r.data.gainedExp}`
+            : "签到成功，已满级经验不再增长",
+        );
         loadLog(1);
         setPage(1);
       })

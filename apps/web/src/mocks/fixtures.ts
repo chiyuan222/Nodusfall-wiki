@@ -20,8 +20,10 @@ export type Pagination = S<"Pagination">;
 
 const now = "2026-09-01T04:00:00.000Z";
 
+let mockSiteId = 1000000;
 const user = (id: string, name: string): S<"UserSummary"> => ({
   id,
+  siteId: mockSiteId++,
   username: name.toLowerCase(),
   displayName: name,
   role: "member",
