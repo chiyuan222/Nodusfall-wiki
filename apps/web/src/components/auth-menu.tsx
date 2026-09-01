@@ -2,14 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { logout, request } from "@/lib/api-client";
 import { getAccessToken } from "@/lib/session";
 
 /**
  * 顶栏登录态菜单（契约 PR #45）：
  * - 未登录：登录 / 注册按钮
- * - 已登录：头像/昵称下拉（用户中心、退出登录）
- * 挂载时探测一次会话；/users/me 401 视为未登录。
+ * - 已登录：头像/昵称下拉（我的主页、我的内容、浏览记录、账号设置、退出登录）
+ * 挂载与每次路由变化时探测会话（登录/登出跳转后顶栏即时刷新）；/users/me 401 视为未登录。
  */
 
 interface MeBrief {
@@ -18,14 +19,24 @@ interface MeBrief {
   avatarUrl?: string | null;
 }
 
+const MENU_ITEMS = [
+  { href: "/me", label: "我的主页" },
+  { href: "/me?tab=content", label: "我的内容" },
+  { href: "/me?tab=history", label: "浏览记录" },
+  { href: "/me?tab=settings", label: "账号设置" },
+];
+
 export function AuthMenu() {
   const [me, setMe] = useState<MeBrief | null>(null);
   const [checked, setChecked] = useState(false);
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const pathname = usePathname();
 
   useEffect(() => {
+    setOpen(false);
     if (!getAccessToken()) {
+      setMe(null);
       setChecked(true);
       return;
     }
@@ -33,7 +44,7 @@ export function AuthMenu() {
       .then((r) => setMe(r.data))
       .catch(() => setMe(null))
       .finally(() => setChecked(true));
-  }, []);
+  }, [pathname]);
 
   // 点击外部 / Esc 关闭下拉
   useEffect(() => {
@@ -112,14 +123,17 @@ export function AuthMenu() {
           role="menu"
           className="absolute right-0 top-full z-50 mt-2 w-44 rounded-md border border-border-subtle bg-surface p-1.5 shadow-card"
         >
-          <Link
-            role="menuitem"
-            href="/me"
-            onClick={() => setOpen(false)}
-            className="block rounded-sm px-3 py-2 text-small text-primary transition-colors duration-fast hover:bg-raised hover:text-amber"
-          >
-            用户中心
-          </Link>
+          {MENU_ITEMS.map((item) => (
+            <Link
+              key={item.href}
+              role="menuitem"
+              href={item.href}
+              onClick={() => setOpen(false)}
+              className="block rounded-sm px-3 py-2 text-small text-primary transition-colors duration-fast hover:bg-raised hover:text-amber"
+            >
+              {item.label}
+            </Link>
+          ))}
           <button
             role="menuitem"
             type="button"
