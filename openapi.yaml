@@ -2268,7 +2268,7 @@ components:
               role:
                 type: string
                 enum: [member, editor, moderator, admin]
-                description: 仅 owner 可修改
+                description: 仅站长可为任意用户分配角色（成员/编辑/版主/管理员；不含 owner）
                 maxLength: 500
     CreateWikiPageRequest:
       required: true
