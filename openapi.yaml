@@ -342,6 +342,113 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /admin/stats/overview:
+    get:
+      tags: [Admin]
+      operationId: getAdminStatsOverview
+      summary: 站长总览统计（用户数/浏览量/日活月活/在线人数/内容热度）
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: 统计总览
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminStatsOverview"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /admin/users:
+    get:
+      tags: [Admin]
+      operationId: listAdminUsers
+      summary: 用户列表（搜索/筛选/分页，需 manage_users 开关）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+        - name: q
+          in: query
+          schema: { type: string }
+          description: 搜索用户名/邮箱/手机号
+        - name: group
+          in: query
+          schema: { type: string, enum: [normal, verified, premium] }
+        - name: role
+          in: query
+          schema: { type: string, enum: [guest, member, editor, moderator, admin, owner] }
+        - name: status
+          in: query
+          schema: { type: string, enum: [active, muted, banned, deleted] }
+        - name: level
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 10 }
+      responses:
+        "200":
+          description: 用户列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUserList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /admin/users/{userId}:
+    get:
+      tags: [Admin]
+      operationId: getAdminUser
+      summary: 用户详情（需 manage_users 开关）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: 用户详情
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUser"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Admin]
+      operationId: updateAdminUser
+      summary: 修改用户（组/等级/封禁/解禁/权限开关/角色；role 与 permissions 仅 owner 可改）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        $ref: "#/components/requestBodies/AdminUpdateUserRequest"
+      responses:
+        "200":
+          description: 更新后的用户
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUser"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /auth/sessions:
     post:
       tags: [Auth]
@@ -1615,6 +1722,36 @@ components:
               slug:
                 type: string
                 description: wiki/guide 的 slug；forumThread 传 threadId
+    AdminUpdateUserRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              group:
+                type: string
+                enum: [normal, verified, premium]
+              level:
+                type: integer
+                minimum: 1
+                maximum: 10
+              status:
+                type: string
+                enum: [active, muted, banned]
+              banReason: { type: string }
+              banUntil: { type: [string, "null"], format: date-time }
+              mutedUntil: { type: [string, "null"], format: date-time }
+              wikiCreateGranted: { type: boolean }
+              permissions:
+                type: array
+                items:
+                  type: string
+                  enum: [manage_users, manage_content, manage_forum, manage_cms, grant_wiki_create]
+              role:
+                type: string
+                enum: [member, editor, moderator, admin]
+                description: 仅 owner 可修改
                 maxLength: 500
     CreateWikiPageRequest:
       required: true
@@ -1860,7 +1997,7 @@ components:
 
     UserSummary:
       type: object
-      required: [id, username, displayName, role, createdAt, status]
+      required: [id, username, displayName, role, createdAt, status, group, level]
       properties:
         id: { type: string, format: uuid }
         username: { type: string }
@@ -1868,12 +2005,22 @@ components:
         avatarUrl: { type: string, format: uri }
         role:
           type: string
-          enum: [guest, member, editor, moderator, admin]
+          enum: [guest, member, editor, moderator, admin, owner]
+          description: owner 为最高权限管理员（站长），admin/moderator 权限由 permissions 开关控制
         createdAt: { type: string, format: date-time }
         status:
           type: string
-          enum: [active, deleted]
-          description: deleted 表示账号已注销（内容匿名化保留）
+          enum: [active, muted, banned, deleted]
+          description: muted 禁言（可浏览不可发言）；banned 黑名单（禁止登录访问）；deleted 已注销
+        group:
+          type: string
+          enum: [normal, verified, premium]
+          description: normal 仅阅览；verified 认证后可评论/发帖；premium 付费组（预留）
+        level:
+          type: integer
+          minimum: 1
+          maximum: 10
+          description: 通用用户等级 1-10
 
     User:
       allOf:
@@ -1884,6 +2031,86 @@ components:
             updatedAt: { type: string, format: date-time }
             emailMasked: { type: string }
             phoneMasked: { type: [string, "null"] }
+            permissions:
+              type: array
+              items:
+                type: string
+                enum: [manage_users, manage_content, manage_forum, manage_cms, grant_wiki_create]
+              description: 管理员权限开关（仅 owner 可配置，默认空）
+            wikiCreateGranted:
+              type: boolean
+              description: 是否被站长授予 Wiki 词条创建资格
+            banReason: { type: [string, "null"] }
+            banUntil: { type: [string, "null"], format: date-time }
+            mutedUntil: { type: [string, "null"], format: date-time }
+
+    AdminUser:
+      allOf:
+        - $ref: "#/components/schemas/User"
+        - type: object
+          required: [email, phone, lastActiveAt]
+          properties:
+            email: { type: string, format: email }
+            phone: { type: [string, "null"] }
+            lastActiveAt: { type: [string, "null"], format: date-time }
+
+    AdminUserList:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminUser"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+
+    AdminStatsDay:
+      type: object
+      required: [date, pv, uv, dau]
+      properties:
+        date: { type: string, format: date }
+        pv: { type: integer }
+        uv: { type: integer }
+        dau: { type: integer }
+
+    AdminStatsOverview:
+      type: object
+      required: [users, today, yesterday, weekly, monthly, online, topContents]
+      properties:
+        users:
+          type: object
+          required: [total, todayNew]
+          properties:
+            total: { type: integer }
+            todayNew: { type: integer }
+        today:
+          $ref: "#/components/schemas/AdminStatsDay"
+        yesterday:
+          $ref: "#/components/schemas/AdminStatsDay"
+        weekly:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminStatsDay"
+        monthly:
+          type: object
+          required: [mau]
+          properties:
+            mau: { type: integer }
+        online: { type: integer, description: 最近 15 分钟活跃登录用户数 }
+        topContents:
+          type: array
+          maxItems: 10
+          items:
+            type: object
+            required: [kind, slug, title, views]
+            properties:
+              kind:
+                type: string
+                enum: [wikiPage, guide, forumThread]
+              slug: { type: string }
+              title: { type: string }
+              views: { type: integer }
 
     AuthSession:
       type: object
