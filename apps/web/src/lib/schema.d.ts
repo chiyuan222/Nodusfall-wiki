@@ -580,6 +580,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/videos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 相关视频导航列表（按分区筛选，仅已发布） */
+        get: operations["listVideos"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/videos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 新增视频导航条目（管理员） */
+        post: operations["createVideo"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/videos/{videoId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** 删除视频导航条目（管理员） */
+        delete: operations["deleteVideo"];
+        options?: never;
+        head?: never;
+        /** 修改视频导航条目（管理员） */
+        patch: operations["updateVideo"];
+        trace?: never;
+    };
     "/guides/{slug}": {
         parameters: {
             query?: never;
@@ -1158,6 +1210,33 @@ export interface components {
         };
         GuideList: {
             data: components["schemas"]["GuideSummary"][];
+            pagination: components["schemas"]["Pagination"];
+        };
+        VideoEntry: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * @description official 官方视频 / analysis 考究杂谈 / gameplay 实况攻略
+             * @enum {string}
+             */
+            kind: "official" | "analysis" | "gameplay";
+            title: string;
+            /** Format: uri */
+            url: string;
+            /** @enum {string} */
+            platform: "bilibili" | "douyin" | "youtube" | "other";
+            /** Format: uri */
+            coverImage: string | null;
+            description: string | null;
+            published: boolean;
+            sortOrder: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        VideoList: {
+            data: components["schemas"]["VideoEntry"][];
             pagination: components["schemas"]["Pagination"];
         };
         RatingSummary: {
@@ -1801,6 +1880,42 @@ export interface components {
                 "application/json": {
                     title: string;
                     content: string;
+                };
+            };
+        };
+        CreateVideoRequest: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    kind: "official" | "analysis" | "gameplay";
+                    title: string;
+                    /** Format: uri */
+                    url: string;
+                    /** @enum {string} */
+                    platform?: "bilibili" | "douyin" | "youtube" | "other";
+                    /** Format: uri */
+                    coverImage?: string | null;
+                    description?: string | null;
+                    published?: boolean;
+                    sortOrder?: number;
+                };
+            };
+        };
+        UpdateVideoRequest: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    kind?: "official" | "analysis" | "gameplay";
+                    title?: string;
+                    /** Format: uri */
+                    url?: string;
+                    /** @enum {string} */
+                    platform?: "bilibili" | "douyin" | "youtube" | "other";
+                    /** Format: uri */
+                    coverImage?: string | null;
+                    description?: string | null;
+                    published?: boolean;
+                    sortOrder?: number;
                 };
             };
         };
@@ -3093,6 +3208,102 @@ export interface operations {
             400: components["responses"]["ValidationError"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    listVideos: {
+        parameters: {
+            query?: {
+                kind?: "official" | "analysis" | "gameplay";
+                page?: components["parameters"]["Page"];
+                perPage?: components["parameters"]["PerPage"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 视频列表 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VideoList"];
+                };
+            };
+        };
+    };
+    createVideo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["CreateVideoRequest"];
+        responses: {
+            /** @description 创建成功 */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VideoEntry"];
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    deleteVideo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                videoId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 已删除 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateVideo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                videoId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["UpdateVideoRequest"];
+        responses: {
+            /** @description 更新后的条目 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VideoEntry"];
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     getGuide: {

@@ -24,6 +24,9 @@ export type Comment = Schemas["Comment"];
 export type SearchResult = Schemas["SearchResult"];
 export type MessageItem = Schemas["MessageItem"];
 export type UnreadCount = Schemas["UnreadCount"];
+export type VideoEntry = Schemas["VideoEntry"];
+export type VideoKind = VideoEntry["kind"];
+export type VideoPlatform = VideoEntry["platform"];
 
 interface ListEnvelope<S> {
   data: S[];
@@ -257,4 +260,42 @@ export const messageApi = {
       method: "POST",
       body: { title, content },
     }).then((r) => r.data),
+};
+
+// ---------- 相关视频导航（契约 PR #67） ----------
+
+export interface VideoInput {
+  kind: VideoKind;
+  title: string;
+  url: string;
+  platform?: VideoPlatform;
+  coverImage?: string | null;
+  description?: string | null;
+  published?: boolean;
+  sortOrder?: number;
+}
+
+export const videoApi = {
+  /** 公开列表：仅已发布，按分区筛选（匿名可访问） */
+  list: (kind?: VideoKind, page?: number, perPage?: number) =>
+    list<VideoEntry>("/videos", { kind, page, perPage }),
+
+  /** 管理侧列表（含未发布；契约追加端点，未上线时由调用方回退公开列表） */
+  adminList: (kind: VideoKind | undefined, page?: number) =>
+    list<VideoEntry>("/admin/videos", { kind, page, perPage: 50 }),
+
+  create: (input: VideoInput) =>
+    request<{ data: VideoEntry }>("/admin/videos", {
+      method: "POST",
+      body: input,
+    }).then((r) => r.data),
+
+  update: (videoId: string, patch: Partial<VideoInput>) =>
+    request<{ data: VideoEntry }>(`/admin/videos/${videoId}`, {
+      method: "PATCH",
+      body: patch,
+    }).then((r) => r.data),
+
+  remove: (videoId: string) =>
+    request<void>(`/admin/videos/${videoId}`, { method: "DELETE" }),
 };
