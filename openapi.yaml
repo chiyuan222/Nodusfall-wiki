@@ -2593,9 +2593,13 @@ components:
 
     UserSummary:
       type: object
-      required: [id, username, displayName, role, createdAt, status, group, level]
+      required: [id, siteId, username, displayName, role, createdAt, status, group, level]
       properties:
         id: { type: string, format: uuid }
+        siteId:
+          type: integer
+          minimum: 1000000
+          description: 全站唯一 7 位网站 ID，注册时按顺序分配（1000000 起），注销不复用
         username: { type: string }
         displayName: { type: string }
         avatarUrl: { type: string, format: uri }
