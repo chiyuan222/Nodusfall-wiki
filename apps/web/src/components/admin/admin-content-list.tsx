@@ -91,7 +91,9 @@ export function AdminContentList({ kind }: { kind: "wiki" | "guide" }) {
       setLoading(true);
       setMsg("");
       request<ListResult<Item>>(listPath, {
-        // 不传 sort：后端对 /wiki/pages 的查询参数做严格校验，暂不支持 sort（会 400）
+        // 契约已声明 sort（wiki: updatedAt/createdAt/title；攻略: rating/updatedAt/createdAt），
+        // 但后端 /wiki/pages 与 /guides 的查询 DTO 白名单尚未放行 sort（实测 400
+        // "property sort should not exist"，2026-09-01）。后端修复后在此加 sort: "updatedAt"。
         query: {
           perPage: 50,
           status: statusFilter || undefined,
