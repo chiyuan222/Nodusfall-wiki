@@ -27,6 +27,9 @@ export type UnreadCount = Schemas["UnreadCount"];
 export type VideoEntry = Schemas["VideoEntry"];
 export type VideoKind = VideoEntry["kind"];
 export type VideoPlatform = VideoEntry["platform"];
+export type SiteSections = Schemas["SiteSections"];
+export type FloatingWindows = Schemas["FloatingWindows"];
+export type FloatingWindowConfig = Schemas["FloatingWindowConfig"];
 
 interface ListEnvelope<S> {
   data: S[];
@@ -298,4 +301,34 @@ export const videoApi = {
 
   remove: (videoId: string) =>
     request<void>(`/admin/videos/${videoId}`, { method: "DELETE" }),
+};
+
+// ---------- 站点配置（分区开关 + 论坛漂浮窗，契约 PR #70） ----------
+
+export const siteApi = {
+  /** 公开读分区显示开关（匿名可访问） */
+  sections: () =>
+    request<SiteSections | { data: SiteSections }>("/site/sections").then(
+      (r) => ("data" in r ? r.data : r),
+    ),
+
+  /** 更新分区开关（owner 或 manage_cms） */
+  updateSections: (patch: Partial<SiteSections>) =>
+    request<SiteSections | { data: SiteSections }>("/admin/site/sections", {
+      method: "PUT",
+      body: patch,
+    }).then((r) => ("data" in r ? r.data : r)),
+
+  /** 公开读论坛漂浮窗配置（匿名可访问） */
+  floatingWindows: () =>
+    request<FloatingWindows | { data: FloatingWindows }>(
+      "/site/floating-windows",
+    ).then((r) => ("data" in r ? r.data : r)),
+
+  /** 更新漂浮窗（owner 或 manage_cms；全量回传 left/right） */
+  updateFloatingWindows: (config: FloatingWindows) =>
+    request<FloatingWindows | { data: FloatingWindows }>(
+      "/admin/site/floating-windows",
+      { method: "PUT", body: config },
+    ).then((r) => ("data" in r ? r.data : r)),
 };

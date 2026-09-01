@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { forumApi } from "@/lib/api";
 import { ApiError } from "@/lib/errors";
 import { EmptyState } from "@/components/empty-state";
+import { FloatingWindows } from "@/components/forum/floating-windows";
 import { authorName } from "@/lib/author";
 
 export const dynamic = "force-dynamic";
@@ -64,6 +65,7 @@ export default async function BoardThreadsPage({
 
   return (
     <div className="mx-auto max-w-page space-y-8">
+      <FloatingWindows />
       {/* 面包屑 */}
       <nav aria-label="面包屑" className="flex items-center gap-2 font-mono text-caption text-faint">
         <Link href="/forum" className="text-secondary transition-colors duration-fast hover:text-amber">

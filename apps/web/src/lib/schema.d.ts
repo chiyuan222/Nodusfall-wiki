@@ -21,6 +21,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/site/sections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 获取内容分区显示开关（禁用的分区前端隐藏/维护中） */
+        get: operations["getSiteSections"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/site/sections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** 更新内容分区显示开关（仅站长或具备 manage_cms 的管理员） */
+        put: operations["updateSiteSections"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/site/floating-windows": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 获取论坛页左右漂浮引流窗配置 */
+        get: operations["getFloatingWindows"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/site/floating-windows": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** 更新论坛页左右漂浮引流窗（仅站长或具备 manage_cms 的管理员） */
+        put: operations["updateFloatingWindows"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/home/digest": {
         parameters: {
             query?: never;
@@ -1025,6 +1093,25 @@ export interface components {
                 [key: string]: string;
             };
         };
+        SiteSections: {
+            home: boolean;
+            world: boolean;
+            wiki: boolean;
+            guides: boolean;
+            forum: boolean;
+            videos: boolean;
+        };
+        FloatingWindowConfig: {
+            enabled: boolean;
+            /** Format: uri */
+            imageUrl: string | null;
+            /** Format: uri */
+            linkUrl: string | null;
+        };
+        FloatingWindows: {
+            left: components["schemas"]["FloatingWindowConfig"];
+            right: components["schemas"]["FloatingWindowConfig"];
+        };
         UserSummary: {
             /** Format: uuid */
             id: string;
@@ -1901,6 +1988,26 @@ export interface components {
                 };
             };
         };
+        UpdateSiteSectionsRequest: {
+            content: {
+                "application/json": {
+                    home?: boolean;
+                    world?: boolean;
+                    wiki?: boolean;
+                    guides?: boolean;
+                    forum?: boolean;
+                    videos?: boolean;
+                };
+            };
+        };
+        UpdateFloatingWindowsRequest: {
+            content: {
+                "application/json": {
+                    left?: components["schemas"]["FloatingWindowConfig"];
+                    right?: components["schemas"]["FloatingWindowConfig"];
+                };
+            };
+        };
         UpdateVideoRequest: {
             content: {
                 "application/json": {
@@ -2087,6 +2194,92 @@ export interface operations {
                     "application/json": components["schemas"]["Health"];
                 };
             };
+        };
+    };
+    getSiteSections: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 分区开关 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteSections"];
+                };
+            };
+        };
+    };
+    updateSiteSections: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["UpdateSiteSectionsRequest"];
+        responses: {
+            /** @description 更新后的分区开关 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteSections"];
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getFloatingWindows: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 漂浮窗配置 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FloatingWindows"];
+                };
+            };
+        };
+    };
+    updateFloatingWindows: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["UpdateFloatingWindowsRequest"];
+        responses: {
+            /** @description 更新后的配置 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FloatingWindows"];
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     getHomeDigest: {

@@ -243,6 +243,12 @@ export function ProfilePanel() {
                   相关视频管理
                 </Link>
                 <Link
+                  href="/admin/site"
+                  className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary transition-colors duration-fast hover:border-amber-soft hover:text-amber"
+                >
+                  站点设置
+                </Link>
+                <Link
                   href="/admin/taxonomy"
                   className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary transition-colors duration-fast hover:border-amber-soft hover:text-amber"
                 >
