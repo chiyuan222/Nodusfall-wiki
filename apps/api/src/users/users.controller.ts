@@ -21,6 +21,7 @@ import {
   UsersService,
 } from './users.service';
 import { RegisterDto } from './dto/register.dto';
+import { BindPhoneDto } from './dto/bind-phone.dto';
 import { UpdateMeDto } from './dto/update-me.dto';
 import { DeleteMeDto } from './dto/delete-me.dto';
 import { CreateHistoryDto } from './dto/create-history.dto';
@@ -41,6 +42,13 @@ export class UsersController {
   @Post()
   async register(@Body() dto: RegisterDto) {
     const user = await this.usersService.register(dto);
+    return { data: toUserResponse(user) };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('me/phone')
+  async bindPhone(@Req() req: AuthenticatedRequest, @Body() dto: BindPhoneDto) {
+    const user = await this.usersService.bindPhone(req.user.sub, dto.phone, dto.smsCode);
     return { data: toUserResponse(user) };
   }
 

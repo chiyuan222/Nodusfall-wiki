@@ -31,4 +31,9 @@ export class RegisterDto {
   @ValidateIf((o: RegisterDto) => !o.email)
   @Matches(/^1[3-9]\d{9}$/)
   phone?: string;
+
+  @ValidateIf((o: RegisterDto) => Boolean(o.phone))
+  @IsString()
+  @Matches(/^\d{6}$/)
+  smsCode?: string;
 }

@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { AuditService } from '../audit/audit.service';
 import { isOwner, hasPermission, PERMISSIONS } from '../common/roles';
 import { AdminUpdateUserDto } from './dto/admin-update-user.dto';
 import { AdminListUsersQueryDto } from './dto/admin-list-users-query.dto';
@@ -27,7 +28,10 @@ interface AdminRequest extends Request {
 @Controller('admin/users')
 @UseGuards(JwtAuthGuard)
 export class AdminUsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly auditService: AuditService,
+  ) {}
 
   private assertManageUsers(req: AdminRequest): void {
     if (!hasPermission(req.user.role, req.user.permissions, PERMISSIONS.MANAGE_USERS)) {
@@ -68,6 +72,14 @@ export class AdminUsersController {
       throw new ForbiddenException('only owner can change role or permissions');
     }
     this.assertManageUsers(req);
-    return { data: await this.usersService.updateAdminUser(userId, dto) };
+    const data = await this.usersService.updateAdminUser(userId, dto);
+    await this.auditService.log(
+      req.user.sub,
+      'user.update',
+      'user',
+      userId,
+      `更新用户（${Object.keys(dto).filter((k) => dto[k as keyof typeof dto] !== undefined).join('、') || '无字段'}）`,
+    );
+    return { data };
   }
 }

@@ -13,6 +13,8 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { AuditService } from '../audit/audit.service';
+import { isManagerRole } from '../common/roles';
 import { CreateWikiCategoryDto } from './dto/create-wiki-category.dto';
 import { UpdateWikiCategoryDto } from './dto/update-wiki-category.dto';
 import { WikiService } from './wiki.service';
@@ -24,28 +26,47 @@ interface AuthenticatedRequest extends Request {
 @Controller('admin/wiki/categories')
 @UseGuards(JwtAuthGuard)
 export class AdminWikiController {
-  constructor(private readonly wikiService: WikiService) {}
+  constructor(
+    private readonly wikiService: WikiService,
+    private readonly auditService: AuditService,
+  ) {}
 
   private assertAdmin(req: AuthenticatedRequest): void {
-    if (req.user.role !== 'ADMIN') {
+    if (!isManagerRole(req.user.role)) {
       throw new ForbiddenException('admin only');
     }
   }
 
   @Post()
-  create(@Req() req: AuthenticatedRequest, @Body() dto: CreateWikiCategoryDto) {
+  async create(@Req() req: AuthenticatedRequest, @Body() dto: CreateWikiCategoryDto) {
     this.assertAdmin(req);
-    return this.wikiService.createCategory(dto).then((data) => ({ data }));
+    const data = await this.wikiService.createCategory(dto);
+    await this.auditService.log(
+      req.user.sub,
+      'wiki.category.create',
+      'wikiCategory',
+      data.slug,
+      `新建 Wiki 分类「${data.name}」`,
+    );
+    return { data };
   }
 
   @Patch(':slug')
-  update(
+  async update(
     @Req() req: AuthenticatedRequest,
     @Param('slug') slug: string,
     @Body() dto: UpdateWikiCategoryDto,
   ) {
     this.assertAdmin(req);
-    return this.wikiService.updateCategory(slug, dto).then((data) => ({ data }));
+    const data = await this.wikiService.updateCategory(slug, dto);
+    await this.auditService.log(
+      req.user.sub,
+      'wiki.category.update',
+      'wikiCategory',
+      slug,
+      `修改 Wiki 分类「${data.name}」`,
+    );
+    return { data };
   }
 
   @Delete(':slug')
@@ -56,5 +77,12 @@ export class AdminWikiController {
   ): Promise<void> {
     this.assertAdmin(req);
     await this.wikiService.deleteCategory(slug);
+    await this.auditService.log(
+      req.user.sub,
+      'wiki.category.delete',
+      'wikiCategory',
+      slug,
+      `删除 Wiki 分类「${slug}」`,
+    );
   }
 }

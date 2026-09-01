@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { AuditService } from '../audit/audit.service';
 import { PaginationQueryDto } from '../common/pagination';
 import { isOwner } from '../common/roles';
 import { CreateAnnouncementDto } from './dto/create-announcement.dto';
@@ -24,7 +25,10 @@ interface AdminRequest extends Request {
 @Controller('admin/announcements')
 @UseGuards(JwtAuthGuard)
 export class AdminAnnouncementsController {
-  constructor(private readonly messagesService: MessagesService) {}
+  constructor(
+    private readonly messagesService: MessagesService,
+    private readonly auditService: AuditService,
+  ) {}
 
   private assertOwner(req: AdminRequest): void {
     if (!isOwner(req.user.role)) {
@@ -48,8 +52,14 @@ export class AdminAnnouncementsController {
     @Body() dto: CreateAnnouncementDto,
   ) {
     this.assertOwner(req);
-    return {
-      data: await this.messagesService.createAnnouncement(req.user.sub, dto),
-    };
+    const data = await this.messagesService.createAnnouncement(req.user.sub, dto);
+    await this.auditService.log(
+      req.user.sub,
+      'announcement.create',
+      'announcement',
+      data.id,
+      `发布全站公告「${dto.title ?? ''}」`,
+    );
+    return { data };
   }
 }

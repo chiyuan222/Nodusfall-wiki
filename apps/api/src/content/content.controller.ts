@@ -10,6 +10,8 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { AuditService } from '../audit/audit.service';
+import { isManagerRole } from '../common/roles';
 import { ContentService } from './content.service';
 
 interface AuthenticatedRequest extends Request {
@@ -18,7 +20,10 @@ interface AuthenticatedRequest extends Request {
 
 @Controller()
 export class ContentController {
-  constructor(private readonly contentService: ContentService) {}
+  constructor(
+    private readonly contentService: ContentService,
+    private readonly auditService: AuditService,
+  ) {}
 
   @Get('content/pages/:slug')
   getPage(@Param('slug') slug: string) {
@@ -32,9 +37,18 @@ export class ContentController {
     @Param('slug') slug: string,
     @Body() body: any,
   ) {
-    if (req.user.role !== 'ADMIN') {
+    if (!isManagerRole(req.user.role)) {
       throw new ForbiddenException('admin only');
     }
-    return this.contentService.put(slug, body).then((data) => ({ data }));
+    return this.contentService.put(slug, body).then((data) => {
+      void this.auditService.log(
+        req.user.sub,
+        'cms.page.update',
+        'contentPage',
+        slug,
+        `保存 CMS 页面「${slug}」`,
+      );
+      return { data };
+    });
   }
 }

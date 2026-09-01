@@ -477,3 +477,29 @@ model ExpLog {
   @@index([userId, createdAt])
   @@index([userId, reason, createdAt])
 }
+
+model SmsCode {
+  id         String    @id @default(uuid())
+  phone      String
+  codeHash   String
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([phone, createdAt])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String
+  actorName  String
+  action     String
+  targetType String?
+  targetId   String?
+  detail     String?
+  createdAt  DateTime @default(now())
+
+  @@index([actorId, createdAt])
+  @@index([action, createdAt])
+  @@index([createdAt])
+}

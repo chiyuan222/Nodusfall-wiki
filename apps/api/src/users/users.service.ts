@@ -9,6 +9,7 @@ import { User } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailCodeService } from '../auth/email-code.service';
+import { SmsCodeService } from '../auth/sms-code.service';
 import { pageInfo } from '../common/pagination';
 import { RegisterDto } from './dto/register.dto';
 import { levelFromExp, nextLevelExp } from '../exp/exp.service';
@@ -94,6 +95,7 @@ export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly emailCodeService: EmailCodeService,
+    private readonly smsCodeService: SmsCodeService,
   ) {}
 
   async findById(id: string): Promise<User | null> {
@@ -142,6 +144,13 @@ export class UsersService {
       }
     }
 
+    if (phone) {
+      const ok = await this.smsCodeService.verify(phone, dto.smsCode ?? '');
+      if (!ok) {
+        throw new BadRequestException('验证码无效或已过期');
+      }
+    }
+
     const passwordHash = await bcrypt.hash(dto.password, 12);
     return this.prisma.user.create({
       data: {
@@ -151,7 +160,26 @@ export class UsersService {
         displayName: dto.username,
         passwordHash,
         emailVerifiedAt: email ? new Date() : null,
+        phoneVerifiedAt: phone ? new Date() : null,
+        group: phone ? 'VERIFIED' : 'NORMAL',
       },
+    });
+  }
+
+  async bindPhone(userId: string, phone: string, smsCode: string): Promise<User> {
+    const ok = await this.smsCodeService.verify(phone, smsCode);
+    if (!ok) {
+      throw new BadRequestException('验证码无效或已过期');
+    }
+    const existing = await this.prisma.user.findFirst({
+      where: { phone, id: { not: userId } },
+    });
+    if (existing) {
+      throw new ConflictException('手机号已被其他账号绑定');
+    }
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { phone, phoneVerifiedAt: new Date(), group: 'VERIFIED' },
     });
   }
 
