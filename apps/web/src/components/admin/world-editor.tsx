@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   emptyMedia,
+  normalizeWorldContent,
   WORLD_SECTION_LABEL,
   type WorldPageContent,
   type WorldSectionId,
@@ -53,7 +54,7 @@ export function WorldEditor() {
     setSaveMsg("");
     loadCmsPage<Draft>("world", "/content/world-page.json")
       .then(({ data, source: s }) => {
-        setDraft(data);
+        setDraft(normalizeWorldContent(data));
         setSource(s);
         setDirty(false);
       })
@@ -369,6 +370,10 @@ function OverviewForm({ draft, mutate, listOp }: FormProps) {
     <>
       <Field label="板块标题" value={o.title} onChange={(v) => mutate((d) => void (d.overview.title = v))} />
       <Field label="导语" value={o.lead} textarea onChange={(v) => mutate((d) => void (d.overview.lead = v))} />
+      <div>
+        <p className="mb-2 font-mono text-caption text-faint">板块主视觉（幻灯片大图，留空 = 占位画框）</p>
+        <MediaField value={o.media} onChange={(v) => mutate((d) => void (d.overview.media = v))} />
+      </div>
       <div className="space-y-3">
         {o.facts.map((fact, i) => (
           <ItemCard
@@ -486,6 +491,10 @@ function OfficialForm({ draft, mutate, listOp }: FormProps) {
   return (
     <>
       <Field label="板块标题" value={o.title} onChange={(v) => mutate((d) => void (d.official.title = v))} />
+      <div>
+        <p className="mb-2 font-mono text-caption text-faint">板块主视觉（幻灯片大图，留空 = 占位画框）</p>
+        <MediaField value={o.media} onChange={(v) => mutate((d) => void (d.official.media = v))} />
+      </div>
       <p className="text-caption text-faint">
         URL 留空的链接会在页面上显示为「待补充」态（虚线卡片、不可点击），不会误导访客。
       </p>

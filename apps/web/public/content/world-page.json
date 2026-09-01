@@ -32,6 +32,7 @@
     "hidden": false,
     "title": "游戏概览",
     "lead": "",
+    "media": { "kind": "image", "src": "", "alt": "概览板块主视觉（待管理员替换）", "poster": "" },
     "facts": [
       { "label": "中文名", "value": "源初之结" },
       { "label": "原名", "value": "NODUSFALL" },
@@ -117,6 +118,7 @@
   "official": {
     "hidden": false,
     "title": "官方信息",
+    "media": { "kind": "image", "src": "", "alt": "官方信息板块主视觉（待管理员替换）", "poster": "" },
     "links": [
       {
         "label": "官方网站",

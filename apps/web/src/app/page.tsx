@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { loadHomeContent } from "@/lib/home-content.server";
 import { MediaSlotView } from "@/components/world/media-slot";
+import { Carousel } from "@/components/carousel";
 
 export const dynamic = "force-dynamic";
 
@@ -112,10 +113,20 @@ export default async function HomePage() {
               </div>
             </div>
             <div className="lg:col-span-8">
-              {/* 放大主视觉：外层编辑风双线框 */}
-              <div className="rounded-lg border border-border-subtle bg-surface p-2 shadow-card">
-                <MediaSlotView media={content.hero.media} variant="banner" priority />
-              </div>
+              {/* 首屏轮播：5 个槽位自动轮替，管理员在 /admin/home 替换图片与链接 */}
+              <Carousel
+                label="首页主视觉轮播"
+                emptyHint="主视觉待管理员替换"
+                slides={content.hero.slides.map((s) => ({
+                  href: s.href,
+                  title: s.caption || content.hero.title,
+                  image:
+                    s.media.kind === "video"
+                      ? s.media.poster || undefined
+                      : s.media.src || undefined,
+                  alt: s.media.alt,
+                }))}
+              />
             </div>
           </div>
         </section>

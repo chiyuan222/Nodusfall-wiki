@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { KnotMark } from "@/components/knot-mark";
+import { Carousel } from "@/components/carousel";
 import { getGuideList, USE_MOCK } from "@/lib/data";
+import { getGuideCarousel } from "@/lib/carousel-data";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +39,10 @@ const FEATURES = [
 ] as const;
 
 export default async function GuidesIndexPage() {
-  const list = await getGuideList();
+  const [list, carousel] = await Promise.all([
+    getGuideList(),
+    getGuideCarousel(),
+  ]);
 
   return (
     <div className="mx-auto max-w-page space-y-12">
@@ -58,6 +63,15 @@ export default async function GuidesIndexPage() {
           )}
         </p>
       </header>
+
+      {/* 轮替推荐框：最新攻略（5 位轮播，角标显示评分，点击跳转对应攻略） */}
+      <section aria-label="攻略推荐轮播">
+        <Carousel
+          label="攻略推荐轮播"
+          slides={carousel}
+          emptyHint="攻略推荐 · 待内容接入"
+        />
+      </section>
 
       {/* 排序/筛选栏（待数据接入，禁用态） */}
       <div

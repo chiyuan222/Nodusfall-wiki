@@ -3,7 +3,7 @@
     "pageId": "home",
     "updatedAt": "",
     "maintainer": "",
-    "note": "本文件驱动首页的横幅、公告条与入口卡。管理员可在 /admin/home 可视化编辑后导出替换本文件；待后端 CMS 契约冻结后改由接口下发。sections 数组控制板块顺序与显隐。"
+    "note": "本文件驱动首页的横幅轮播、公告条与入口卡。管理员可在 /admin/home 可视化编辑后导出替换本文件；待后端 CMS 契约冻结后改由接口下发。sections 数组控制板块顺序与显隐。hero.slides 为 5 个轮替位，图片留空时显示占位画框。"
   },
   "sections": ["hero", "notice", "digest", "entries"],
   "hero": {
@@ -11,12 +11,33 @@
     "kicker": "NODUSFALL · 非官方玩家社区",
     "title": "诸神入刃，斩断死结",
     "lead": "《源初之结》的玩家 Wiki、攻略与讨论论坛。资料由社区共同维护。",
-    "media": {
-      "kind": "image",
-      "src": "",
-      "alt": "首页主视觉（待管理员替换，支持图片或视频）",
-      "poster": ""
-    },
+    "slides": [
+      {
+        "media": { "kind": "image", "src": "", "alt": "首页轮播第 1 张（待管理员替换）", "poster": "" },
+        "caption": "",
+        "href": ""
+      },
+      {
+        "media": { "kind": "image", "src": "", "alt": "首页轮播第 2 张（待管理员替换）", "poster": "" },
+        "caption": "",
+        "href": ""
+      },
+      {
+        "media": { "kind": "image", "src": "", "alt": "首页轮播第 3 张（待管理员替换）", "poster": "" },
+        "caption": "",
+        "href": ""
+      },
+      {
+        "media": { "kind": "image", "src": "", "alt": "首页轮播第 4 张（待管理员替换）", "poster": "" },
+        "caption": "",
+        "href": ""
+      },
+      {
+        "media": { "kind": "image", "src": "", "alt": "首页轮播第 5 张（待管理员替换）", "poster": "" },
+        "caption": "",
+        "href": ""
+      }
+    ],
     "ctas": [
       { "label": "游戏总览", "href": "/world", "style": "primary" },
       { "label": "浏览 Wiki", "href": "/wiki", "style": "ghost" },

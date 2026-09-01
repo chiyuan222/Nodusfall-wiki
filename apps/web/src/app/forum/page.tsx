@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { KnotMark } from "@/components/knot-mark";
+import { Carousel } from "@/components/carousel";
 import { getForumIndexData, USE_MOCK } from "@/lib/data";
+import { getForumCarousel } from "@/lib/carousel-data";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +20,10 @@ const FEATURES = [
 ] as const;
 
 export default async function ForumIndexPage() {
-  const data = await getForumIndexData();
+  const [data, carousel] = await Promise.all([
+    getForumIndexData(),
+    getForumCarousel(),
+  ]);
 
   return (
     <div className="mx-auto max-w-page space-y-12">
@@ -39,6 +44,15 @@ export default async function ForumIndexPage() {
           )}
         </p>
       </header>
+
+      {/* 轮替推荐框：板块热帖（置顶优先，5 位轮播，点击跳转对应帖子） */}
+      <section aria-label="论坛热帖轮播">
+        <Carousel
+          label="论坛热帖轮播"
+          slides={carousel}
+          emptyHint="热帖推荐 · 待内容接入"
+        />
+      </section>
 
       <div className="grid gap-6 lg:grid-cols-12">
         {/* 板块列表 */}

@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   emptyHomeMedia,
+  emptyHomeSlide,
   HOME_SECTION_LABEL,
+  normalizeHomeContent,
   type HomePageContent,
   type HomeSectionId,
 } from "@/lib/home-content";
@@ -45,7 +47,7 @@ export function HomeEditor() {
     setSaveMsg("");
     loadCmsPage<Draft>("home", "/content/home-page.json")
       .then(({ data, source: s }) => {
-        setDraft(data);
+        setDraft(normalizeHomeContent(data));
         setSource(s);
         setDirty(false);
       })
@@ -243,7 +245,32 @@ export function HomeEditor() {
                       <Field label="眉题 kicker" value={draft.hero.kicker} onChange={(v) => mutate((d) => void (d.hero.kicker = v))} />
                       <Field label="主标题" value={draft.hero.title} onChange={(v) => mutate((d) => void (d.hero.title = v))} />
                       <Field label="导语" value={draft.hero.lead} textarea onChange={(v) => mutate((d) => void (d.hero.lead = v))} />
-                      <MediaField value={draft.hero.media} onChange={(v) => mutate((d) => void (d.hero.media = v))} />
+                      <div>
+                        <p className="mb-2 font-mono text-caption text-faint">
+                          首屏轮播 slides（5 个轮替位；标题留空时显示首页主标题，链接留空则不可点击；建议用图片）
+                        </p>
+                        <div className="space-y-3">
+                          {draft.hero.slides.map((slide, j) => (
+                            <ItemCard
+                              key={j}
+                              title={`slides[${j}] · 第 ${j + 1} 张`}
+                              index={j}
+                              length={draft.hero.slides.length}
+                              onMove={(f, t) => listOp((d) => d.hero.slides, "move", { index: f, to: t })}
+                              onRemove={(x) => listOp((d) => d.hero.slides, "remove", { index: x })}
+                            >
+                              <div className="grid gap-3 md:grid-cols-2">
+                                <Field label="叠加标题（可留空）" value={slide.caption} onChange={(v) => mutate((d) => void (d.hero.slides[j]!.caption = v))} />
+                                <Field label="点击跳转链接（可留空）" value={slide.href} onChange={(v) => mutate((d) => void (d.hero.slides[j]!.href = v))} />
+                              </div>
+                              <MediaField value={slide.media} onChange={(v) => mutate((d) => void (d.hero.slides[j]!.media = v))} />
+                            </ItemCard>
+                          ))}
+                        </div>
+                        <button type="button" className={`${addBtnCls} mt-3`} onClick={() => listOp((d) => d.hero.slides, "add", { item: emptyHomeSlide() })}>
+                          + 添加轮播槽位
+                        </button>
+                      </div>
                       <div>
                         <p className="mb-2 font-mono text-caption text-faint">按钮 ctas</p>
                         <div className="space-y-3">
