@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -21,6 +22,8 @@ import {
 } from './users.service';
 import { RegisterDto } from './dto/register.dto';
 import { UpdateMeDto } from './dto/update-me.dto';
+import { DeleteMeDto } from './dto/delete-me.dto';
+import { CreateHistoryDto } from './dto/create-history.dto';
 import { ForumService } from '../forum/forum.service';
 import { PaginationQueryDto } from '../common/pagination';
 
@@ -61,6 +64,16 @@ export class UsersController {
     return { data: toUserResponse(user) };
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Delete('me')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteMe(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: DeleteMeDto,
+  ): Promise<void> {
+    await this.usersService.deactivate(req.user.sub, dto.password);
+  }
+
   @Get(':userId')
   @HttpCode(HttpStatus.OK)
   async getUser(@Param('userId') userId: string) {
@@ -87,5 +100,53 @@ export class UsersController {
     @Query() pagination: PaginationQueryDto,
   ) {
     return this.forumService.myBookmarks(req.user.sub, pagination.page, pagination.perPage);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('me/comments')
+  listMyComments(
+    @Req() req: AuthenticatedRequest,
+    @Query() pagination: PaginationQueryDto,
+  ) {
+    return this.usersService.myComments(
+      req.user.sub,
+      pagination.page,
+      pagination.perPage,
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('me/history')
+  listMyHistory(
+    @Req() req: AuthenticatedRequest,
+    @Query() pagination: PaginationQueryDto,
+  ) {
+    return this.usersService.historyList(
+      req.user.sub,
+      pagination.page,
+      pagination.perPage,
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('me/history')
+  @HttpCode(HttpStatus.CREATED)
+  async createHistoryEntry(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: CreateHistoryDto,
+  ) {
+    const entry = await this.usersService.recordHistory(
+      req.user.sub,
+      dto.kind,
+      dto.slug,
+    );
+    return { data: entry };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('me/history')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async clearMyHistory(@Req() req: AuthenticatedRequest): Promise<void> {
+    await this.usersService.clearHistory(req.user.sub);
   }
 }

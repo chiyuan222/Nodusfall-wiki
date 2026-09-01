@@ -47,11 +47,12 @@ export class ProblemDetailsFilter implements ExceptionFilter {
     let detail = '服务器内部错误';
     let code = 'INTERNAL_ERROR';
     let errors: Array<{ field: string; code: string; message: string }> | undefined;
+    let body: unknown;
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
       title = defaultTitle(status);
-      const body = exception.getResponse();
+      body = exception.getResponse();
       if (typeof body === 'string') {
         detail = body;
       } else if (body && typeof body === 'object') {
@@ -71,7 +72,9 @@ export class ProblemDetailsFilter implements ExceptionFilter {
     }
 
     if (status === 429) {
-      response.setHeader('Retry-After', '60');
+      const retryAfter =
+        body && typeof body === 'object' && (body as Record<string, unknown>).retryAfter;
+      response.setHeader('Retry-After', String(retryAfter ?? 60));
     }
 
     response.status(status).json({
