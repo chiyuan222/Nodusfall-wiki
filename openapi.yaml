@@ -631,6 +631,45 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
 
+  /admin/audit-logs:
+    get:
+      tags: [Admin]
+      operationId: listAuditLogs
+      summary: 管理审计日志（仅站长可查看；记录管理操作的用户/时间/动作）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: perPage
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - name: action
+          in: query
+          schema: { type: string }
+          description: 按动作类型筛选（如 user.update / wiki.category.create）
+        - name: actorId
+          in: query
+          schema: { type: string, format: uuid }
+          description: 按操作者筛选
+        - name: from
+          in: query
+          schema: { type: string, format: date-time }
+        - name: to
+          in: query
+          schema: { type: string, format: date-time }
+      responses:
+        "200":
+          description: 审计日志列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditLogList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
   /admin/users:
     get:
       tags: [Admin]
@@ -2774,6 +2813,40 @@ components:
         topContents:
           type: array
           maxItems: 10
+
+    AuditLog:
+      type: object
+      required: [id, action, actorName, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        action:
+          type: string
+          description: >
+            动作类型：site.sections.update / site.floating.update /
+            cms.page.update / announcement.create / user.update /
+            wiki.category.create|update|delete / forum.board.create|update|delete /
+            video.create|update|delete / wiki.page.update|delete / guide.update|delete /
+            forum.thread.update|delete / forum.post.update|delete / comment.delete
+        targetType: { type: string, nullable: true, description: 目标对象类型（如 wikiCategory / forumBoard / user） }
+        targetId: { type: string, nullable: true, description: 目标对象 id 或 slug }
+        detail: { type: string, nullable: true, description: 人类可读的动作描述 }
+        actorName: { type: string, description: 操作者用户名快照（账号注销后仍保留） }
+        actor:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/UserSummary"
+        createdAt: { type: string, format: date-time }
+
+    AuditLogList:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuditLog"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
           items:
             type: object
             required: [kind, slug, title, views]
