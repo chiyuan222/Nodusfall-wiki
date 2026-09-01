@@ -425,3 +425,19 @@ model AnnouncementRead {
 
   @@unique([announcementId, userId])
 }
+
+model VideoEntry {
+  id          String   @id @default(uuid())
+  kind        String
+  title       String
+  url         String
+  platform    String
+  coverImage  String?
+  description String?
+  published   Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([kind, published, sortOrder])
+}
