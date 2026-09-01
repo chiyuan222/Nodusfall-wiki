@@ -6,6 +6,6 @@ import { AdminForumController } from './admin-forum.controller';
 @Module({
   controllers: [ForumController, AdminForumController],
   providers: [ForumService],
+  exports: [ForumService],
 })
 export class ForumModule {}
-export { ForumService } from './forum.service';
