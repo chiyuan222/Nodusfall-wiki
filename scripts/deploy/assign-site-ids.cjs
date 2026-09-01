@@ -10,7 +10,15 @@ if (!m) {
   console.error('DATABASE_URL not found in apps/api/.env');
   process.exit(1);
 }
-process.env.DATABASE_URL = m[1].trim();
+let url = m[1].trim();
+if (
+  url.length >= 2 &&
+  ((url.startsWith('"') && url.endsWith('"')) ||
+    (url.startsWith("'") && url.endsWith("'")))
+) {
+  url = url.slice(1, -1);
+}
+process.env.DATABASE_URL = url;
 
 const { PrismaClient } = require(path.join(
   root,
