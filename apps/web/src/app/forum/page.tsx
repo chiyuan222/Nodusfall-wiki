@@ -5,6 +5,7 @@ import { Carousel } from "@/components/carousel";
 import { getForumIndexData, USE_MOCK } from "@/lib/data";
 import { getForumCarousel } from "@/lib/carousel-data";
 import { authorName } from "@/lib/author";
+import { FloatingWindows } from "@/components/forum/floating-windows";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +29,8 @@ export default async function ForumIndexPage() {
 
   return (
     <div className="mx-auto max-w-page space-y-12">
+      {/* 左右漂浮引流窗（站长配置二维码/友情站，可关闭，契约 PR #70） */}
+      <FloatingWindows />
       {/* 页头 */}
       <header className="pt-6 lg:pt-10">
         <p className="font-mono text-caption uppercase tracking-[0.4em] text-faint">

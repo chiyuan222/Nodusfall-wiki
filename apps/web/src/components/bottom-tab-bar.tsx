@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { NAV_ITEMS } from "./site-header";
+import { NAV_ITEMS, NAV_SECTION } from "./site-header";
 import { KnotMark } from "./knot-mark";
 import { useUnreadMessages } from "@/lib/messages";
+import { useSiteSections } from "@/lib/site-config";
 
 /** 18px 线性图标（stroke currentColor），与站点标识同一手绘细线语言 */
 function Glyph({ href, size }: { href: string; size: number }) {
@@ -80,14 +81,24 @@ function Glyph({ href, size }: { href: string; size: number }) {
 export function BottomTabBar() {
   const pathname = usePathname();
   const unread = useUnreadMessages();
-  const items = [...NAV_ITEMS, { href: "/me", label: "我的" }] as const;
+  const sections = useSiteSections();
+  const items = [
+    ...NAV_ITEMS.filter((item) => {
+      const key = NAV_SECTION[item.href];
+      return !key || sections[key];
+    }),
+    { href: "/me", label: "我的" },
+  ] as const;
 
   return (
     <nav
       aria-label="底部导航"
       className="fixed inset-x-0 bottom-0 z-40 border-t border-border-subtle bg-surface/95 backdrop-blur lg:hidden"
     >
-      <div className="grid grid-cols-7">
+      <div
+        className="grid"
+        style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
+      >
         {items.map((item) => {
           const active =
             item.href === "/"

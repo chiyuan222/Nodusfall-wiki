@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { KnotMark } from "./knot-mark";
 import { ThemeSwitcher } from "./theme-switcher";
 import { AuthMenu } from "./auth-menu";
+import { useSiteSections } from "@/lib/site-config";
+import type { SiteSections } from "@/lib/api";
 
 export const NAV_ITEMS = [
   { href: "/", label: "首页" },
@@ -16,6 +18,15 @@ export const NAV_ITEMS = [
   { href: "/videos", label: "相关视频", short: "视频" },
 ] as const;
 
+/** 导航项 → 分区开关键（契约 PR #70；home 不隐藏，禁用走横幅/门控） */
+export const NAV_SECTION: Record<string, keyof SiteSections> = {
+  "/world": "world",
+  "/wiki": "wiki",
+  "/guides": "guides",
+  "/forum": "forum",
+  "/videos": "videos",
+};
+
 function isActive(pathname: string, href: string): boolean {
   return href === "/" ? pathname === "/" : pathname.startsWith(href);
 }
@@ -23,6 +34,11 @@ function isActive(pathname: string, href: string): boolean {
 /** 桌面端顶部导航（lg 及以上显示，移动端由 BottomTabBar 替代） */
 export function SiteHeader() {
   const pathname = usePathname();
+  const sections = useSiteSections();
+  const visibleItems = NAV_ITEMS.filter((item) => {
+    const key = NAV_SECTION[item.href];
+    return !key || sections[key];
+  });
 
   return (
     <header className="sticky top-0 z-40 hidden border-b border-border-subtle bg-surface/90 backdrop-blur lg:block">
@@ -39,7 +55,7 @@ export function SiteHeader() {
         </Link>
 
         <nav aria-label="主导航" className="flex items-center gap-1">
-          {NAV_ITEMS.map((item) => (
+          {visibleItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
