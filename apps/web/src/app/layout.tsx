@@ -14,13 +14,13 @@ import { SiteFooter } from "@/components/site-footer";
 
 export const metadata: Metadata = {
   title: {
-    default: "源初之结 Nodusfall Wiki — 非官方玩家 Wiki / 攻略 / 论坛",
-    template: "%s · Nodusfall Wiki",
+    default: "源神小窝 — 源初之结非官方 Wiki / 攻略 / 论坛",
+    template: "%s · 源神小窝",
   },
   description:
-    "《源初之结》（Nodusfall）非官方玩家社区：Wiki 资料库、玩家攻略与讨论论坛。",
+    "源神小窝：《源初之结》（Nodusfall）非官方玩家社区——Wiki 资料库、玩家攻略与讨论论坛。",
   openGraph: {
-    siteName: "Nodusfall Wiki（非官方）",
+    siteName: "源神小窝（源初之结非官方 Wiki）",
     type: "website",
   },
 };
