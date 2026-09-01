@@ -285,6 +285,44 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
+  /users/me/phone:
+    post:
+      tags: [Users]
+      operationId: bindPhone
+      summary: 绑定或换绑手机号（无手机号=绑定，有手机号=换绑；成功后认证组 verified）
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone, smsCode]
+              properties:
+                phone:
+                  type: string
+                  pattern: "^1[3-9]\\d{9}$"
+                  description: 新手机号
+                smsCode:
+                  type: string
+                  description: 短信验证码（POST /auth/sms-codes 获取，6 位数字，10 分钟内有效）
+      responses:
+        "200":
+          description: 绑定成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/User"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          description: 手机号已被其他账号绑定
+
   /users/me/threads:
     get:
       tags: [Users]
@@ -738,6 +776,32 @@ paths:
                 email:
                   type: string
                   format: email
+      responses:
+        "204":
+          description: 验证码已发送
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+  /auth/sms-codes:
+    post:
+      tags: [Auth]
+      operationId: sendSmsCode
+      summary: 发送手机号验证码（限流：同一手机号 60s 一次、每日 5 次）
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone]
+              properties:
+                phone:
+                  type: string
+                  pattern: "^1[3-9]\\d{9}$"
+                  description: 中国大陆手机号
       responses:
         "204":
           description: 验证码已发送
@@ -2154,7 +2218,10 @@ components:
               phone:
                 type: string
                 pattern: "^1[3-9]\\d{9}$"
-                description: 中国大陆手机号注册（暂仅格式校验，短信验证接入后启用；与 email 二选一）
+                description: 中国大陆手机号注册（需同时传 smsCode 短信验证码；与 email 二选一）
+              smsCode:
+                type: string
+                description: 手机号注册验证码（POST /auth/sms-codes 获取，6 位数字，10 分钟内有效）
     AuthSessionRequest:
       required: true
       content:
