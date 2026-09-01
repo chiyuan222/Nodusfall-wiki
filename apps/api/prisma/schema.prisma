@@ -53,6 +53,7 @@ model User {
   status       UserStatus @default(ACTIVE)
   group        UserGroup @default(NORMAL)
   level        Int       @default(1)
+  exp          Int       @default(0)
   permissions  String[]
   wikiCreateGranted Boolean @default(false)
   banReason    String?
@@ -73,6 +74,8 @@ model User {
   sentMessages  DirectMessage[]   @relation("DirectMessageSender")
   receivedMessages DirectMessage[] @relation("DirectMessageRecipient")
   announcements Announcement[]    @relation("AnnouncementAuthor")
+  checkins     CheckIn[]
+  expLogs      ExpLog[]
   wikiPages     WikiPage[]        @relation("WikiPageAuthor")
   wikiRevisions WikiPageRevision[] @relation("WikiRevisionAuthor")
   guides        Guide[]           @relation("GuideAuthor")
@@ -447,4 +450,29 @@ model SiteConfig {
   key       String   @unique
   data      Json
   updatedAt DateTime @updatedAt
+}
+
+model CheckIn {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      DateTime
+  streak    Int      @default(1)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, date])
+  @@index([userId, date])
+}
+
+model ExpLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount    Int
+  reason    String
+  refId     String?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([userId, reason, createdAt])
 }

@@ -16,6 +16,7 @@ import { extractFirstImage } from '../common/markdown';
 import { hasPermission, isManagerRole, PERMISSIONS } from '../common/roles';
 import { PrismaService } from '../prisma/prisma.service';
 import { toUserSummary } from '../users/users.service';
+import { ExpService } from '../exp/exp.service';
 
 type PageWithRelations = WikiPage & {
   author: User;
@@ -90,7 +91,10 @@ function revisionView(revision: RevisionWithAuthor) {
 
 @Injectable()
 export class WikiService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly expService: ExpService,
+  ) {}
 
   listCategories() {
     return this.prisma.wikiCategory.findMany({
@@ -253,6 +257,7 @@ export class WikiService {
       },
       include: { author: true, category: true },
     });
+    void this.expService.grant(userId, "wiki", page.id);
     return pageDetail({ ...page, _count: { revisions: 1 } });
   }
 
@@ -337,6 +342,7 @@ export class WikiService {
       },
       include: { author: true, category: true, _count: { select: { revisions: true } } },
     });
+    void this.expService.grant(userId, "wiki", page.id);
     return pageDetail(page);
   }
 
@@ -376,6 +382,7 @@ export class WikiService {
         where: { id: page.id },
         data: { likeCount: { increment: 1 } },
       });
+      void this.expService.grant(userId, "like", page.id);
     }
   }
 
@@ -401,6 +408,7 @@ export class WikiService {
       create: { pageId: page.id, userId },
       update: {},
     });
+    void this.expService.grant(userId, "bookmark", page.id);
   }
 
   async unbookmarkPage(userId: string, slug: string): Promise<void> {
