@@ -6,8 +6,9 @@ import { request, type ListResult } from "@/lib/api-client";
 import { getAccessToken } from "@/lib/session";
 
 /**
- * 用户中心「我的内容」：我发布的主题 / 我的收藏（客户端组件）。
- * 契约：GET /users/me/threads、GET /users/me/bookmarks（Bearer，返回 ForumThreadList）
+ * 用户中心「我的内容」：我发布的主题 / 我的收藏 / 我的评论（客户端组件）。
+ * 契约：GET /users/me/threads、GET /users/me/bookmarks（ForumThreadList）、
+ *       GET /users/me/comments（MyCommentList，含 targetTitle 目标标题）
  */
 
 interface ThreadItem {
@@ -22,7 +23,18 @@ interface ThreadItem {
   coverImage: string | null;
 }
 
-type Tab = "threads" | "bookmarks";
+/** 契约 MyComment（GET /users/me/comments） */
+interface MyCommentItem {
+  id: string;
+  targetType: "wiki_page" | "guide";
+  targetSlug: string;
+  targetTitle: string;
+  content: string;
+  likeCount: number;
+  createdAt: string;
+}
+
+type Tab = "threads" | "bookmarks" | "comments";
 
 const TAB_CONFIG: Record<
   Tab,
@@ -38,12 +50,17 @@ const TAB_CONFIG: Record<
     path: "/users/me/bookmarks",
     emptyText: "还没有收藏任何主题。",
   },
+  comments: {
+    label: "我的评论",
+    path: "/users/me/comments",
+    emptyText: "还没有发表过评论。",
+  },
 };
 
 export function MyContent() {
   const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
   const [tab, setTab] = useState<Tab>("threads");
-  const [items, setItems] = useState<ThreadItem[]>([]);
+  const [items, setItems] = useState<(ThreadItem | MyCommentItem)[]>([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -56,7 +73,7 @@ export function MyContent() {
   const load = useCallback((t: Tab, p: number) => {
     setLoading(true);
     setErr("");
-    request<ListResult<ThreadItem>>(TAB_CONFIG[t].path, {
+    request<ListResult<ThreadItem | MyCommentItem>>(TAB_CONFIG[t].path, {
       query: { page: p, perPage: 10 },
     })
       .then((r) => {
@@ -108,9 +125,39 @@ export function MyContent() {
         <p className="p-6 text-center text-small text-faint">{err}</p>
       ) : items.length === 0 ? (
         <p className="p-6 text-center text-small text-faint">{cfg.emptyText}</p>
+      ) : tab === "comments" ? (
+        <ol className="divide-y divide-border-subtle">
+          {(items as MyCommentItem[]).map((c) => (
+            <li key={c.id}>
+              <Link
+                href={
+                  c.targetType === "wiki_page"
+                    ? `/wiki/${c.targetSlug}`
+                    : `/guides/${c.targetSlug}`
+                }
+                className="group block px-5 py-3.5 transition-colors duration-fast hover:bg-raised"
+              >
+                <span className="flex items-center gap-2">
+                  <span className="shrink-0 rounded-sm border border-border-subtle px-1.5 py-0.5 font-mono text-caption text-faint">
+                    {c.targetType === "wiki_page" ? "Wiki" : "攻略"}
+                  </span>
+                  <span className="truncate text-body font-medium text-primary group-hover:text-amber">
+                    {c.targetTitle}
+                  </span>
+                </span>
+                <span className="mt-1 block truncate text-small text-secondary">
+                  {c.content}
+                </span>
+                <span className="mt-0.5 block font-mono text-caption text-faint">
+                  {c.createdAt.slice(0, 10)} · {c.likeCount} 喜欢
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ol>
       ) : (
         <ol className="divide-y divide-border-subtle">
-          {items.map((t) => (
+          {(items as ThreadItem[]).map((t) => (
             <li key={t.id}>
               <Link
                 href={`/forum/threads/${t.id}`}

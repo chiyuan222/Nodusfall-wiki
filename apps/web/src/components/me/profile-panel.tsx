@@ -22,6 +22,9 @@ interface Me {
   bio?: string;
   role?: string;
   createdAt?: string;
+  /** 联系方式脱敏（仅本人可见，契约 PR #45） */
+  emailMasked?: string;
+  phoneMasked?: string | null;
 }
 
 const ROLE_LABEL: Record<string, string> = {
@@ -181,6 +184,13 @@ export function ProfilePanel() {
               <> · 注册于 {new Date(me.createdAt).toLocaleDateString("zh-CN")}</>
             )}
           </p>
+          {(me.emailMasked || me.phoneMasked) && (
+            <p className="mt-0.5 font-mono text-caption text-faint">
+              {me.emailMasked && <>邮箱 {me.emailMasked}</>}
+              {me.emailMasked && me.phoneMasked && <> · </>}
+              {me.phoneMasked && <>手机 {me.phoneMasked}</>}
+            </p>
+          )}
         </div>
         <span className="grow" />
         <button

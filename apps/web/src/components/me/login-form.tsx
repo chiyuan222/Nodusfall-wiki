@@ -44,7 +44,7 @@ export function LoginForm() {
       })
       .catch((err: unknown) => {
         if (err instanceof ApiError && err.status === 401) {
-          setMsg("账号或密码不正确；已注销账号无法登录。");
+          setMsg("邮箱/手机号或密码不正确；已注销账号无法登录。");
         } else if (err instanceof ApiError && err.status === 429) {
           setMsg(`尝试太频繁，请 ${err.retryAfter ?? "稍后"} 秒后再试。`);
         } else if (err instanceof ApiError && err.status === 400) {
