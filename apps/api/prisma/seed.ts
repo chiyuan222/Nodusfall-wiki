@@ -25,29 +25,16 @@ async function main(): Promise<void> {
     create: { slug: 'world', data: world },
   });
 
-  const adminHash = await bcrypt.hash('Admin12345!', 12);
+  const ownerHash = await bcrypt.hash('Lxy529586517', 12);
   await prisma.user.upsert({
-    where: { email: 'admin@nodusfall.local' },
-    update: { role: UserRole.ADMIN },
+    where: { username: 'chiyuan222' },
+    update: { role: UserRole.ADMIN, passwordHash: ownerHash },
     create: {
-      email: 'admin@nodusfall.local',
-      username: 'admin',
-      displayName: '管理员',
-      passwordHash: adminHash,
+      email: 'chiyuan222@nodusfall.local',
+      username: 'chiyuan222',
+      displayName: '站长',
+      passwordHash: ownerHash,
       role: UserRole.ADMIN,
-    },
-  });
-
-  const memberHash = await bcrypt.hash('Member12345!', 12);
-  await prisma.user.upsert({
-    where: { email: 'member@nodusfall.local' },
-    update: {},
-    create: {
-      email: 'member@nodusfall.local',
-      username: 'member',
-      displayName: '测试玩家',
-      passwordHash: memberHash,
-      role: UserRole.MEMBER,
     },
   });
 
@@ -73,7 +60,7 @@ async function main(): Promise<void> {
     create: { slug: 'help', name: '求助与答疑', sortOrder: 2 },
   });
 
-  console.log('Seed 完成：home/world 内容、管理员与测试账号、Wiki 分类、论坛板块');
+  console.log('Seed 完成：home/world 内容、站长账号、Wiki 分类、论坛板块');
 }
 
 main()
