@@ -10,6 +10,7 @@ import { extractFirstImage } from '../common/markdown';
 import { hasPermission, PERMISSIONS } from '../common/roles';
 import { PrismaService } from '../prisma/prisma.service';
 import { toUserSummary } from '../users/users.service';
+import { ExpService } from '../exp/exp.service';
 
 type BoardWithCount = ForumBoard & { _count: { threads: number } };
 type ThreadWithAuthor = ForumThread & { author: User };
@@ -75,7 +76,10 @@ function plainExcerpt(content: string): string {
 
 @Injectable()
 export class ForumService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly expService: ExpService,
+  ) {}
 
   listBoards() {
     return this.prisma.forumBoard
@@ -213,6 +217,7 @@ export class ForumService {
       },
       include: { author: true },
     });
+    void this.expService.grant(userId, 'thread', thread.id);
     return { ...threadSummary(thread), boardSlug, content: thread.content };
   }
 
@@ -333,6 +338,7 @@ export class ForumService {
         where: { id: threadId },
         data: { likeCount: { increment: 1 } },
       });
+      void this.expService.grant(userId, "like", threadId);
     }
   }
 
@@ -407,6 +413,7 @@ export class ForumService {
         data: { replyCount: floor, lastPostAt: new Date() },
       }),
     ]);
+    void this.expService.grant(userId, "reply", post.id);
     return postView(post);
   }
 
@@ -469,6 +476,7 @@ export class ForumService {
       update: {},
       create: { threadId, userId },
     });
+    void this.expService.grant(userId, "bookmark", threadId);
   }
 
   async unbookmarkThread(userId: string, threadId: string): Promise<void> {

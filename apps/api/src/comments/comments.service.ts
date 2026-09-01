@@ -8,6 +8,7 @@ import { pageInfo } from '../common/pagination';
 import { hasPermission, PERMISSIONS } from '../common/roles';
 import { PrismaService } from '../prisma/prisma.service';
 import { toUserSummary } from '../users/users.service';
+import { ExpService } from '../exp/exp.service';
 
 type CommentWithAuthor = Comment & { author: User };
 
@@ -27,7 +28,10 @@ function commentView(comment: CommentWithAuthor, likedByMe = false) {
 
 @Injectable()
 export class CommentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly expService: ExpService,
+  ) {}
 
   private async resolveTarget(type: 'WIKI_PAGE' | 'GUIDE', slug: string): Promise<string> {
     if (type === 'WIKI_PAGE') {
@@ -95,6 +99,7 @@ export class CommentsService {
       data: { targetType: type, targetId, authorId: userId, content },
       include: { author: true },
     });
+    void this.expService.grant(userId, "comment", comment.id);
     return commentView(comment);
   }
 
@@ -136,6 +141,7 @@ export class CommentsService {
         where: { id: commentId },
         data: { likeCount: { increment: 1 } },
       });
+      void this.expService.grant(userId, "like", commentId);
     }
   }
 

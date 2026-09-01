@@ -11,6 +11,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { EmailCodeService } from '../auth/email-code.service';
 import { pageInfo } from '../common/pagination';
 import { RegisterDto } from './dto/register.dto';
+import { levelFromExp, nextLevelExp } from '../exp/exp.service';
 
 export type PublicUser = Omit<User, 'passwordHash'>;
 
@@ -36,6 +37,8 @@ export interface UserResponse extends UserSummary {
   banReason: string | null;
   banUntil: Date | null;
   mutedUntil: Date | null;
+  exp: number;
+  nextLevelExp: number | null;
 }
 
 export function toUserSummary(user: User): UserSummary {
@@ -64,6 +67,8 @@ export function toUserResponse(user: User): UserResponse {
     banReason: user.banReason,
     banUntil: user.banUntil,
     mutedUntil: user.mutedUntil,
+    exp: user.exp,
+    nextLevelExp: nextLevelExp(levelFromExp(user.exp)),
   };
 }
 

@@ -9,6 +9,7 @@ import { extractFirstImage } from '../common/markdown';
 import { hasPermission, isManagerRole, PERMISSIONS } from '../common/roles';
 import { PrismaService } from '../prisma/prisma.service';
 import { toUserSummary } from '../users/users.service';
+import { ExpService } from '../exp/exp.service';
 
 type GuideWithAuthor = Guide & { author: User };
 
@@ -64,7 +65,10 @@ function detail(
 
 @Injectable()
 export class GuidesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly expService: ExpService,
+  ) {}
 
   private async distribution(guideId: string) {
     const rows = await this.prisma.rating.groupBy({
@@ -159,6 +163,7 @@ export class GuidesService {
       },
       include: { author: true },
     });
+    void this.expService.grant(userId, "guide", guide.id);
     return detail(guide);
   }
 
@@ -219,6 +224,7 @@ export class GuidesService {
       },
       include: { author: true },
     });
+    void this.expService.grant(userId, "guide", guide.id);
     return detail(guide);
   }
 
@@ -258,6 +264,7 @@ export class GuidesService {
         where: { id: guide.id },
         data: { likeCount: { increment: 1 } },
       });
+      void this.expService.grant(userId, "like", guide.id);
     }
   }
 
@@ -283,6 +290,7 @@ export class GuidesService {
       create: { guideId: guide.id, userId },
       update: {},
     });
+    void this.expService.grant(userId, "bookmark", guide.id);
   }
 
   async unbookmarkGuide(userId: string, slug: string): Promise<void> {
