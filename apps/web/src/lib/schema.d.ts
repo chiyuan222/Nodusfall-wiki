@@ -178,6 +178,76 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/users/me/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 我的消息（私信 + 全站公告，按时间倒序，分页） */
+        get: operations["listMyMessages"];
+        put?: never;
+        /** 发送私信（仅站长与注册用户之间；普通用户间/管理员间禁止） */
+        post: operations["sendDirectMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/me/messages/unread-count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 未读消息数（头像红点） */
+        get: operations["getMyUnreadCount"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/me/messages/read-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 全部消息标记已读（进入消息页后调用，红点消除） */
+        post: operations["markAllMessagesRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/announcements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 公告历史（仅站长） */
+        get: operations["listAnnouncements"];
+        put?: never;
+        /** 发布全站公告（仅站长，广播到所有用户收件箱） */
+        post: operations["createAnnouncement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/users/{userId}": {
         parameters: {
             query?: never;
@@ -1226,6 +1296,26 @@ export interface components {
             data: components["schemas"]["HistoryEntry"][];
             pagination: components["schemas"]["Pagination"];
         };
+        MessageItem: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "direct" | "announcement";
+            sender: components["schemas"]["UserSummary"];
+            title?: string | null;
+            content: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            readAt: string | null;
+        };
+        MessageList: {
+            data: components["schemas"]["MessageItem"][];
+            pagination: components["schemas"]["Pagination"];
+        };
+        UnreadCount: {
+            unread: number;
+        };
         SearchResult: {
             /** @enum {string} */
             kind: "wiki" | "guide" | "forum";
@@ -1694,6 +1784,23 @@ export interface components {
                     kind: "wikiPage" | "guide" | "forumThread";
                     /** @description wiki/guide 的 slug；forumThread 传 threadId */
                     slug: string;
+                };
+            };
+        };
+        CreateDirectMessageRequest: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    recipientId: string;
+                    content: string;
+                };
+            };
+        };
+        CreateAnnouncementRequest: {
+            content: {
+                "application/json": {
+                    title: string;
+                    content: string;
                 };
             };
         };
@@ -2170,6 +2277,142 @@ export interface operations {
                 content?: never;
             };
             401: components["responses"]["Unauthorized"];
+        };
+    };
+    listMyMessages: {
+        parameters: {
+            query?: {
+                page?: components["parameters"]["Page"];
+                perPage?: components["parameters"]["PerPage"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 消息列表 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    sendDirectMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["CreateDirectMessageRequest"];
+        responses: {
+            /** @description 发送成功 */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageItem"];
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getMyUnreadCount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 未读数 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnreadCount"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    markAllMessagesRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 已全部标记 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    listAnnouncements: {
+        parameters: {
+            query?: {
+                page?: components["parameters"]["Page"];
+                perPage?: components["parameters"]["PerPage"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 公告列表 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createAnnouncement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["CreateAnnouncementRequest"];
+        responses: {
+            /** @description 发布成功 */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageItem"];
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     getUser: {

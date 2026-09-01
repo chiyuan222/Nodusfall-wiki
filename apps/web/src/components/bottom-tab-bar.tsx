@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { NAV_ITEMS } from "./site-header";
 import { KnotMark } from "./knot-mark";
+import { useUnreadMessages } from "@/lib/messages";
 
 /** 18px 线性图标（stroke currentColor），与站点标识同一手绘细线语言 */
 function Glyph({ href, size }: { href: string; size: number }) {
@@ -67,9 +68,10 @@ function Glyph({ href, size }: { href: string; size: number }) {
   }
 }
 
-/** 移动端底部 Tab Bar（lg 以下显示），含「我的」入口 */
+/** 移动端底部 Tab Bar（lg 以下显示），含「我的」入口；未读消息在「我的」图标右上角显红点 */
 export function BottomTabBar() {
   const pathname = usePathname();
+  const unread = useUnreadMessages();
   const items = [...NAV_ITEMS, { href: "/me", label: "我的" }] as const;
 
   return (
@@ -103,6 +105,15 @@ export function BottomTabBar() {
                 <KnotMark size={20} />
               ) : (
                 <Glyph href={item.href} size={20} />
+              )}
+              {/* 未读消息红点（「我的」入口） */}
+              {item.href === "/me" && unread > 0 && (
+                <span
+                  aria-label={`${unread} 条未读消息`}
+                  className="absolute right-[calc(50%-22px)] top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 font-mono text-[10px] leading-none text-white"
+                >
+                  {unread > 99 ? "99+" : unread}
+                </span>
               )}
               {item.label}
             </Link>
