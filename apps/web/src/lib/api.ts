@@ -59,6 +59,18 @@ export const wikiApi = {
 
   comments: (slug: string, page?: number) =>
     list<Comment>(`/wiki/pages/${slug}/comments`, { page }),
+
+  /** 点赞 / 取消点赞（幂等 204，契约 PR #52） */
+  like: (slug: string) =>
+    request<void>(`/wiki/pages/${slug}/like`, { method: "PUT" }),
+  unlike: (slug: string) =>
+    request<void>(`/wiki/pages/${slug}/like`, { method: "DELETE" }),
+
+  /** 收藏 / 取消收藏（幂等 204） */
+  bookmark: (slug: string) =>
+    request<void>(`/wiki/pages/${slug}/bookmark`, { method: "PUT" }),
+  unbookmark: (slug: string) =>
+    request<void>(`/wiki/pages/${slug}/bookmark`, { method: "DELETE" }),
 };
 
 // ---------- 攻略 ----------
@@ -89,6 +101,18 @@ export const guidesApi = {
 
   comments: (slug: string, page?: number) =>
     list<Comment>(`/guides/${slug}/comments`, { page }),
+
+  /** 点赞 / 取消点赞（幂等 204，契约 PR #52） */
+  like: (slug: string) =>
+    request<void>(`/guides/${slug}/like`, { method: "PUT" }),
+  unlike: (slug: string) =>
+    request<void>(`/guides/${slug}/like`, { method: "DELETE" }),
+
+  /** 收藏 / 取消收藏（幂等 204） */
+  bookmark: (slug: string) =>
+    request<void>(`/guides/${slug}/bookmark`, { method: "PUT" }),
+  unbookmark: (slug: string) =>
+    request<void>(`/guides/${slug}/bookmark`, { method: "DELETE" }),
 };
 
 // ---------- 论坛 ----------
@@ -159,6 +183,13 @@ export const forumApi = {
 
   unbookmark: (threadId: string) =>
     request<void>(`/forum/threads/${threadId}/bookmark`, { method: "DELETE" }),
+
+  /** 主题点赞 / 取消点赞（幂等 204，契约 PR #52） */
+  likeThread: (threadId: string) =>
+    request<void>(`/forum/threads/${threadId}/like`, { method: "PUT" }),
+
+  unlikeThread: (threadId: string) =>
+    request<void>(`/forum/threads/${threadId}/like`, { method: "DELETE" }),
 };
 
 // ---------- 评论（写操作） ----------

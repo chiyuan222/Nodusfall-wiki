@@ -1,23 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import Link from "next/link";
 import { commentApi, type Comment } from "@/lib/api";
 import { request, type ListResult, type Pagination } from "@/lib/api-client";
 import { ApiError } from "@/lib/errors";
 import { getAccessToken } from "@/lib/session";
 import { authorName } from "@/lib/author";
+import { useMe, canPost, isAdminRole } from "@/lib/me";
+import { UserGroupBadge, UserStatusMark } from "@/components/user-marks";
 
 /**
  * 评论区（Wiki 条目 / 攻略共用，客户端组件）。
  * 数据：GET /<target>/<slug>/comments（分页）；发表/点赞/删除需登录。
  * 首屏数据由服务端注入，后续分页与变更走客户端请求。
+ * 契约 PR #51：normal 组 / muted / banned 仅浏览不显示发表框；作者位展示用户组与受限标识。
  */
-
-interface Me {
-  id: string;
-  role?: string;
-}
 
 export function CommentSection({
   targetType,
@@ -36,16 +34,8 @@ export function CommentSection({
   const [draft, setDraft] = useState("");
   const [posting, setPosting] = useState(false);
   const [msg, setMsg] = useState("");
-  const [me, setMe] = useState<Me | null>(null);
-  const [loggedIn, setLoggedIn] = useState(false);
-
-  useEffect(() => {
-    if (!getAccessToken()) return;
-    setLoggedIn(true);
-    request<{ data: Me }>("/users/me")
-      .then((r) => setMe(r.data))
-      .catch(() => setMe(null));
-  }, []);
+  const { me, pending } = useMe();
+  const loggedIn = !pending && !!me;
 
   const listPath =
     targetType === "wiki"
@@ -127,7 +117,7 @@ export function CommentSection({
   };
 
   const canManage = (c: Comment) =>
-    me && (me.id === c.author.id || me.role?.toLowerCase() === "admin");
+    me && (me.id === c.author.id || isAdminRole(me.role));
 
   return (
     <section
@@ -141,8 +131,8 @@ export function CommentSection({
         </span>
       </h2>
 
-      {/* 发表区 */}
-      {loggedIn ? (
+      {/* 发表区：登录且用户组可发言；normal 组 / 禁言 / 封禁 仅浏览（契约 PR #51） */}
+      {loggedIn && canPost(me) && (
         <div className="mt-4">
           <textarea
             value={draft}
@@ -164,7 +154,17 @@ export function CommentSection({
             {msg && <span className="text-caption text-secondary">{msg}</span>}
           </div>
         </div>
-      ) : (
+      )}
+      {loggedIn && !canPost(me) && (
+        <p className="mt-4 rounded-sm border border-dashed border-border-subtle px-4 py-3 text-small text-secondary">
+          {me?.status === "muted"
+            ? "账号处于禁言状态，暂不可发表评论。"
+            : me?.status === "banned"
+              ? "账号已被封禁，仅可浏览。"
+              : "当前用户组仅支持浏览，暂不可发表评论。"}
+        </p>
+      )}
+      {!loggedIn && !pending && (
         <p className="mt-4 rounded-sm border border-dashed border-border-subtle px-4 py-3 text-small text-secondary">
           <Link href="/login" className="text-amber hover:underline">
             登录
@@ -186,10 +186,12 @@ export function CommentSection({
         <ol className="mt-6 divide-y divide-border-subtle">
           {items.map((c) => (
             <li key={c.id} className="py-4 first:pt-0 last:pb-0">
-              <div className="flex items-baseline gap-2">
+              <div className="flex flex-wrap items-baseline gap-2">
                 <span className="text-small font-medium text-primary">
                   {authorName(c.author)}
                 </span>
+                <UserGroupBadge group={c.author.group} level={c.author.level} />
+                <UserStatusMark status={c.author.status} />
                 <time
                   dateTime={c.createdAt}
                   className="font-mono text-caption text-faint"

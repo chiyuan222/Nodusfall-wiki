@@ -260,8 +260,34 @@ export function HomeEditor() {
                               onRemove={(x) => listOp((d) => d.hero.slides, "remove", { index: x })}
                             >
                               <div className="grid gap-3 md:grid-cols-2">
-                                <Field label="叠加标题（可留空）" value={slide.caption} onChange={(v) => mutate((d) => void (d.hero.slides[j]!.caption = v))} />
-                                <Field label="点击跳转链接（可留空）" value={slide.href} onChange={(v) => mutate((d) => void (d.hero.slides[j]!.href = v))} />
+                                <Field label="叠加标题（可留空）" value={slide.title ?? ""} onChange={(v) => mutate((d) => void (d.hero.slides[j]!.title = v))} />
+                                <div className="grid grid-cols-2 gap-3">
+                                  <label className="block">
+                                    <span className="mb-1 block font-mono text-caption text-faint">跳转类型</span>
+                                    <select
+                                      value={slide.linkKind ?? ""}
+                                      onChange={(e) => mutate((d) => {
+                                        const v = e.target.value as NonNullable<typeof slide.linkKind> | "";
+                                        if (v) d.hero.slides[j]!.linkKind = v;
+                                        else { delete d.hero.slides[j]!.linkKind; delete d.hero.slides[j]!.linkTarget; }
+                                      })}
+                                      className="w-full rounded-md border border-border-subtle bg-raised px-3 py-2 text-small text-primary"
+                                    >
+                                      <option value="">不可点击</option>
+                                      <option value="wiki">Wiki 词条</option>
+                                      <option value="guide">攻略</option>
+                                      <option value="forum">论坛主题</option>
+                                      <option value="home">首页</option>
+                                      <option value="world">总览页</option>
+                                      <option value="external">外部链接</option>
+                                    </select>
+                                  </label>
+                                  <Field
+                                    label={slide.linkKind === "wiki" || slide.linkKind === "guide" ? "目标 slug" : slide.linkKind === "forum" ? "主题 ID" : "链接地址"}
+                                    value={slide.linkTarget ?? ""}
+                                    onChange={(v) => mutate((d) => void (d.hero.slides[j]!.linkTarget = v))}
+                                  />
+                                </div>
                               </div>
                               <MediaField value={slide.media} onChange={(v) => mutate((d) => void (d.hero.slides[j]!.media = v))} />
                             </ItemCard>
@@ -324,16 +350,30 @@ export function HomeEditor() {
                   {id === "digest" && (
                     <>
                       <p className="text-caption text-faint">
-                        两栏快报显示在首屏下方：左栏最新动态、右栏精华推荐。条目优先由后端聚合接口
+                        两栏快报显示在首屏下方：左栏最新动态、右栏精华推荐。「自动聚合」模式由后端
                         <code className="font-mono text-amber">GET /home/digest</code>
-                        自动提供（最新按发布时间、精华按后端 featured 标记）；此处手填条目仅在接口不可用时作为兜底显示。
-                        栏目标题与空态提示文字仍由这里控制。
+                        提供条目（接口失败时回退下方手填条目）；「手动指定」模式始终显示下方手填条目（契约 mode: auto/manual）。
                       </p>
                       {(["latest", "featured"] as const).map((key) => (
                         <div key={key} className="rounded-md border border-border-subtle p-4">
                           <p className="mb-3 font-mono text-caption uppercase tracking-widest text-amber">
                             {key === "latest" ? "左栏 · 最新动态" : "右栏 · 精华推荐"}
                           </p>
+                          <div className="mb-3 flex items-center gap-4 rounded-md border border-border-subtle bg-raised px-3 py-2">
+                            <span className="font-mono text-caption text-faint">条目来源</span>
+                            {(["auto", "manual"] as const).map((m) => (
+                              <label key={m} className="flex cursor-pointer items-center gap-1.5 text-small text-secondary">
+                                <input
+                                  type="radio"
+                                  name={`digest-mode-${key}`}
+                                  checked={(draft.digest[key].mode ?? "auto") === m}
+                                  onChange={() => mutate((d) => void (d.digest[key].mode = m))}
+                                  className="accent-amber"
+                                />
+                                {m === "auto" ? "自动聚合（推荐）" : "手动指定"}
+                              </label>
+                            ))}
+                          </div>
                           <div className="grid gap-3 md:grid-cols-2">
                             <Field
                               label="栏目标题"

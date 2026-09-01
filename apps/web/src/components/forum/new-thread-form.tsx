@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { forumApi } from "@/lib/api";
 import { ApiError } from "@/lib/errors";
-import { getAccessToken } from "@/lib/session";
+import { useMe, canPost } from "@/lib/me";
 import { Markdown } from "@/components/markdown";
 import { MediaField } from "@/components/admin/editor-controls";
 import { emptyMedia } from "@/lib/world-content";
@@ -13,20 +13,17 @@ import { emptyMedia } from "@/lib/world-content";
 /**
  * 发布主题表单：标题 + 可选封面（POST /uploads 直传）+ Markdown 正文（支持预览）。
  * 成功后跳转帖子详情页。
+ * 契约 PR #51：normal 组 / muted / banned 不可发帖（不渲染表单）。
  */
 export function NewThreadForm({ boardSlug }: { boardSlug: string }) {
   const router = useRouter();
-  const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
+  const { me, pending } = useMe();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [cover, setCover] = useState(() => emptyMedia());
   const [preview, setPreview] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [msg, setMsg] = useState("");
-
-  useEffect(() => {
-    setLoggedIn(!!getAccessToken());
-  }, []);
 
   const submit = () => {
     if (submitting) return;
@@ -59,11 +56,11 @@ export function NewThreadForm({ boardSlug }: { boardSlug: string }) {
       });
   };
 
-  if (loggedIn === null) {
+  if (pending) {
     return <p className="py-16 text-center text-small text-faint">载入中…</p>;
   }
 
-  if (!loggedIn) {
+  if (!me) {
     return (
       <div className="rounded-md border border-border-subtle bg-surface p-8 text-center">
         <p className="text-body text-secondary">发布主题需要先登录。</p>
@@ -73,6 +70,20 @@ export function NewThreadForm({ boardSlug }: { boardSlug: string }) {
         >
           去登录
         </Link>
+      </div>
+    );
+  }
+
+  if (!canPost(me)) {
+    return (
+      <div className="rounded-md border border-border-subtle bg-surface p-8 text-center">
+        <p className="text-body text-secondary">
+          {me.status === "muted"
+            ? "账号处于禁言状态，暂不可发布主题。"
+            : me.status === "banned"
+              ? "账号已被封禁，仅可浏览。"
+              : "当前用户组仅支持浏览，暂不可发布主题。"}
+        </p>
       </div>
     );
   }

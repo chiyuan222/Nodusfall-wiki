@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { loadHomeContent } from "@/lib/home-content.server";
 import { getHomeDigest } from "@/lib/digest-data";
+import { slideHref } from "@/lib/home-content";
 import { MediaSlotView } from "@/components/world/media-slot";
 import { Carousel } from "@/components/carousel";
 
@@ -122,8 +123,8 @@ export default async function HomePage() {
                 label="首页主视觉轮播"
                 emptyHint="主视觉待管理员替换"
                 slides={content.hero.slides.map((s) => ({
-                  href: s.href,
-                  title: s.caption || content.hero.title,
+                  href: slideHref(s),
+                  title: s.title || content.hero.title,
                   image:
                     s.media.kind === "video"
                       ? s.media.poster || undefined
@@ -146,7 +147,8 @@ export default async function HomePage() {
               ["featured", content.digest.featured, liveDigest?.featured],
             ] as const
           ).map(([key, col, liveItems]) => {
-            const items = liveItems ?? col.items;
+            // 契约 PR #50：mode=manual 始终用手填条目；auto（默认）优先聚合接口，失败回退手填
+            const items = col.mode === "manual" ? col.items : liveItems ?? col.items;
             return (
             <div
               key={key}

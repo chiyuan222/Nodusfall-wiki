@@ -117,7 +117,7 @@ export default async function GuidesIndexPage() {
                       </span>
                     ))}
                     <span className="ml-auto font-mono">
-                      {authorName(g.author)} · {g.updatedAt.slice(0, 10)}
+                      {authorName(g.author)} · {g.updatedAt.slice(0, 10)} · 👍 {g.likeCount} · ◉ {g.viewCount}
                     </span>
                   </span>
                 </span>

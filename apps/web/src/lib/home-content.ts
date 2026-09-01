@@ -9,13 +9,62 @@ import type { MediaSlot } from "./world-content";
  * 读取 JSON 的服务端加载器在 ./home-content.server.ts。
  */
 
-/** 首屏轮播槽位：图片 + 可选叠加标题 + 可选跳转链接（管理员在 /admin/home 维护，共 5 个轮替位） */
+/** 轮播槽跳转类型（契约 openapi.yaml HomeHero.slides.items.linkKind） */
+export type HomeSlideLinkKind =
+  | "wiki"
+  | "guide"
+  | "forum"
+  | "home"
+  | "world"
+  | "external";
+
+/** 首屏轮播槽位（契约对齐 PR #50）：媒体 + 可选叠加标题 + 可选跳转（管理员在 /admin/home 维护，共 5 个轮替位） */
 export interface HomeHeroSlide {
   media: MediaSlot;
   /** 叠加在图片上的标题（可留空，留空时显示首页主标题） */
-  caption: string;
-  /** 点击跳转（站内 / 或外链；留空 = 不可点击） */
-  href: string;
+  title?: string;
+  /** 跳转类型；与 linkTarget 同时缺省 = 不可点击 */
+  linkKind?: HomeSlideLinkKind;
+  /** 跳转目标：wiki/guide 传 slug，forum 传 threadId，external 传完整 URL，home/world 可留空 */
+  linkTarget?: string;
+}
+
+/** 由契约字段还原前端路由（linkKind/linkTarget → href） */
+export function slideHref(slide: HomeHeroSlide): string {
+  const target = slide.linkTarget ?? "";
+  switch (slide.linkKind) {
+    case "wiki":
+      return target ? `/wiki/${target}` : "";
+    case "guide":
+      return target ? `/guides/${target}` : "";
+    case "forum":
+      return target ? `/forum/threads/${target}` : "";
+    case "home":
+      return "/";
+    case "world":
+      return "/world";
+    case "external":
+      return target;
+    default:
+      return "";
+  }
+}
+
+/** 旧版 href → 契约 linkKind/linkTarget（normalize 迁移用） */
+export function hrefToSlideLink(
+  href: string,
+): Pick<HomeHeroSlide, "linkKind" | "linkTarget"> {
+  if (!href) return {};
+  if (/^https?:\/\//.test(href)) return { linkKind: "external", linkTarget: href };
+  let m = href.match(/^\/wiki\/(.+)$/);
+  if (m) return { linkKind: "wiki", linkTarget: m[1] };
+  m = href.match(/^\/guides\/(.+)$/);
+  if (m) return { linkKind: "guide", linkTarget: m[1] };
+  m = href.match(/^\/forum\/threads\/(.+)$/);
+  if (m) return { linkKind: "forum", linkTarget: m[1] };
+  if (href === "/" ) return { linkKind: "home" };
+  if (href === "/world") return { linkKind: "world" };
+  return { linkKind: "external", linkTarget: href };
 }
 
 export interface HomeHero {
@@ -28,14 +77,31 @@ export interface HomeHero {
   ctas: { label: string; href: string; style: "primary" | "ghost" }[];
 }
 
-/** 兼容旧版配置：hero.media（单媒体）→ hero.slides（轮播数组） */
+/** 兼容旧版配置：hero.media（单媒体）→ hero.slides；旧槽位 {caption, href} → 契约 {title, linkKind, linkTarget} */
 export function normalizeHomeContent(raw: HomePageContent): HomePageContent {
   const hero = raw.hero as HomeHero & { media?: MediaSlot };
   if (!Array.isArray(hero.slides)) {
     hero.slides = hero.media
-      ? [{ media: hero.media, caption: "", href: "" }]
+      ? [{ media: hero.media }]
       : [];
-    delete hero.media;
+  }
+  hero.slides = hero.slides.map((s) => {
+    const legacy = s as HomeHeroSlide & { caption?: string; href?: string };
+    const next: HomeHeroSlide = { media: legacy.media };
+    next.title = legacy.title ?? legacy.caption ?? "";
+    if (legacy.linkKind) {
+      next.linkKind = legacy.linkKind;
+      next.linkTarget = legacy.linkTarget;
+    } else if (legacy.href) {
+      Object.assign(next, hrefToSlideLink(legacy.href));
+    }
+    return next;
+  });
+  delete hero.media;
+  // digest 栏位缺省 mode=auto（契约默认）
+  for (const key of ["latest", "featured"] as const) {
+    const col = raw.digest?.[key];
+    if (col && col.mode !== "manual") col.mode = col.mode ?? "auto";
   }
   return raw;
 }
@@ -76,6 +142,8 @@ export interface HomeDigestItem {
 export interface HomeDigestColumn {
   title: string;
   emptyText: string;
+  /** 契约 PR #50：auto 由后端 GET /home/digest 聚合（接口失败回退手填 items）；manual 始终使用手填 items */
+  mode?: "auto" | "manual";
   items: HomeDigestItem[];
 }
 
@@ -114,6 +182,5 @@ export const emptyHomeMedia = (): MediaSlot => ({
 /** 生成一个空轮播槽位（编辑器新增槽位时使用） */
 export const emptyHomeSlide = (): HomeHeroSlide => ({
   media: emptyHomeMedia(),
-  caption: "",
-  href: "",
+  title: "",
 });
