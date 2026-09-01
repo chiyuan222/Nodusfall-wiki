@@ -9,7 +9,7 @@ import { HistoryReporter } from "@/components/history-reporter";
 import { InteractionBar } from "@/components/interaction-bar";
 import { ContentActions } from "@/components/content-actions";
 import { authorName } from "@/lib/author";
-import { UserGroupBadge, UserStatusMark } from "@/components/user-marks";
+import { UserGroupBadge, UserStatusMark, SiteIdMark } from "@/components/user-marks";
 
 export const dynamic = "force-dynamic";
 
@@ -85,6 +85,7 @@ export default async function ThreadPage({
             <span className="flex items-center gap-2">
               {authorName(thread.author)}
               <UserGroupBadge group={thread.author.group} level={thread.author.level} />
+              <SiteIdMark siteId={thread.author.siteId} />
               <UserStatusMark status={thread.author.status} />
             </span>
             <span aria-hidden>·</span>

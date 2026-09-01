@@ -1150,6 +1150,8 @@ export interface components {
         UserSummary: {
             /** Format: uuid */
             id: string;
+            /** @description 全站唯一 7 位网站 ID，注册时按顺序分配（1000000 起），注销不复用 */
+            siteId: number;
             username: string;
             displayName: string;
             /** Format: uri */

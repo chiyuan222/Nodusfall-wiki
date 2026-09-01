@@ -42,3 +42,13 @@ export function UserStatusMark({ status }: { status?: string }) {
     );
   return null;
 }
+
+/** 网站 ID（契约 PR #78：UserSummary.siteId，7 位，1000000 起）；字段缺失时不渲染 */
+export function SiteIdMark({ siteId }: { siteId?: number }) {
+  if (siteId === undefined || siteId === null) return null;
+  return (
+    <span className="shrink-0 font-mono text-caption text-faint">
+      ID {siteId}
+    </span>
+  );
+}

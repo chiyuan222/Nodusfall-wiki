@@ -16,7 +16,7 @@ import { logout } from "@/lib/api-client";
  */
 
 import { isAdminRole, hasPermission, type MeUser } from "@/lib/me";
-import { UserGroupBadge } from "@/components/user-marks";
+import { UserGroupBadge, SiteIdMark } from "@/components/user-marks";
 import { CheckinPanel } from "@/components/me/checkin-panel";
 
 type Me = MeUser;
@@ -176,6 +176,12 @@ export function ProfilePanel() {
           </p>
           <p className="mt-0.5 font-mono text-caption text-faint">
             @{me.username}
+            {me.siteId != null && (
+              <>
+                {" · "}
+                <SiteIdMark siteId={me.siteId} />
+              </>
+            )}
             {me.createdAt && (
               <> · 注册于 {new Date(me.createdAt).toLocaleDateString("zh-CN")}</>
             )}

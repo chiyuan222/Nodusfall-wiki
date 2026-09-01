@@ -8,7 +8,7 @@ import { ApiError } from "@/lib/errors";
 import { getAccessToken } from "@/lib/session";
 import { authorName } from "@/lib/author";
 import { useMe, canPost, isAdminRole } from "@/lib/me";
-import { UserGroupBadge, UserStatusMark } from "@/components/user-marks";
+import { UserGroupBadge, UserStatusMark, SiteIdMark } from "@/components/user-marks";
 
 /**
  * 评论区（Wiki 条目 / 攻略共用，客户端组件）。
@@ -191,6 +191,7 @@ export function CommentSection({
                   {authorName(c.author)}
                 </span>
                 <UserGroupBadge group={c.author.group} level={c.author.level} />
+                <SiteIdMark siteId={c.author.siteId} />
                 <UserStatusMark status={c.author.status} />
                 <time
                   dateTime={c.createdAt}
