@@ -103,6 +103,9 @@ export class EmailCodeService {
       host,
       port: Number(this.config.get('SMTP_PORT', '465')),
       secure: this.config.get('SMTP_SECURE', 'true') === 'true',
+      connectionTimeout: 15000,
+      greetingTimeout: 15000,
+      socketTimeout: 20000,
       ...(this.config.get<string>('SMTP_USER')
         ? {
             auth: {
@@ -112,11 +115,15 @@ export class EmailCodeService {
           }
         : {}),
     });
-    await transporter.sendMail({
-      from,
-      to: email,
-      subject: '【源神小窝】邮箱注册验证码',
-      text: `你的注册验证码是：${code}，10 分钟内有效。若非本人操作请忽略本邮件。`,
-    });
+    try {
+      await transporter.sendMail({
+        from,
+        to: email,
+        subject: '【源神小窝】邮箱注册验证码',
+        text: `你的注册验证码是：${code}，10 分钟内有效。若非本人操作请忽略本邮件。`,
+      });
+    } finally {
+      transporter.close();
+    }
   }
 }
