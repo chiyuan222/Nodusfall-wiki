@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ContentStatus, Guide, User } from '@prisma/client';
 import { pageInfo } from '../common/pagination';
+import { extractFirstImage } from '../common/markdown';
 import { PrismaService } from '../prisma/prisma.service';
 import { toUserSummary } from '../users/users.service';
 
@@ -24,6 +25,7 @@ function summary(guide: GuideWithAuthor) {
     slug: guide.slug,
     title: guide.title,
     excerpt: guide.excerpt,
+    coverImage: guide.coverImage ?? extractFirstImage(guide.content),
     tags: guide.tags,
     status: guide.status.toLowerCase(),
     author: toUserSummary(guide.author),
@@ -39,6 +41,7 @@ function detail(guide: GuideWithAuthor) {
     content: guide.content,
     relatedCharacter: guide.relatedCharacter,
     createdAt: guide.createdAt,
+    featuredAt: guide.featuredAt,
   };
 }
 
@@ -104,6 +107,7 @@ export class GuidesService {
     tags?: string[];
     status?: 'draft' | 'published';
     relatedCharacter?: string;
+    coverImage?: string | null;
   }) {
     const guide = await this.prisma.guide.create({
       data: {
@@ -111,6 +115,7 @@ export class GuidesService {
         title: dto.title,
         content: dto.content,
         excerpt: excerpt(dto.content),
+        coverImage: dto.coverImage ?? extractFirstImage(dto.content),
         tags: dto.tags ?? [],
         status: dto.status ? (dto.status.toUpperCase() as ContentStatus) : 'DRAFT',
         relatedCharacter: dto.relatedCharacter,
@@ -136,6 +141,9 @@ export class GuidesService {
     tags?: string[];
     status?: 'draft' | 'published' | 'archived';
     relatedCharacter?: string;
+    coverImage?: string | null;
+    featured?: boolean;
+    featuredAt?: string | null;
   }) {
     const existing = await this.prisma.guide.findUnique({ where: { slug } });
     if (!existing) throw new NotFoundException('guide not found');
@@ -145,9 +153,17 @@ export class GuidesService {
         title: dto.title ?? existing.title,
         content: dto.content ?? existing.content,
         excerpt: dto.content ? excerpt(dto.content) : existing.excerpt,
+        coverImage: dto.coverImage !== undefined ? dto.coverImage : extractFirstImage(dto.content ?? existing.content),
         tags: dto.tags ?? existing.tags,
         status: dto.status ? (dto.status.toUpperCase() as ContentStatus) : existing.status,
         relatedCharacter: dto.relatedCharacter ?? existing.relatedCharacter,
+        featuredAt: dto.featuredAt
+          ? new Date(dto.featuredAt)
+          : dto.featured === true
+            ? new Date()
+            : dto.featured === false
+              ? null
+              : existing.featuredAt,
       },
       include: { author: true },
     });

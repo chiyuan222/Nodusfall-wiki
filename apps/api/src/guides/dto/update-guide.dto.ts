@@ -21,4 +21,15 @@ export class UpdateGuideDto {
   @IsOptional()
   @IsString()
   relatedCharacter?: string;
+
+  @IsOptional()
+  @IsString()
+  coverImage?: string | null;
+
+  @IsOptional()
+  featured?: boolean;
+
+  @IsOptional()
+  @IsString()
+  featuredAt?: string | null;
 }

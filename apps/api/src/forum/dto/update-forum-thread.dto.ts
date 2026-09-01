@@ -23,4 +23,11 @@ export class UpdateForumThreadDto {
   @IsOptional()
   @IsUrl()
   coverImage?: string | null;
+
+  @IsOptional()
+  featured?: boolean;
+
+  @IsOptional()
+  @IsString()
+  featuredAt?: string | null;
 }

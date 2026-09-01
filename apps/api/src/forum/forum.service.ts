@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { ForumBoard, ForumPost, ForumThread, User } from '@prisma/client';
 import { pageInfo } from '../common/pagination';
+import { extractFirstImage } from '../common/markdown';
 import { PrismaService } from '../prisma/prisma.service';
 import { toUserSummary } from '../users/users.service';
 
@@ -30,7 +31,7 @@ function threadSummary(thread: ThreadWithAuthor) {
     boardSlug: '', // patched by caller
     title: thread.title,
     excerpt: plainExcerpt(thread.content),
-    coverImage: thread.coverImage,
+    coverImage: thread.coverImage ?? extractFirstImage(thread.content),
     author: toUserSummary(thread.author),
     pinned: thread.pinned,
     locked: thread.locked,
@@ -209,6 +210,7 @@ export class ForumService {
       boardSlug: thread.board.slug,
       bookmarkedByMe: bookmarked,
       content: thread.content,
+      featuredAt: thread.featuredAt,
     };
   }
 
@@ -217,6 +219,8 @@ export class ForumService {
     pinned?: boolean;
     locked?: boolean;
     coverImage?: string | null;
+    featured?: boolean;
+    featuredAt?: string | null;
   }) {
     const existing = await this.prisma.forumThread.findUnique({ where: { id: threadId } });
     if (!existing) throw new NotFoundException('thread not found');
@@ -227,10 +231,22 @@ export class ForumService {
         pinned: dto.pinned ?? existing.pinned,
         locked: dto.locked ?? existing.locked,
         coverImage: dto.coverImage !== undefined ? dto.coverImage : existing.coverImage,
+        featuredAt: dto.featuredAt
+          ? new Date(dto.featuredAt)
+          : dto.featured === true
+            ? new Date()
+            : dto.featured === false
+              ? null
+              : existing.featuredAt,
       },
       include: { author: true, board: true },
     });
-    return { ...threadSummary(thread), boardSlug: thread.board.slug, content: thread.content };
+    return {
+      ...threadSummary(thread),
+      boardSlug: thread.board.slug,
+      content: thread.content,
+      featuredAt: thread.featuredAt,
+    };
   }
 
   async deleteThread(threadId: string): Promise<void> {

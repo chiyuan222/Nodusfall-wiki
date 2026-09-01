@@ -11,6 +11,7 @@ import { CommentsModule } from './comments/comments.module';
 import { SearchModule } from './search/search.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { ContentModule } from './content/content.module';
+import { HomeModule } from './home/home.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { ContentModule } from './content/content.module';
     SearchModule,
     UploadsModule,
     ContentModule,
+    HomeModule,
   ],
 })
 export class AppModule {}

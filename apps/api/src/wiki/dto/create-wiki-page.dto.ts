@@ -36,4 +36,8 @@ export class CreateWikiPageDto {
   @IsString()
   @MaxLength(200)
   changelog?: string;
+
+  @IsOptional()
+  @IsString()
+  coverImage?: string | null;
 }

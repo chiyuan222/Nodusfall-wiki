@@ -77,6 +77,8 @@ model WikiPage {
   title       String
   content     String
   excerpt     String
+  coverImage  String?
+  featuredAt  DateTime?
   categoryId  String
   category    WikiCategory  @relation(fields: [categoryId], references: [id])
   tags        String[]
@@ -108,6 +110,8 @@ model Guide {
   title            String
   content          String
   excerpt          String
+  coverImage       String?
+  featuredAt       DateTime?
   tags             String[]
   status           ContentStatus @default(DRAFT)
   relatedCharacter String?
@@ -149,6 +153,7 @@ model ForumThread {
   title       String
   content     String
   coverImage  String?
+  featuredAt  DateTime?
   authorId    String
   author      User       @relation("ThreadAuthor", fields: [authorId], references: [id])
   pinned      Boolean    @default(false)
