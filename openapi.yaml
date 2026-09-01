@@ -160,6 +160,44 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
+  /users/me/threads:
+    get:
+      tags: [Users]
+      operationId: listMyThreads
+      summary: 我发布的主题
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+      responses:
+        "200":
+          description: 我的主题列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForumThreadList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /users/me/bookmarks:
+    get:
+      tags: [Users]
+      operationId: listMyBookmarks
+      summary: 我收藏的主题
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+      responses:
+        "200":
+          description: 我的收藏列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForumThreadList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
   /users/{userId}:
     get:
       tags: [Users]
