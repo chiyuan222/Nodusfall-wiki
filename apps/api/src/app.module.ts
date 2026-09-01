@@ -15,6 +15,7 @@ import { HomeModule } from './home/home.module';
 import { StatsModule } from './stats/stats.module';
 import { StatsMiddleware } from './stats/stats.middleware';
 import { MessagesModule } from './messages/messages.module';
+import { VideosModule } from './videos/videos.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { MessagesModule } from './messages/messages.module';
     HomeModule,
     StatsModule,
     MessagesModule,
+    VideosModule,
   ],
 })
 export class AppModule implements NestModule {
