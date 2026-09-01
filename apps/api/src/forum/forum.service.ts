@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -75,6 +76,61 @@ export class ForumService {
         include: { _count: { select: { threads: true } } },
       })
       .then((boards) => boards.map(boardView));
+  }
+
+  async createBoard(dto: {
+    slug: string;
+    name: string;
+    description?: string;
+    sortOrder?: number;
+  }) {
+    const existing = await this.prisma.forumBoard.findUnique({
+      where: { slug: dto.slug },
+    });
+    if (existing) {
+      throw new ConflictException('board slug already exists');
+    }
+    return this.prisma.forumBoard.create({
+      data: {
+        slug: dto.slug,
+        name: dto.name,
+        description: dto.description,
+        sortOrder: dto.sortOrder ?? 0,
+      },
+    });
+  }
+
+  async updateBoard(slug: string, dto: {
+    name?: string;
+    description?: string;
+    sortOrder?: number;
+  }) {
+    const board = await this.prisma.forumBoard.findUnique({ where: { slug } });
+    if (!board) {
+      throw new NotFoundException('board not found');
+    }
+    return this.prisma.forumBoard.update({
+      where: { id: board.id },
+      data: {
+        name: dto.name ?? board.name,
+        description: dto.description ?? board.description,
+        sortOrder: dto.sortOrder ?? board.sortOrder,
+      },
+    });
+  }
+
+  async deleteBoard(slug: string): Promise<void> {
+    const board = await this.prisma.forumBoard.findUnique({ where: { slug } });
+    if (!board) {
+      throw new NotFoundException('board not found');
+    }
+    const count = await this.prisma.forumThread.count({
+      where: { boardId: board.id },
+    });
+    if (count > 0) {
+      throw new ConflictException('board is not empty');
+    }
+    await this.prisma.forumBoard.delete({ where: { id: board.id } });
   }
 
   async listThreads(

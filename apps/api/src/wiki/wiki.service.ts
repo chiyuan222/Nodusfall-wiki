@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -78,6 +79,61 @@ export class WikiService {
     return this.prisma.wikiCategory.findMany({
       orderBy: { sortOrder: 'asc' },
     });
+  }
+
+  async createCategory(dto: {
+    slug: string;
+    name: string;
+    description?: string;
+    sortOrder?: number;
+  }) {
+    const existing = await this.prisma.wikiCategory.findUnique({
+      where: { slug: dto.slug },
+    });
+    if (existing) {
+      throw new ConflictException('category slug already exists');
+    }
+    return this.prisma.wikiCategory.create({
+      data: {
+        slug: dto.slug,
+        name: dto.name,
+        description: dto.description,
+        sortOrder: dto.sortOrder ?? 0,
+      },
+    });
+  }
+
+  async updateCategory(slug: string, dto: {
+    name?: string;
+    description?: string;
+    sortOrder?: number;
+  }) {
+    const category = await this.prisma.wikiCategory.findUnique({ where: { slug } });
+    if (!category) {
+      throw new NotFoundException('category not found');
+    }
+    return this.prisma.wikiCategory.update({
+      where: { id: category.id },
+      data: {
+        name: dto.name ?? category.name,
+        description: dto.description ?? category.description,
+        sortOrder: dto.sortOrder ?? category.sortOrder,
+      },
+    });
+  }
+
+  async deleteCategory(slug: string): Promise<void> {
+    const category = await this.prisma.wikiCategory.findUnique({ where: { slug } });
+    if (!category) {
+      throw new NotFoundException('category not found');
+    }
+    const count = await this.prisma.wikiPage.count({
+      where: { categoryId: category.id },
+    });
+    if (count > 0) {
+      throw new ConflictException('category is not empty');
+    }
+    await this.prisma.wikiCategory.delete({ where: { id: category.id } });
   }
 
   async listPages(query: {
