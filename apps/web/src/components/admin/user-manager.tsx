@@ -11,7 +11,7 @@ import type { components } from "@/lib/schema";
  * 用户与权限管理（/admin/users，契约 PR #51）。
  * - 列表：GET /admin/users（q/group/role/status/level 筛选 + 分页）
  * - 详情：GET /admin/users/{userId}
- * - 修改：PATCH /admin/users/{userId}（组/等级/封禁解禁禁言/权限开关；role 与 permissions 仅 owner）
+ * - 修改：PATCH /admin/users/{userId}（组/等级/封禁解禁禁言/权限开关；role 与 permissions 仅 owner（可为任意用户分配/配置））
  * 需 manage_users 开关（admin/owner 默认具备）。
  */
 
@@ -355,7 +355,7 @@ export function UserManager() {
               {/* 权限开关（仅 owner） */}
               <fieldset disabled={!isOwner || busy}>
                 <legend className="font-mono text-caption text-faint">
-                  管理权限开关{isOwner ? "" : "（仅站长可改）"}
+                  管理权限开关{isOwner ? "" : "（仅站长可配置）"}
                 </legend>
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   {PERMISSIONS.map((p) => {
@@ -383,7 +383,7 @@ export function UserManager() {
               {/* 角色（仅 owner） */}
               {isOwner && (
                 <label className="block">
-                  <span className="mb-1 block font-mono text-caption text-faint">角色（仅站长可改）</span>
+                  <span className="mb-1 block font-mono text-caption text-faint">角色（仅站长可分配）</span>
                   <select
                     value={selected.role}
                     disabled={busy}
