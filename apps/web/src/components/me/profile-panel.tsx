@@ -17,6 +17,7 @@ import { logout } from "@/lib/api-client";
 
 import { isAdminRole, hasPermission, type MeUser } from "@/lib/me";
 import { UserGroupBadge } from "@/components/user-marks";
+import { CheckinPanel } from "@/components/me/checkin-panel";
 
 type Me = MeUser;
 
@@ -196,6 +197,16 @@ export function ProfilePanel() {
           退出登录
         </button>
       </div>
+
+      {/* 签到与经验等级（契约 PR #75）：签到后同步刷新资料卡等级徽章 */}
+      <CheckinPanel
+        exp={me.exp}
+        level={me.level}
+        nextLevelExp={me.nextLevelExp}
+        onExpChange={(exp, level, nextLevelExp) =>
+          setMe((prev) => (prev ? { ...prev, exp, level, nextLevelExp } : prev))
+        }
+      />
 
       {/* 管理入口（管理员/站长；用户与统计按 manage_users 开关额外显示） */}
       {(isAdminRole(me.role) || hasPermission(me, "manage_users")) && (
