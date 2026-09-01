@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { KnotMark } from "./knot-mark";
 import { ThemeSwitcher } from "./theme-switcher";
+import { AuthMenu } from "./auth-menu";
 
 export const NAV_ITEMS = [
   { href: "/", label: "首页" },
@@ -60,12 +61,7 @@ export function SiteHeader() {
           >
             搜索
           </Link>
-          <Link
-            href="/login"
-            className="rounded-md bg-amber px-4 py-1.5 text-small font-medium text-amber-fg transition-colors duration-fast hover:opacity-90"
-          >
-            登录
-          </Link>
+          <AuthMenu />
         </div>
       </div>
     </header>

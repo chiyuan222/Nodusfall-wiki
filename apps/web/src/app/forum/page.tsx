@@ -4,6 +4,7 @@ import { KnotMark } from "@/components/knot-mark";
 import { Carousel } from "@/components/carousel";
 import { getForumIndexData, USE_MOCK } from "@/lib/data";
 import { getForumCarousel } from "@/lib/carousel-data";
+import { authorName } from "@/lib/author";
 
 export const dynamic = "force-dynamic";
 
@@ -127,7 +128,7 @@ export default async function ForumIndexPage() {
                         </span>
                       </span>
                       <span className="mt-1 block font-mono text-caption text-faint">
-                        {t.author.displayName} · 最后回复 {t.lastPostAt.slice(0, 10)}
+                        {authorName(t.author)} · 最后回复 {t.lastPostAt.slice(0, 10)}
                       </span>
                     </span>
                     <span className="flex shrink-0 items-center gap-4 text-center font-mono text-caption text-secondary">

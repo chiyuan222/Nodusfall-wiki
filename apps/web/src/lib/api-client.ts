@@ -163,9 +163,9 @@ export async function request<T>(
   return (await res.json()) as T;
 }
 
-/** 登录（grantType=password），成功后持久化会话 */
+/** 登录（grantType=password），credential 传 { email } 或 { phone } 二选一，成功后持久化会话 */
 export async function login(
-  email: string,
+  credential: { email: string } | { phone: string },
   password: string,
 ): Promise<void> {
   const res = await request<{
@@ -178,7 +178,7 @@ export async function login(
   }>("/auth/sessions", {
     method: "POST",
     auth: false,
-    body: { grantType: "password", email, password },
+    body: { grantType: "password", ...credential, password },
   });
   saveSession(res.data);
 }

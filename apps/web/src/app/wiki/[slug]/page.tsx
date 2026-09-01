@@ -6,6 +6,8 @@ import { ApiError } from "@/lib/errors";
 import { Markdown, slugifyHeading } from "@/components/markdown";
 import { CommentSection } from "@/components/comment-section";
 import { WikiEditEntry } from "@/components/wiki/wiki-edit-entry";
+import { HistoryReporter } from "@/components/history-reporter";
+import { authorName } from "@/lib/author";
 
 async function loadPage(slug: string): Promise<WikiPage> {
   try {
@@ -60,6 +62,7 @@ export default async function WikiPageDetail({
 
   return (
     <div className="mx-auto max-w-page">
+      <HistoryReporter kind="wikiPage" slug={page.slug} />
       {/* 面包屑 */}
       <nav aria-label="面包屑" className="flex items-center gap-2 font-mono text-caption text-faint">
         <Link href="/wiki" className="text-secondary transition-colors duration-fast hover:text-amber">
@@ -74,7 +77,7 @@ export default async function WikiPageDetail({
           <header className="space-y-4">
             <h1 className="font-serif text-display font-semibold">{page.title}</h1>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-caption text-faint">
-              <span>{page.author.displayName}</span>
+              <span>{authorName(page.author)}</span>
               <span aria-hidden>·</span>
               <time dateTime={page.updatedAt}>
                 更新于 {new Date(page.updatedAt).toLocaleDateString("zh-CN")}

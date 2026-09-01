@@ -4,6 +4,7 @@ import { KnotMark } from "@/components/knot-mark";
 import { Carousel } from "@/components/carousel";
 import { getGuideList, USE_MOCK } from "@/lib/data";
 import { getGuideCarousel } from "@/lib/carousel-data";
+import { authorName } from "@/lib/author";
 
 export const dynamic = "force-dynamic";
 
@@ -116,7 +117,7 @@ export default async function GuidesIndexPage() {
                       </span>
                     ))}
                     <span className="ml-auto font-mono">
-                      {g.author.displayName} · {g.updatedAt.slice(0, 10)}
+                      {authorName(g.author)} · {g.updatedAt.slice(0, 10)}
                     </span>
                   </span>
                 </span>

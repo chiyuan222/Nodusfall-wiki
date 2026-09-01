@@ -12,6 +12,7 @@ import { ApiError } from "@/lib/errors";
 import { getAccessToken } from "@/lib/session";
 import type { WikiCategory, WikiPage, WikiPageRevision } from "@/lib/api";
 import { Markdown } from "@/components/markdown";
+import { authorName } from "@/lib/author";
 
 /**
  * Wiki 条目编辑器（客户端组件）。
@@ -606,7 +607,7 @@ export function RevisionList({ slug }: { slug: string }) {
                     {rev.changelog || "（无变更说明）"}
                   </span>
                   <span className="ml-auto font-mono text-caption text-faint">
-                    {rev.author.displayName} ·{" "}
+                    {authorName(rev.author)} ·{" "}
                     {new Date(rev.createdAt).toLocaleString("zh-CN")}
                   </span>
                 </li>

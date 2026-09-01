@@ -100,7 +100,8 @@ export interface paths {
         get: operations["getCurrentUser"];
         put?: never;
         post?: never;
-        delete?: never;
+        /** 注销当前账号（软注销，需密码确认；内容保留并匿名化，会话全部失效） */
+        delete: operations["deleteCurrentUser"];
         options?: never;
         head?: never;
         /** 更新当前用户资料 */
@@ -136,6 +137,42 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/me/comments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 我的评论列表 */
+        get: operations["listMyComments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/me/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 我的浏览记录（仅登录用户，按最近浏览倒序） */
+        get: operations["listMyHistory"];
+        put?: never;
+        /** 记录一次浏览（详情页挂载时上报一次） */
+        post: operations["createHistoryEntry"];
+        /** 清空我的浏览记录 */
+        delete: operations["clearMyHistory"];
         options?: never;
         head?: never;
         patch?: never;
@@ -187,6 +224,23 @@ export interface paths {
         post?: never;
         /** 登出并撤销会话 */
         delete: operations["deleteSession"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/email-codes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 发送邮箱注册验证码（限流：同一邮箱 60s 一次、每日 5 次） */
+        post: operations["sendEmailCode"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -718,11 +772,18 @@ export interface components {
             role: "guest" | "member" | "editor" | "moderator" | "admin";
             /** Format: date-time */
             createdAt: string;
+            /**
+             * @description deleted 表示账号已注销（内容匿名化保留）
+             * @enum {string}
+             */
+            status: "active" | "deleted";
         };
         User: components["schemas"]["UserSummary"] & {
             bio?: string;
             /** Format: date-time */
             updatedAt?: string;
+            emailMasked?: string;
+            phoneMasked?: string | null;
         };
         AuthSession: {
             accessToken: string;
@@ -919,6 +980,40 @@ export interface components {
         };
         CommentList: {
             data: components["schemas"]["Comment"][];
+            pagination: components["schemas"]["Pagination"];
+        };
+        MyComment: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            targetType: "wiki_page" | "guide";
+            targetSlug: string;
+            targetTitle: string;
+            content: string;
+            likeCount: number;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        MyCommentList: {
+            data: components["schemas"]["MyComment"][];
+            pagination: components["schemas"]["Pagination"];
+        };
+        HistoryEntry: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "wikiPage" | "guide" | "forumThread";
+            title: string;
+            slug: string;
+            boardSlug: string | null;
+            /** Format: uri */
+            coverImage: string | null;
+            excerpt: string | null;
+            /** Format: date-time */
+            viewedAt: string;
+        };
+        HistoryEntryList: {
+            data: components["schemas"]["HistoryEntry"][];
             pagination: components["schemas"]["Pagination"];
         };
         SearchResult: {
@@ -1326,10 +1421,17 @@ export interface components {
         RegisterRequest: {
             content: {
                 "application/json": {
-                    /** Format: email */
-                    email: string;
                     username: string;
                     password: string;
+                    /**
+                     * Format: email
+                     * @description 邮箱注册时必填，需同时传 emailCode
+                     */
+                    email?: string;
+                    /** @description 邮箱注册验证码（POST /auth/email-codes 获取，6 位数字，10 分钟内有效） */
+                    emailCode?: string;
+                    /** @description 中国大陆手机号注册（暂仅格式校验，短信验证接入后启用；与 email 二选一） */
+                    phone?: string;
                 };
             };
         };
@@ -1338,8 +1440,13 @@ export interface components {
                 "application/json": {
                     /** @enum {string} */
                     grantType: "password" | "refreshToken";
-                    /** Format: email */
+                    /**
+                     * Format: email
+                     * @description 邮箱登录（与 phone 二选一）
+                     */
                     email?: string;
+                    /** @description 手机号登录（与 email 二选一） */
+                    phone?: string;
                     password?: string;
                     refreshToken?: string;
                 };
@@ -1352,6 +1459,16 @@ export interface components {
                     /** Format: uri */
                     avatarUrl?: string;
                     bio?: string;
+                };
+            };
+        };
+        CreateHistoryEntryRequest: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    kind: "wikiPage" | "guide" | "forumThread";
+                    /** @description wiki/guide 的 slug；forumThread 传 threadId */
+                    slug: string;
                 };
             };
         };
@@ -1618,6 +1735,32 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
         };
     };
+    deleteCurrentUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    password: string;
+                };
+            };
+        };
+        responses: {
+            /** @description 已注销 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthorized"];
+        };
+    };
     updateCurrentUser: {
         parameters: {
             query?: never;
@@ -1688,6 +1831,96 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
         };
     };
+    listMyComments: {
+        parameters: {
+            query?: {
+                page?: components["parameters"]["Page"];
+                perPage?: components["parameters"]["PerPage"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 我的评论列表 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyCommentList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    listMyHistory: {
+        parameters: {
+            query?: {
+                page?: components["parameters"]["Page"];
+                perPage?: components["parameters"]["PerPage"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 浏览记录列表 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HistoryEntryList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createHistoryEntry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["CreateHistoryEntryRequest"];
+        responses: {
+            /** @description 已记录 */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HistoryEntry"];
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    clearMyHistory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 已清空 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
     getUser: {
         parameters: {
             query?: never;
@@ -1752,6 +1985,33 @@ export interface operations {
                 content?: never;
             };
             401: components["responses"]["Unauthorized"];
+        };
+    };
+    sendEmailCode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: email */
+                    email: string;
+                };
+            };
+        };
+        responses: {
+            /** @description 验证码已发送 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["ValidationError"];
+            429: components["responses"]["RateLimited"];
         };
     };
     listWikiCategories: {

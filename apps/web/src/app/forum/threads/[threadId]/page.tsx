@@ -5,6 +5,8 @@ import { forumApi, type ForumThread } from "@/lib/api";
 import { ApiError } from "@/lib/errors";
 import { Markdown } from "@/components/markdown";
 import { AdminThreadControls, BookmarkButton, PostSection } from "@/components/forum/thread-interactions";
+import { HistoryReporter } from "@/components/history-reporter";
+import { authorName } from "@/lib/author";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +45,7 @@ export default async function ThreadPage({
 
   return (
     <div className="mx-auto max-w-page space-y-10">
+      <HistoryReporter kind="forumThread" slug={thread.id} />
       {/* 面包屑 */}
       <nav aria-label="面包屑" className="flex items-center gap-2 font-mono text-caption text-faint">
         <Link href="/forum" className="text-secondary transition-colors duration-fast hover:text-amber">
@@ -76,7 +79,7 @@ export default async function ThreadPage({
           </div>
           <h1 className="font-serif text-display font-semibold">{thread.title}</h1>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-caption text-faint">
-            <span>{thread.author.displayName}</span>
+            <span>{authorName(thread.author)}</span>
             <span aria-hidden>·</span>
             <time dateTime={thread.createdAt}>
               发布于 {new Date(thread.createdAt).toLocaleString("zh-CN", { dateStyle: "medium", timeStyle: "short" })}
