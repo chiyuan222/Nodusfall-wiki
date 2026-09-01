@@ -63,6 +63,14 @@ function Glyph({ href, size }: { href: string; size: number }) {
           <path d="M3.8 15c.8-2.8 2.8-4.2 5.2-4.2s4.4 1.4 5.2 4.2" />
         </svg>
       );
+    case "/videos":
+      // 相关视频：播放符
+      return (
+        <svg {...common}>
+          <rect x="2.5" y="4" width="13" height="10" rx="2" />
+          <path d="M7.5 7.2v3.6l3.4-1.8-3.4-1.8Z" fill="currentColor" stroke="none" />
+        </svg>
+      );
     default:
       return null;
   }
@@ -79,12 +87,13 @@ export function BottomTabBar() {
       aria-label="底部导航"
       className="fixed inset-x-0 bottom-0 z-40 border-t border-border-subtle bg-surface/95 backdrop-blur lg:hidden"
     >
-      <div className="grid grid-cols-6">
+      <div className="grid grid-cols-7">
         {items.map((item) => {
           const active =
             item.href === "/"
               ? pathname === "/"
               : pathname.startsWith(item.href);
+          const label = "short" in item ? item.short : item.label;
           return (
             <Link
               key={item.href}
@@ -115,7 +124,7 @@ export function BottomTabBar() {
                   {unread > 99 ? "99+" : unread}
                 </span>
               )}
-              {item.label}
+              {label}
             </Link>
           );
         })}

@@ -12,6 +12,8 @@ export const NAV_ITEMS = [
   { href: "/wiki", label: "Wiki" },
   { href: "/guides", label: "攻略" },
   { href: "/forum", label: "论坛" },
+  // 相关视频（契约 PR #67）：short 供移动端底栏使用
+  { href: "/videos", label: "相关视频", short: "视频" },
 ] as const;
 
 function isActive(pathname: string, href: string): boolean {
