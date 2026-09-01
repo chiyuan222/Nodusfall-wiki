@@ -50,6 +50,37 @@ paths:
               schema:
                 $ref: "#/components/schemas/Health"
 
+  /home/digest:
+    get:
+      tags: [Content]
+      operationId: getHomeDigest
+      summary: 首页最新动态与精华推荐聚合
+      security: []
+      parameters:
+        - name: latestLimit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 12
+            default: 6
+        - name: featuredLimit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 12
+            default: 6
+      responses:
+        "200":
+          description: 首页聚合数据
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HomeDigestResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+
   /content/pages/{slug}:
     get:
       tags: [Content]
@@ -1472,6 +1503,8 @@ components:
               changelog:
                 type: string
                 maxLength: 200
+              featured: { type: boolean }
+              featuredAt: { type: [string, "null"], format: date-time }
     UpdateWikiPageRequest:
       required: true
       content:
@@ -1532,6 +1565,8 @@ components:
                 type: string
                 enum: [draft, published, archived]
               relatedCharacter: { type: string }
+              featured: { type: boolean }
+              featuredAt: { type: [string, "null"], format: date-time }
     RatingInput:
       required: true
       content:
@@ -1566,6 +1601,8 @@ components:
               pinned: { type: boolean }
               locked: { type: boolean }
               coverImage: { type: [string, "null"], format: uri }
+              featured: { type: boolean }
+              featuredAt: { type: [string, "null"], format: date-time }
     CreateForumPostRequest:
       required: true
       content:
@@ -1737,12 +1774,13 @@ components:
 
     WikiPageSummary:
       type: object
-      required: [id, slug, title, excerpt, categorySlug, tags, status, author, updatedAt]
+      required: [id, slug, title, excerpt, coverImage, categorySlug, tags, status, author, updatedAt]
       properties:
         id: { type: string, format: uuid }
         slug: { type: string }
         title: { type: string }
         excerpt: { type: string }
+        coverImage: { type: [string, "null"], format: uri }
         categorySlug: { type: string }
         tags:
           type: array
@@ -1758,12 +1796,13 @@ components:
       allOf:
         - $ref: "#/components/schemas/WikiPageSummary"
         - type: object
-          required: [content, version, createdAt, revisionCount]
+          required: [content, version, createdAt, revisionCount, featuredAt]
           properties:
             content: { type: string }
             version: { type: integer }
             createdAt: { type: string, format: date-time }
             revisionCount: { type: integer }
+            featuredAt: { type: [string, "null"], format: date-time }
 
     WikiPageList:
       type: object
@@ -1803,12 +1842,13 @@ components:
 
     GuideSummary:
       type: object
-      required: [id, slug, title, excerpt, tags, status, author, rating, updatedAt]
+      required: [id, slug, title, excerpt, coverImage, tags, status, author, rating, updatedAt]
       properties:
         id: { type: string, format: uuid }
         slug: { type: string }
         title: { type: string }
         excerpt: { type: string }
+        coverImage: { type: [string, "null"], format: uri }
         tags:
           type: array
           items: { type: string }
@@ -1829,11 +1869,12 @@ components:
       allOf:
         - $ref: "#/components/schemas/GuideSummary"
         - type: object
-          required: [content, createdAt]
+          required: [content, createdAt, featuredAt]
           properties:
             content: { type: string }
             relatedCharacter: { type: string }
             createdAt: { type: string, format: date-time }
+            featuredAt: { type: [string, "null"], format: date-time }
 
     GuideList:
       type: object
@@ -1916,9 +1957,10 @@ components:
       allOf:
         - $ref: "#/components/schemas/ForumThreadSummary"
         - type: object
-          required: [content]
+          required: [content, featuredAt]
           properties:
             content: { type: string }
+            featuredAt: { type: [string, "null"], format: date-time }
 
     ForumThreadList:
       type: object
@@ -1987,7 +2029,7 @@ components:
 
     SearchResult:
       type: object
-      required: [kind, id, title, excerpt, url]
+      required: [kind, id, title, excerpt, coverImage, url]
       properties:
         kind:
           type: string
@@ -1995,6 +2037,7 @@ components:
         id: { type: string }
         title: { type: string }
         excerpt: { type: string }
+        coverImage: { type: [string, "null"], format: uri }
         url: { type: string }
         updatedAt: { type: string, format: date-time }
 
@@ -2310,6 +2353,53 @@ components:
       oneOf:
         - $ref: "#/components/schemas/HomePageContent"
         - $ref: "#/components/schemas/WorldPageContent"
+
+    DigestStats:
+      type: object
+      required: [viewCount, likeCount, commentCount, scoreAverage, scoreCount]
+      properties:
+        viewCount: { type: integer }
+        likeCount: { type: integer }
+        commentCount: { type: integer }
+        scoreAverage: { type: [number, "null"] }
+        scoreCount: { type: integer }
+
+    DigestItem:
+      type: object
+      required: [id, kind, title, slug, excerpt, coverImage, author, createdAt, updatedAt, publishedAt, boardSlug, stats]
+      properties:
+        id: { type: string, format: uuid }
+        kind: { type: string, enum: [wiki, guide, forum] }
+        title: { type: string }
+        slug: { type: string }
+        excerpt: { type: [string, "null"] }
+        coverImage: { type: [string, "null"], format: uri }
+        author:
+          $ref: "#/components/schemas/UserSummary"
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        publishedAt: { type: [string, "null"], format: date-time }
+        boardSlug: { type: [string, "null"] }
+        stats:
+          $ref: "#/components/schemas/DigestStats"
+        likedByMe: { type: [boolean, "null"] }
+        bookmarkedByMe: { type: [boolean, "null"] }
+        myScore: { type: [integer, "null"] }
+
+    HomeDigestResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [latest, featured]
+          properties:
+            latest:
+              type: array
+              items: { $ref: "#/components/schemas/DigestItem" }
+            featured:
+              type: array
+              items: { $ref: "#/components/schemas/DigestItem" }
 
   responses:
     ValidationError:
