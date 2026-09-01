@@ -7,3 +7,4 @@ import { ForumService } from './forum.service';
   providers: [ForumService],
 })
 export class ForumModule {}
+export { ForumService } from './forum.service';
