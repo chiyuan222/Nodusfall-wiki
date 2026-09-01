@@ -26,16 +26,18 @@ function EmptySlot({ label }: { label: string }) {
   );
 }
 
-/* ---------- 板块外壳：编号 + 标题 + 锚点 ---------- */
-function SectionShell({
+/* ---------- 幻灯片外壳：一页一板块，编号 + 页码 + 统一框架 ---------- */
+function SlideShell({
   id,
   index,
+  total,
   title,
   intro,
   children,
 }: {
   id: string;
   index: number;
+  total: number;
   title: string;
   intro?: string;
   children: ReactNode;
@@ -44,71 +46,84 @@ function SectionShell({
     <section
       id={id}
       aria-labelledby={`${id}-title`}
-      className="relative scroll-mt-28 border-t border-border-subtle py-14 lg:scroll-mt-36"
+      className="relative scroll-mt-28 lg:scroll-mt-36"
     >
-      {/* 板块序号水印（编辑风，与首页「结」字水印同一语言） */}
-      <span
-        aria-hidden
-        className="pointer-events-none absolute -top-2 right-0 select-none font-serif text-[6rem] font-semibold leading-none text-primary opacity-[0.05]"
-      >
-        {String(index).padStart(2, "0")}
-      </span>
-      <div className="relative flex flex-wrap items-baseline gap-x-4 gap-y-2">
-        <span className="font-mono text-caption tracking-[0.35em] text-amber">
-          {String(index).padStart(2, "0")}
-        </span>
-        <h2
-          id={`${id}-title`}
-          className="font-serif text-h1 font-semibold text-primary"
-        >
-          {title}
-        </h2>
-      </div>
-      {intro !== undefined && (
-        <div className="mt-4 max-w-reading text-body leading-relaxed text-secondary">
-          {intro ? <p>{intro}</p> : <EmptySlot label="板块引言" />}
+      <div className="overflow-hidden rounded-lg border border-border-subtle bg-surface shadow-card">
+        {/* 幻灯片页眉：编号 + 标题 + 页码 */}
+        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2 border-b border-border-subtle px-6 py-5 md:px-10">
+          <span className="font-mono text-caption tracking-[0.35em] text-amber">
+            {String(index).padStart(2, "0")}
+          </span>
+          <h2
+            id={`${id}-title`}
+            className="font-serif text-h1 font-semibold text-primary"
+          >
+            {title}
+          </h2>
+          <span
+            aria-hidden
+            className="ml-auto font-mono text-caption tracking-[0.3em] text-faint"
+          >
+            {String(index).padStart(2, "0")} / {String(total).padStart(2, "0")}
+          </span>
         </div>
-      )}
-      <div className="mt-10">{children}</div>
+        {intro !== undefined && (
+          <div className="max-w-reading px-6 pt-6 text-body leading-relaxed text-secondary md:px-10">
+            {intro ? <p>{intro}</p> : <EmptySlot label="板块引言" />}
+          </div>
+        )}
+        <div className="p-6 md:p-10">{children}</div>
+      </div>
     </section>
   );
 }
 
-/* ---------- 首屏 ---------- */
+/* ---------- 首屏：主视觉大图 + 叠加标题（发布会首页感） ---------- */
 function HeroSection({ content }: { content: WorldPageContent }) {
   const { hero } = content;
   return (
-    <section aria-label="首屏" className="pt-10 lg:pt-16">
-      {hero.kicker ? (
-        <p className="font-mono text-caption uppercase tracking-[0.4em] text-faint">
-          {hero.kicker}
-        </p>
-      ) : (
-        <EmptySlot label="首屏眉题" />
-      )}
-
-      <div className="mt-4 flex flex-wrap items-end gap-x-6 gap-y-2">
-        <h1 className="font-serif text-[2.75rem] font-bold leading-none tracking-wide text-primary md:text-[4.5rem]">
-          {hero.title || "（待填写标题）"}
-        </h1>
-        {hero.subtitle && (
-          <p className="pb-2 font-mono text-h3 tracking-[0.3em] text-faint">
-            {hero.subtitle}
-          </p>
-        )}
-      </div>
-
-      <div className="mt-6 max-w-reading text-body leading-relaxed text-secondary">
-        {hero.lead ? <p>{hero.lead}</p> : <EmptySlot label="一句话介绍（首屏导语）" />}
-      </div>
-
-      <div className="mt-8">
-        {/* 与首页一致的编辑风双线框装裱，放大为 banner 比例 */}
-        <div className="rounded-lg border border-border-subtle bg-surface p-2 shadow-card">
-          <MediaSlotView media={hero.art} variant="banner" priority />
+    <section aria-label="首屏" className="pt-8 lg:pt-12">
+      <div className="relative overflow-hidden rounded-lg border border-border-subtle shadow-card">
+        {/* 主视觉（图片/视频槽位，管理员可替换） */}
+        <MediaSlotView media={hero.art} variant="hero" priority />
+        {/* 渐变 + 叠加文案 */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"
+        />
+        <div className="absolute inset-x-0 bottom-0 p-6 md:p-10">
+          {hero.kicker ? (
+            <p className="font-mono text-caption uppercase tracking-[0.4em] text-white/70">
+              {hero.kicker}
+            </p>
+          ) : (
+            <span className="font-mono text-caption uppercase tracking-[0.4em] text-white/40">
+              待管理员补充 · 首屏眉题
+            </span>
+          )}
+          <div className="mt-3 flex flex-wrap items-end gap-x-6 gap-y-2">
+            <h1 className="font-serif text-[2.75rem] font-bold leading-none tracking-wide text-white drop-shadow md:text-[4.5rem]">
+              {hero.title || "（待填写标题）"}
+            </h1>
+            {hero.subtitle && (
+              <p className="pb-2 font-mono text-h3 tracking-[0.3em] text-white/70">
+                {hero.subtitle}
+              </p>
+            )}
+          </div>
+          <div className="mt-4 max-w-reading text-body leading-relaxed text-white/85">
+            {hero.lead ? (
+              <p>{hero.lead}</p>
+            ) : (
+              <p className="font-mono text-caption text-white/50">
+                待管理员补充 · 一句话介绍（首屏导语）
+              </p>
+            )}
+          </div>
         </div>
       </div>
 
+      {/* 信息条 + 按钮 */}
       <div className="mt-6 flex flex-wrap items-center gap-3">
         {hero.chips.map((chip, i) => (
           <span
@@ -147,17 +162,18 @@ function HeroSection({ content }: { content: WorldPageContent }) {
   );
 }
 
-/* ---------- 概览：档案表 ---------- */
+/* ---------- 概览：主视觉大图 + 档案表（规格页幻灯片） ---------- */
 function OverviewSection({ content }: { content: WorldPageContent }) {
   const { overview } = content;
   return (
     <>
-      <div className="max-w-reading text-body leading-relaxed text-secondary">
+      <MediaSlotView media={overview.media} variant="banner" />
+      <div className="mt-8 max-w-reading text-body leading-relaxed text-secondary">
         {overview.lead ? <p>{overview.lead}</p> : <EmptySlot label="游戏概览导语" />}
       </div>
       <dl className="mt-8 grid gap-px overflow-hidden rounded-md border border-border-subtle bg-border-subtle md:grid-cols-2 lg:grid-cols-3">
         {overview.facts.map((fact, i) => (
-          <div key={`${fact.label}-${i}`} className="bg-surface p-4">
+          <div key={`${fact.label}-${i}`} className="bg-canvas p-4">
             <dt className="font-mono text-caption uppercase tracking-widest text-faint">
               {fact.label || "（未命名项）"}
             </dt>
@@ -171,27 +187,27 @@ function OverviewSection({ content }: { content: WorldPageContent }) {
   );
 }
 
-/* ---------- 世界观：词条交替行 ---------- */
+/* ---------- 世界观：每个词条一页幻灯片（大图 + 玻璃文字板，交替侧） ---------- */
 function WorldviewSection({ content }: { content: WorldPageContent }) {
   const { worldview } = content;
   return (
-    <ol className="space-y-14">
+    <ol className="space-y-8">
       {worldview.entries.map((entry, i) => (
         <li
           key={`${entry.no}-${i}`}
-          className="grid items-center gap-6 md:grid-cols-12"
+          className="relative overflow-hidden rounded-md border border-border-subtle"
         >
+          {/* 词条大图（横幅比例，管理员可替换） */}
+          <MediaSlotView media={entry.image} variant="banner" hint={false} />
+          {/* 文字板：玻璃拟态浮层，移动端置于图下、桌面端交替贴左右下角 */}
           <div
-            className={`md:col-span-5 ${i % 2 === 1 ? "md:order-2" : ""}`}
-          >
-            <MediaSlotView media={entry.image} variant="entry" />
-          </div>
-          <div
-            className={`relative md:col-span-7 ${i % 2 === 1 ? "md:order-1" : ""}`}
+            className={`relative border-t border-border-subtle bg-surface p-6 md:absolute md:bottom-6 md:w-[26rem] md:rounded-md md:border md:bg-canvas/85 md:shadow-overlay md:backdrop-blur-md ${
+              i % 2 === 1 ? "md:right-6" : "md:left-6"
+            }`}
           >
             <span
               aria-hidden
-              className="pointer-events-none absolute -top-9 right-0 select-none font-mono text-[4.5rem] font-bold leading-none text-border-subtle/60"
+              className="pointer-events-none absolute -top-8 right-3 select-none font-mono text-[3.5rem] font-bold leading-none text-border-subtle/70"
             >
               {entry.no}
             </span>
@@ -210,8 +226,12 @@ function WorldviewSection({ content }: { content: WorldPageContent }) {
                 </span>
               )}
             </div>
-            <div className="mt-3 max-w-reading text-body leading-relaxed text-secondary">
-              {entry.body ? <p>{entry.body}</p> : <EmptySlot label={`「${entry.title || entry.no}」词条正文`} />}
+            <div className="mt-3 text-body leading-relaxed text-secondary">
+              {entry.body ? (
+                <p>{entry.body}</p>
+              ) : (
+                <EmptySlot label={`「${entry.title || entry.no}」词条正文`} />
+              )}
             </div>
           </div>
         </li>
@@ -220,27 +240,35 @@ function WorldviewSection({ content }: { content: WorldPageContent }) {
   );
 }
 
-/* ---------- 玩法：编号卡片 ---------- */
+/* ---------- 玩法：每个玩法一页幻灯片（大图 + 文字栏交替） ---------- */
 function GameplaySection({ content }: { content: WorldPageContent }) {
   const { gameplay } = content;
   return (
-    <ol className="grid gap-5 md:grid-cols-2">
+    <ol className="space-y-8">
       {gameplay.features.map((feature, i) => (
         <li
           key={`${feature.no}-${i}`}
-          className="group rounded-md border border-border-subtle bg-surface shadow-card transition-colors duration-fast hover:border-amber-soft"
+          className="grid items-stretch gap-0 overflow-hidden rounded-md border border-border-subtle bg-canvas md:grid-cols-12"
         >
-          <MediaSlotView media={feature.image} variant="card" hint={false} />
-          <div className="p-5">
+          <div
+            className={`md:col-span-7 ${i % 2 === 1 ? "md:order-2" : ""}`}
+          >
+            <MediaSlotView media={feature.image} variant="entry" hint={false} />
+          </div>
+          <div
+            className={`flex flex-col justify-center p-6 md:col-span-5 md:p-8 ${
+              i % 2 === 1 ? "md:order-1" : ""
+            }`}
+          >
             <div className="flex items-center gap-3">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full border border-amber-soft font-serif text-caption text-amber">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full border border-amber-soft font-serif text-small text-amber">
                 {feature.no}
               </span>
-              <h3 className="text-h3 font-semibold text-primary">
+              <h3 className="font-serif text-h2 font-semibold text-primary">
                 {feature.title || "（待填写玩法名）"}
               </h3>
             </div>
-            <div className="mt-3 text-small leading-relaxed text-secondary">
+            <div className="mt-4 text-small leading-relaxed text-secondary">
               {feature.body ? <p>{feature.body}</p> : <EmptySlot label="玩法说明" />}
             </div>
           </div>
@@ -250,53 +278,59 @@ function GameplaySection({ content }: { content: WorldPageContent }) {
   );
 }
 
-/* ---------- 官方信息：链接卡（含待补充态） ---------- */
+/* ---------- 官方信息：主视觉 + 链接卡（含待补充态） ---------- */
 function OfficialSection({ content }: { content: WorldPageContent }) {
   const { official } = content;
   return (
-    <ul className="grid gap-4 md:grid-cols-2">
-      {official.links.map((link, i) => {
-        const hasUrl = link.url.trim().length > 0;
-        const inner = (
-          <>
-            <span>
-              <span className="block text-body font-medium text-primary group-hover:text-amber">
-                {link.label || "（待填写名称）"}
+    <>
+      <MediaSlotView media={official.media} variant="banner" />
+      <ul className="mt-8 grid gap-4 md:grid-cols-2">
+        {official.links.map((link, i) => {
+          const hasUrl = link.url.trim().length > 0;
+          const inner = (
+            <>
+              <span>
+                <span className="block text-body font-medium text-primary group-hover:text-amber">
+                  {link.label || "（待填写名称）"}
+                </span>
+                <span className="mt-1 block text-small text-faint">
+                  {link.desc || "待管理员补充说明"}
+                </span>
               </span>
-              <span className="mt-1 block text-small text-faint">
-                {link.desc || "待管理员补充说明"}
-              </span>
-            </span>
-            <span
-              aria-hidden
-              className="font-mono text-h2 text-faint transition-colors duration-fast group-hover:text-amber"
-            >
-              {hasUrl ? "↗" : "—"}
-            </span>
-          </>
-        );
-        const cls =
-          "group flex items-center justify-between gap-4 rounded-md border border-border-subtle bg-surface p-5 transition-colors duration-fast";
-        return (
-          <li key={`${link.label}-${i}`}>
-            {hasUrl ? (
-              <a
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`${cls} hover:border-amber-soft`}
+              <span
+                aria-hidden
+                className="font-mono text-h2 text-faint transition-colors duration-fast group-hover:text-amber"
               >
-                {inner}
-              </a>
-            ) : (
-              <span className={`${cls} border-dashed opacity-70`} title="链接待管理员补充">
-                {inner}
+                {hasUrl ? "↗" : "—"}
               </span>
-            )}
-          </li>
-        );
-      })}
-    </ul>
+            </>
+          );
+          const cls =
+            "group flex items-center justify-between gap-4 rounded-md border border-border-subtle bg-canvas p-5 transition-colors duration-fast";
+          return (
+            <li key={`${link.label}-${i}`}>
+              {hasUrl ? (
+                <a
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`${cls} hover:border-amber-soft`}
+                >
+                  {inner}
+                </a>
+              ) : (
+                <span
+                  className={`${cls} border-dashed opacity-70`}
+                  title="链接待管理员补充"
+                >
+                  {inner}
+                </span>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </>
   );
 }
 
@@ -343,12 +377,12 @@ function RepostsSection({ content }: { content: WorldPageContent }) {
                 href={item.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group block overflow-hidden rounded-md border border-border-subtle bg-surface shadow-card transition-colors duration-fast hover:border-amber-soft"
+                className="group block overflow-hidden rounded-md border border-border-subtle bg-canvas transition-colors duration-fast hover:border-amber-soft"
               >
                 {card}
               </a>
             ) : (
-              <div className="group overflow-hidden rounded-md border border-border-subtle bg-surface shadow-card">
+              <div className="group overflow-hidden rounded-md border border-border-subtle bg-canvas">
                 {card}
               </div>
             )}
@@ -401,8 +435,8 @@ function NewsSection({ content }: { content: WorldPageContent }) {
           </>
         );
         const cls = hasMedia
-          ? "group block overflow-hidden rounded-md border border-border-subtle bg-surface shadow-card transition-colors duration-fast hover:border-amber-soft"
-          : "group block rounded-md border border-border-subtle bg-surface p-5 transition-colors duration-fast hover:border-amber-soft";
+          ? "group block overflow-hidden rounded-md border border-border-subtle bg-canvas transition-colors duration-fast hover:border-amber-soft"
+          : "group block rounded-md border border-border-subtle bg-canvas p-5 transition-colors duration-fast hover:border-amber-soft";
         return (
           <li key={`${item.date}-${item.title}-${i}`}>
             {item.url ? (
@@ -453,14 +487,14 @@ export default async function WorldPage() {
   const navSections = ordered.filter((id) => id !== "hero");
 
   return (
-    <article className="mx-auto max-w-page">
+    <article className="mx-auto max-w-page space-y-10">
       {ordered.includes("hero") && <HeroSection content={content} />}
 
-      {/* 页内锚点导航（粘性） */}
+      {/* 页内锚点导航（粘性，类似 PPT 目录条） */}
       {navSections.length > 0 && (
         <nav
           aria-label="本页板块"
-          className="sticky top-0 z-30 -mx-4 mt-10 border-y border-border-subtle bg-canvas/90 px-4 backdrop-blur md:-mx-6 md:px-6 lg:top-14"
+          className="sticky top-0 z-30 -mx-4 border-y border-border-subtle bg-canvas/90 px-4 backdrop-blur md:-mx-6 md:px-6 lg:top-14"
         >
           <ul className="flex gap-1 overflow-x-auto py-2.5">
             {navSections.map((id, i) => (
@@ -484,15 +518,16 @@ export default async function WorldPage() {
         const section = content[id] as { title?: string; intro?: string };
         const Body = SECTION_BODY[id as Exclude<WorldSectionId, "hero">];
         return (
-          <SectionShell
+          <SlideShell
             key={id}
             id={id}
             index={i + 1}
+            total={navSections.length}
             title={section?.title || WORLD_SECTION_LABEL[id]}
             intro={"intro" in section ? section.intro : undefined}
           >
             <Body content={content} />
-          </SectionShell>
+          </SlideShell>
         );
       })}
 

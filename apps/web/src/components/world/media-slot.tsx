@@ -16,7 +16,7 @@ const ASPECT: Record<Variant, string> = {
 };
 
 /** 原创占位线稿：以「源点结绳」为母题的抽象线条，三套主题下均协调 */
-function PlaceholderArt({ variant }: { variant: Variant }) {
+export function PlaceholderArt({ variant }: { variant: Variant }) {
   const uid = `ph-${variant}`;
   return (
     <svg

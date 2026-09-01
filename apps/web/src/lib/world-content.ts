@@ -34,6 +34,8 @@ export interface WorldOverview {
   hidden?: boolean;
   title: string;
   lead: string;
+  /** 板块主视觉：幻灯片式大图，管理员可替换 */
+  media: MediaSlot;
   facts: { label: string; value: string }[];
 }
 
@@ -71,6 +73,8 @@ export interface WorldGameplay {
 export interface WorldOfficial {
   hidden?: boolean;
   title: string;
+  /** 板块主视觉：幻灯片式大图，管理员可替换 */
+  media: MediaSlot;
   links: { label: string; url: string; desc: string }[];
 }
 
@@ -150,3 +154,10 @@ export const emptyMedia = (): MediaSlot => ({
   alt: "",
   poster: "",
 });
+
+/** 兼容旧版配置：为后加的媒体槽位补默认值（旧 JSON / 后端旧 seed 不含这两个字段） */
+export function normalizeWorldContent(raw: WorldPageContent): WorldPageContent {
+  if (raw.overview && !raw.overview.media) raw.overview.media = emptyMedia();
+  if (raw.official && !raw.official.media) raw.official.media = emptyMedia();
+  return raw;
+}

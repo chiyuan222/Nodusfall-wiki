@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { KnotMark } from "@/components/knot-mark";
 import { WikiEditEntry } from "@/components/wiki/wiki-edit-entry";
+import { Carousel } from "@/components/carousel";
 import { getWikiIndexData, USE_MOCK } from "@/lib/data";
+import { getWikiCarousel } from "@/lib/carousel-data";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +25,10 @@ function formatDate(iso: string): string {
 }
 
 export default async function WikiIndexPage() {
-  const data = await getWikiIndexData();
+  const [data, carousel] = await Promise.all([
+    getWikiIndexData(),
+    getWikiCarousel(),
+  ]);
 
   return (
     <div className="mx-auto max-w-page space-y-12">
@@ -47,6 +52,15 @@ export default async function WikiIndexPage() {
           <WikiEditEntry variant="new" />
         </div>
       </header>
+
+      {/* 轮替推荐框：最新词条（5 位轮播，点击跳转对应条目） */}
+      <section aria-label="词条推荐轮播">
+        <Carousel
+          label="Wiki 词条推荐轮播"
+          slides={carousel}
+          emptyHint="词条推荐 · 待内容接入"
+        />
+      </section>
 
       <div className="grid gap-6 lg:grid-cols-12">
         {/* 分类导航 */}

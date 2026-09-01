@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { API_BASE_URL } from "./api-client";
-import type { WorldPageContent } from "./world-content";
+import { normalizeWorldContent, type WorldPageContent } from "./world-content";
 
 /**
  * /world 内容配置的服务端加载器（仅服务端组件可用，勿被客户端引用）。
@@ -43,5 +43,6 @@ async function loadFromFile(): Promise<WorldPageContent | null> {
 
 /** 读取内容配置；接口不可用时回退本地文件，再不行返回 null 由页面降级为提示 */
 export async function loadWorldContent(): Promise<WorldPageContent | null> {
-  return (await loadFromApi()) ?? (await loadFromFile());
+  const data = (await loadFromApi()) ?? (await loadFromFile());
+  return data ? normalizeWorldContent(data) : null;
 }
