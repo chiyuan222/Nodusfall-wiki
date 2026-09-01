@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { ProfilePanel } from "@/components/me/profile-panel";
+import { MyContent } from "@/components/me/my-content";
 
 export const metadata: Metadata = { title: "用户中心" };
 
@@ -17,6 +18,14 @@ export default function MePage() {
         <ProfilePanel />
       </section>
 
+      {/* 我的内容：我发布的主题 / 我的收藏（GET /users/me/threads、/users/me/bookmarks） */}
+      <section aria-labelledby="my-content">
+        <h2 id="my-content" className="mb-3 text-small font-semibold text-secondary">
+          我的内容
+        </h2>
+        <MyContent />
+      </section>
+
       {/* 移动端的外观设置入口（桌面端在顶部导航） */}
       <section
         aria-labelledby="appearance"
@@ -27,10 +36,6 @@ export default function MePage() {
         </h2>
         <ThemeSwitcher />
       </section>
-
-      <p className="text-caption text-faint">
-        「我的帖子 / 我的收藏」需要后端补充对应查询端点（提案 §6.2），已在 Issue 跟进。
-      </p>
     </div>
   );
 }
