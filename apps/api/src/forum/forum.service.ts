@@ -287,4 +287,49 @@ export class ForumService {
       where: { threadId, userId },
     });
   }
+
+  async myThreads(userId: string, page: number, perPage: number) {
+    const where = { authorId: userId };
+    const [total, threads] = await this.prisma.$transaction([
+      this.prisma.forumThread.count({ where }),
+      this.prisma.forumThread.findMany({
+        where,
+        orderBy: { updatedAt: 'desc' },
+        skip: (page - 1) * perPage,
+        take: perPage,
+        include: { author: true, board: true },
+      }),
+    ]);
+    return {
+      data: threads.map((thread) => ({
+        ...threadSummary(thread),
+        boardSlug: thread.board.slug,
+      })),
+      pagination: pageInfo(page, perPage, total),
+    };
+  }
+
+  async myBookmarks(userId: string, page: number, perPage: number) {
+    const where = { userId };
+    const [total, bookmarks] = await this.prisma.$transaction([
+      this.prisma.forumThreadBookmark.count({ where }),
+      this.prisma.forumThreadBookmark.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * perPage,
+        take: perPage,
+        include: {
+          thread: { include: { author: true, board: true } },
+        },
+      }),
+    ]);
+    return {
+      data: bookmarks.map((bookmark) => ({
+        ...threadSummary(bookmark.thread),
+        boardSlug: bookmark.thread.board.slug,
+        bookmarkedByMe: true,
+      })),
+      pagination: pageInfo(page, perPage, total),
+    };
+  }
 }

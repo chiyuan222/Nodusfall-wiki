@@ -7,6 +7,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Req,
   NotFoundException,
   UseGuards,
@@ -20,6 +21,8 @@ import {
 } from './users.service';
 import { RegisterDto } from './dto/register.dto';
 import { UpdateMeDto } from './dto/update-me.dto';
+import { ForumService } from '../forum/forum.service';
+import { PaginationQueryDto } from '../common/pagination';
 
 interface AuthenticatedRequest extends Request {
   user: { sub: string };
@@ -27,7 +30,10 @@ interface AuthenticatedRequest extends Request {
 
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly forumService: ForumService,
+  ) {}
 
   @Post()
   async register(@Body() dto: RegisterDto) {
@@ -63,5 +69,23 @@ export class UsersController {
       throw new NotFoundException('user not found');
     }
     return { data: toUserSummary(user) };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('me/threads')
+  listMyThreads(
+    @Req() req: AuthenticatedRequest,
+    @Query() pagination: PaginationQueryDto,
+  ) {
+    return this.forumService.myThreads(req.user.sub, pagination.page, pagination.perPage);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('me/bookmarks')
+  listMyBookmarks(
+    @Req() req: AuthenticatedRequest,
+    @Query() pagination: PaginationQueryDto,
+  ) {
+    return this.forumService.myBookmarks(req.user.sub, pagination.page, pagination.perPage);
   }
 }
