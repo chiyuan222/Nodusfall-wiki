@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { pageInfo } from '../common/pagination';
+import { extractFirstImage } from '../common/markdown';
 import { PrismaService } from '../prisma/prisma.service';
 
 type Kind = 'all' | 'wiki' | 'guide' | 'forum';
@@ -14,6 +15,7 @@ export class SearchService {
       id: string;
       title: string;
       excerpt: string;
+      coverImage: string | null;
       url: string;
       updatedAt: Date;
     }> = [];
@@ -35,6 +37,7 @@ export class SearchService {
           id: page.id,
           title: page.title,
           excerpt: page.excerpt,
+          coverImage: page.coverImage ?? extractFirstImage(page.content),
           url: `/wiki/pages/${page.slug}`,
           updatedAt: page.updatedAt,
         });
@@ -58,6 +61,7 @@ export class SearchService {
           id: guide.id,
           title: guide.title,
           excerpt: guide.excerpt,
+          coverImage: guide.coverImage ?? extractFirstImage(guide.content),
           url: `/guides/${guide.slug}`,
           updatedAt: guide.updatedAt,
         });
@@ -80,6 +84,7 @@ export class SearchService {
           id: thread.id,
           title: thread.title,
           excerpt: thread.content.slice(0, 160),
+          coverImage: thread.coverImage ?? extractFirstImage(thread.content),
           url: `/forum/threads/${thread.id}`,
           updatedAt: thread.updatedAt,
         });
