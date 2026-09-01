@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { loadHomeContent } from "@/lib/home-content.server";
+import { getHomeDigest } from "@/lib/digest-data";
 import { MediaSlotView } from "@/components/world/media-slot";
 import { Carousel } from "@/components/carousel";
 
@@ -21,7 +22,10 @@ function EmptySlot({ label }: { label: string }) {
 }
 
 export default async function HomePage() {
-  const content = await loadHomeContent();
+  const [content, liveDigest] = await Promise.all([
+    loadHomeContent(),
+    getHomeDigest(),
+  ]);
 
   if (!content) {
     return (
@@ -137,10 +141,13 @@ export default async function HomePage() {
         <section aria-label="最新动态与精华推荐" className="grid gap-6 md:grid-cols-2">
           {(
             [
-              ["latest", content.digest.latest],
-              ["featured", content.digest.featured],
+              // 条目优先用聚合接口 GET /home/digest；接口不可用时回退 CMS 手填
+              ["latest", content.digest.latest, liveDigest?.latest],
+              ["featured", content.digest.featured, liveDigest?.featured],
             ] as const
-          ).map(([key, col]) => (
+          ).map(([key, col, liveItems]) => {
+            const items = liveItems ?? col.items;
+            return (
             <div
               key={key}
               className="rounded-md border border-border-subtle bg-surface p-5 shadow-card"
@@ -155,8 +162,8 @@ export default async function HomePage() {
               </div>
               {(() => {
                 const slots = Array.from(
-                  { length: Math.max(6, col.items.length) },
-                  (_, i) => col.items[i] ?? null,
+                  { length: Math.max(6, items.length) },
+                  (_, i) => items[i] ?? null,
                 );
                 return (
                   <ol className="mt-2 divide-y divide-border-subtle">
@@ -217,13 +224,14 @@ export default async function HomePage() {
                   </ol>
                 );
               })()}
-              {col.items.length === 0 && (
+              {items.length === 0 && (
                 <p className="mt-3 text-center font-mono text-caption text-faint">
                   {col.emptyText || "待管理员补充。"}
                 </p>
               )}
             </div>
-          ))}
+            );
+          })}
         </section>
       )}
 

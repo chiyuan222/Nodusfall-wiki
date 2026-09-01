@@ -62,7 +62,7 @@ export interface HomeEntries {
   cards: HomeEntryCard[];
 }
 
-/** 动态/精华条目：管理员手填的精选链接，图片+标题简介由链接目标页承担，这里只列文本行 */
+/** 动态/精华条目：接口不可用时的兜底条目（正常由 GET /home/digest 聚合提供，见 lib/digest-data.ts） */
 export interface HomeDigestItem {
   date: string;
   tag: string;
