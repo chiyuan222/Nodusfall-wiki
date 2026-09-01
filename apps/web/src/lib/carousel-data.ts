@@ -109,7 +109,7 @@ export async function getForumCarousel(): Promise<CarouselSlide[]> {
   const first = boards?.data?.[0];
   if (!first) return [];
   const list = await tryFetch<ListResult<SummaryBase>>(
-    `/forum/boards/${first.slug}/threads?perPage=5`,
+    `/forum/boards/${first.slug}/threads?perPage=5&sort=lastPostAt`,
   );
   if (!list) return [];
   const items = [...list.data]
