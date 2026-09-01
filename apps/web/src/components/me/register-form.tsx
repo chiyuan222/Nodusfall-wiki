@@ -8,9 +8,9 @@ import { saveSession } from "@/lib/session";
 import { ApiError } from "@/lib/errors";
 
 /**
- * 注册表单：POST /users（契约 PR #45）。
+ * 注册表单：POST /users（契约 PR #45 / #82）。
  * - 邮箱注册：{ username, password, email, emailCode }，验证码 POST /auth/email-codes（60s 倒计时）
- * - 手机号注册：{ username, password, phone }（^1[3-9]\d{9}$，短信验证后续接入）
+ * - 手机号注册：{ username, password, phone, smsCode }，验证码 POST /auth/sms-codes（60s 倒计时、每日 5 次）
  * - 需勾选《用户协议》与《隐私政策》（链接 /legal/terms、/legal/privacy）；成功后自动登录并跳 /me
  */
 
@@ -28,6 +28,7 @@ export function RegisterForm() {
   const [email, setEmail] = useState("");
   const [emailCode, setEmailCode] = useState("");
   const [phone, setPhone] = useState("");
+  const [smsCode, setSmsCode] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [sending, setSending] = useState(false);
@@ -49,16 +50,17 @@ export function RegisterForm() {
 
   const sendCode = () => {
     if (sending || countdown > 0) return;
-    if (!EMAIL_RE.test(email.trim())) {
-      setMsg("请输入有效的邮箱地址。");
+    const isPhone = tab === "phone";
+    if (isPhone ? !PHONE_RE.test(phone.trim()) : !EMAIL_RE.test(email.trim())) {
+      setMsg(isPhone ? "请输入有效的中国大陆手机号。" : "请输入有效的邮箱地址。");
       return;
     }
     setSending(true);
     setMsg("");
-    request<void>("/auth/email-codes", {
+    request<void>(isPhone ? "/auth/sms-codes" : "/auth/email-codes", {
       method: "POST",
       auth: false,
-      body: { email: email.trim() },
+      body: isPhone ? { phone: phone.trim() } : { email: email.trim() },
     })
       .then(() => {
         setCountdown(60);
@@ -69,7 +71,7 @@ export function RegisterForm() {
           setMsg(`发送太频繁，请 ${err.retryAfter ?? 60} 秒后再试。`);
           setCountdown(Number(err.retryAfter) || 60);
         } else if (err instanceof ApiError && err.status === 400) {
-          setMsg("邮箱格式不正确。");
+          setMsg(isPhone ? "手机号格式不正确。" : "邮箱格式不正确。");
         } else {
           setMsg("发送失败，请稍后重试。");
         }
@@ -100,7 +102,10 @@ export function RegisterForm() {
     } else {
       if (!PHONE_RE.test(phone.trim()))
         return setMsg("请输入有效的中国大陆手机号。");
+      if (!/^\d{6}$/.test(smsCode.trim()))
+        return setMsg("请输入 6 位数字短信验证码。");
       body.phone = phone.trim();
+      body.smsCode = smsCode.trim();
     }
 
     setSubmitting(true);
@@ -246,27 +251,57 @@ export function RegisterForm() {
           </div>
         </>
       ) : (
-        <div>
-          <label htmlFor="reg-phone" className={labelCls}>
-            手机号
-          </label>
-          <input
-            id="reg-phone"
-            name="phone"
-            type="tel"
-            inputMode="numeric"
-            autoComplete="tel"
-            required
-            maxLength={11}
-            value={phone}
-            onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
-            placeholder="中国大陆 11 位手机号"
-            className={inputCls}
-          />
-          <p className="mt-1 text-caption text-faint">
-            短信验证将在后续接入，当前为格式校验。
-          </p>
-        </div>
+        <>
+          <div>
+            <label htmlFor="reg-phone" className={labelCls}>
+              手机号
+            </label>
+            <input
+              id="reg-phone"
+              name="phone"
+              type="tel"
+              inputMode="numeric"
+              autoComplete="tel"
+              required
+              maxLength={11}
+              value={phone}
+              onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
+              placeholder="中国大陆 11 位手机号"
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label htmlFor="reg-sms" className={labelCls}>
+              短信验证码
+            </label>
+            <div className="flex gap-2">
+              <input
+                id="reg-sms"
+                name="smsCode"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                required
+                maxLength={6}
+                value={smsCode}
+                onChange={(e) => setSmsCode(e.target.value)}
+                placeholder="6 位数字"
+                className={inputCls}
+              />
+              <button
+                type="button"
+                disabled={sending || countdown > 0}
+                onClick={sendCode}
+                className="w-32 shrink-0 rounded-md border border-amber-soft px-3 text-small text-amber transition-colors duration-fast hover:bg-amber hover:text-amber-fg disabled:opacity-40"
+              >
+                {countdown > 0
+                  ? `${countdown}s 后重发`
+                  : sending
+                    ? "发送中…"
+                    : "发送验证码"}
+              </button>
+            </div>
+          </div>
+        </>
       )}
 
       <div>
