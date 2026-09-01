@@ -9,6 +9,8 @@ import { RatingPanel } from "@/components/rating-panel";
 import { RatingStars } from "@/components/rating-stars";
 import { GuideEditEntry } from "@/components/guides/guide-edit-entry";
 import { HistoryReporter } from "@/components/history-reporter";
+import { InteractionBar } from "@/components/interaction-bar";
+import { ContentActions } from "@/components/content-actions";
 import { authorName } from "@/lib/author";
 
 async function loadGuide(slug: string): Promise<Guide> {
@@ -83,6 +85,21 @@ export default async function GuideDetailPage({
               <span aria-hidden>·</span>
               <RatingStars rating={guide.rating} count={guide.ratingCount} />
               <GuideEditEntry slug={guide.slug} authorId={guide.author.id} />
+            </div>
+            <InteractionBar
+              kind="guide"
+              target={guide.slug}
+              viewCount={guide.viewCount}
+              likeCount={guide.likeCount}
+              likedByMe={guide.likedByMe}
+              bookmarkedByMe={guide.bookmarkedByMe}
+            />
+            <div className="flex flex-wrap items-center">
+              <ContentActions
+                kind="guide"
+                target={guide.slug}
+                author={{ id: guide.author.id, displayName: authorName(guide.author) }}
+              />
             </div>
             {guide.tags.length > 0 && (
               <ul className="flex flex-wrap gap-2" aria-label="标签">

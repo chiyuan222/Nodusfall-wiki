@@ -7,6 +7,8 @@ import { Markdown, slugifyHeading } from "@/components/markdown";
 import { CommentSection } from "@/components/comment-section";
 import { WikiEditEntry } from "@/components/wiki/wiki-edit-entry";
 import { HistoryReporter } from "@/components/history-reporter";
+import { InteractionBar } from "@/components/interaction-bar";
+import { ContentActions } from "@/components/content-actions";
 import { authorName } from "@/lib/author";
 
 async function loadPage(slug: string): Promise<WikiPage> {
@@ -85,6 +87,21 @@ export default async function WikiPageDetail({
               <span aria-hidden>·</span>
               <span>v{page.version} · {page.revisionCount} 次修订</span>
               <WikiEditEntry variant="edit" slug={page.slug} />
+            </div>
+            <InteractionBar
+              kind="wiki"
+              target={page.slug}
+              viewCount={page.viewCount}
+              likeCount={page.likeCount}
+              likedByMe={page.likedByMe}
+              bookmarkedByMe={page.bookmarkedByMe}
+            />
+            <div className="flex flex-wrap items-center">
+              <ContentActions
+                kind="wiki"
+                target={page.slug}
+                author={{ id: page.author.id, displayName: authorName(page.author) }}
+              />
             </div>
             {page.tags.length > 0 && (
               <ul className="flex flex-wrap gap-2" aria-label="标签">

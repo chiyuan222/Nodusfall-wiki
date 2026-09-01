@@ -4,9 +4,12 @@ import { notFound } from "next/navigation";
 import { forumApi, type ForumThread } from "@/lib/api";
 import { ApiError } from "@/lib/errors";
 import { Markdown } from "@/components/markdown";
-import { AdminThreadControls, BookmarkButton, PostSection } from "@/components/forum/thread-interactions";
+import { AdminThreadControls, PostSection } from "@/components/forum/thread-interactions";
 import { HistoryReporter } from "@/components/history-reporter";
+import { InteractionBar } from "@/components/interaction-bar";
+import { ContentActions } from "@/components/content-actions";
 import { authorName } from "@/lib/author";
+import { UserGroupBadge, UserStatusMark } from "@/components/user-marks";
 
 export const dynamic = "force-dynamic";
 
@@ -79,22 +82,38 @@ export default async function ThreadPage({
           </div>
           <h1 className="font-serif text-display font-semibold">{thread.title}</h1>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-caption text-faint">
-            <span>{authorName(thread.author)}</span>
+            <span className="flex items-center gap-2">
+              {authorName(thread.author)}
+              <UserGroupBadge group={thread.author.group} level={thread.author.level} />
+              <UserStatusMark status={thread.author.status} />
+            </span>
             <span aria-hidden>·</span>
             <time dateTime={thread.createdAt}>
               发布于 {new Date(thread.createdAt).toLocaleString("zh-CN", { dateStyle: "medium", timeStyle: "short" })}
             </time>
             <span aria-hidden>·</span>
-            <span>回复 {thread.replyCount} · 喜欢 {thread.likeCount}</span>
+            <span>回复 {thread.replyCount}</span>
             <span className="grow" />
             <AdminThreadControls
               threadId={thread.id}
               initialPinned={thread.pinned}
               initialLocked={thread.locked}
             />
-            <BookmarkButton
-              threadId={thread.id}
-              initialBookmarked={thread.bookmarkedByMe}
+          </div>
+          <InteractionBar
+            kind="thread"
+            target={thread.id}
+            viewCount={thread.viewCount}
+            likeCount={thread.likeCount}
+            likedByMe={thread.likedByMe}
+            bookmarkedByMe={thread.bookmarkedByMe}
+          />
+          <div className="flex flex-wrap items-center">
+            <ContentActions
+              kind="thread"
+              target={thread.id}
+              boardSlug={thread.boardSlug}
+              author={{ id: thread.author.id, displayName: authorName(thread.author) }}
             />
           </div>
         </header>
