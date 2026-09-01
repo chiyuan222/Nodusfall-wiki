@@ -176,6 +176,23 @@ export interface paths {
         patch: operations["updateCurrentUser"];
         trace?: never;
     };
+    "/users/me/phone": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 绑定或换绑手机号（无手机号=绑定，有手机号=换绑；成功后认证组 verified） */
+        post: operations["bindPhone"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/users/me/threads": {
         parameters: {
             query?: never;
@@ -385,6 +402,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/audit-logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 管理审计日志（仅站长可查看；记录管理操作的用户/时间/动作） */
+        get: operations["listAuditLogs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/users": {
         parameters: {
             query?: never;
@@ -465,6 +499,23 @@ export interface paths {
         put?: never;
         /** 发送邮箱注册验证码（限流：同一邮箱 60s 一次、每日 5 次） */
         post: operations["sendEmailCode"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/sms-codes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 发送手机号验证码（限流：同一手机号 60s 一次、每日 5 次） */
+        post: operations["sendSmsCode"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1235,6 +1286,27 @@ export interface components {
                 views: number;
             }[];
         };
+        AuditLog: {
+            /** Format: uuid */
+            id: string;
+            /** @description 动作类型：site.sections.update / site.floating.update / cms.page.update / announcement.create / user.update / wiki.category.create|update|delete / forum.board.create|update|delete / video.create|update|delete / wiki.page.update|delete / guide.update|delete / forum.thread.update|delete / forum.post.update|delete / comment.delete */
+            action: string;
+            /** @description 目标对象类型（如 wikiCategory / forumBoard / user） */
+            targetType?: string | null;
+            /** @description 目标对象 id 或 slug */
+            targetId?: string | null;
+            /** @description 人类可读的动作描述 */
+            detail?: string | null;
+            /** @description 操作者用户名快照（账号注销后仍保留） */
+            actorName: string;
+            actor?: components["schemas"]["UserSummary"] | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        AuditLogList: {
+            data: components["schemas"]["AuditLog"][];
+            pagination: components["schemas"]["Pagination"];
+        };
         AuthSession: {
             accessToken: string;
             refreshToken: string;
@@ -1982,8 +2054,10 @@ export interface components {
                     email?: string;
                     /** @description 邮箱注册验证码（POST /auth/email-codes 获取，6 位数字，10 分钟内有效） */
                     emailCode?: string;
-                    /** @description 中国大陆手机号注册（暂仅格式校验，短信验证接入后启用；与 email 二选一） */
+                    /** @description 中国大陆手机号注册（需同时传 smsCode 短信验证码；与 email 二选一） */
                     phone?: string;
+                    /** @description 手机号注册验证码（POST /auth/sms-codes 获取，6 位数字，10 分钟内有效） */
+                    smsCode?: string;
                 };
             };
         };
@@ -2520,6 +2594,46 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
         };
     };
+    bindPhone: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description 新手机号 */
+                    phone: string;
+                    /** @description 短信验证码（POST /auth/sms-codes 获取，6 位数字，10 分钟内有效） */
+                    smsCode: string;
+                };
+            };
+        };
+        responses: {
+            /** @description 绑定成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["User"];
+                    };
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthorized"];
+            /** @description 手机号已被其他账号绑定 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     listMyThreads: {
         parameters: {
             query?: {
@@ -2906,6 +3020,37 @@ export interface operations {
             403: components["responses"]["Forbidden"];
         };
     };
+    listAuditLogs: {
+        parameters: {
+            query?: {
+                page?: number;
+                perPage?: number;
+                /** @description 按动作类型筛选（如 user.update / wiki.category.create） */
+                action?: string;
+                /** @description 按操作者筛选 */
+                actorId?: string;
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 审计日志列表 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditLogList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
     listAdminUsers: {
         parameters: {
             query?: {
@@ -3043,6 +3188,33 @@ export interface operations {
                 "application/json": {
                     /** Format: email */
                     email: string;
+                };
+            };
+        };
+        responses: {
+            /** @description 验证码已发送 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["ValidationError"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    sendSmsCode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description 中国大陆手机号 */
+                    phone: string;
                 };
             };
         };

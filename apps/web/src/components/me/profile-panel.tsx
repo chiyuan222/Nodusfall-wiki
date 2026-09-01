@@ -18,6 +18,7 @@ import { logout } from "@/lib/api-client";
 import { isAdminRole, hasPermission, type MeUser } from "@/lib/me";
 import { UserGroupBadge, SiteIdMark } from "@/components/user-marks";
 import { CheckinPanel } from "@/components/me/checkin-panel";
+import { PhoneBind } from "@/components/me/phone-bind";
 
 type Me = MeUser;
 
@@ -193,6 +194,15 @@ export function ProfilePanel() {
               {me.phoneMasked && <>手机 {me.phoneMasked}</>}
             </p>
           )}
+          <p className="mt-0.5">
+            <PhoneBind
+              phoneMasked={me.phoneMasked}
+              onBound={(u) => {
+                setMe(u);
+                setMsg("手机号绑定成功，已完成手机认证，可评论/发帖。");
+              }}
+            />
+          </p>
         </div>
         <span className="grow" />
         <button
@@ -277,6 +287,14 @@ export function ProfilePanel() {
                 >
                   站点统计
                 </Link>
+                {me.role?.toLowerCase() === "owner" && (
+                  <Link
+                    href="/admin/audit-logs"
+                    className="rounded-md border border-amber-soft px-4 py-2 text-small text-amber transition-colors duration-fast hover:bg-amber hover:text-amber-fg"
+                  >
+                    操作日志（仅站长）
+                  </Link>
+                )}
               </>
             )}
             {(isAdminRole(me.role) || hasPermission(me, "manage_users")) && (
