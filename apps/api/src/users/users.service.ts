@@ -17,6 +17,7 @@ export type PublicUser = Omit<User, 'passwordHash'>;
 
 export interface UserSummary {
   id: string;
+  siteId: number;
   username: string;
   displayName: string;
   avatarUrl: string | null;
@@ -44,6 +45,7 @@ export interface UserResponse extends UserSummary {
 export function toUserSummary(user: User): UserSummary {
   return {
     id: user.id,
+    siteId: user.siteId,
     username: user.username,
     displayName: user.displayName ?? user.username,
     avatarUrl: user.avatarUrl,

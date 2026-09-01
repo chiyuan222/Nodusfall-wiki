@@ -42,6 +42,7 @@ enum CommentTargetType {
 
 model User {
   id           String   @id @default(uuid())
+  siteId       Int      @unique @default(autoincrement())
   email        String?  @unique
   phone        String?  @unique
   username     String   @unique

@@ -28,15 +28,19 @@ async function main(): Promise<void> {
   const ownerHash = await bcrypt.hash('Lxy529586517', 12);
   await prisma.user.upsert({
     where: { username: 'chiyuan222' },
-    update: { role: UserRole.ADMIN, passwordHash: ownerHash },
+    update: { role: UserRole.OWNER, passwordHash: ownerHash },
     create: {
       email: 'chiyuan222@nodusfall.local',
       username: 'chiyuan222',
       displayName: '站长',
       passwordHash: ownerHash,
-      role: UserRole.ADMIN,
+      role: UserRole.OWNER,
+      siteId: 1000000,
     },
   });
+  await prisma.$executeRawUnsafe(
+    `SELECT setval(pg_get_serial_sequence('"User"', 'siteId'), GREATEST((SELECT COALESCE(MAX("siteId"), 999999) FROM "User"), 999999))`,
+  );
 
   await prisma.wikiCategory.upsert({
     where: { slug: 'lore' },

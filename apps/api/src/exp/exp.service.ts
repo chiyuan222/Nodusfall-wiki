@@ -26,6 +26,7 @@ export const DAILY_LIMITS: Record<string, number> = {
 
 export const DAILY_TOTAL_LIMIT = 100;
 export const LEVEL_MAX = 10;
+export const LEVEL_MAX_EXP = (100 * LEVEL_MAX * (LEVEL_MAX - 1)) / 2;
 
 export function levelFromExp(exp: number): number {
   let level = 1;
@@ -92,7 +93,7 @@ export class ExpService {
       today: true,
       streak,
       total,
-      gainedExp: amount,
+      gainedExp: result.gained,
       exp: result.exp,
       level: result.level,
       nextLevelExp: nextLevelExp(result.level),
@@ -140,20 +141,25 @@ export class ExpService {
   }
 
   private async applyExp(userId: string, amount: number, reason: string, refId?: string) {
-    await this.prisma.expLog.create({
-      data: { userId, amount, reason, refId },
-    });
     const cur = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { exp: true },
     });
-    const newExp = (cur?.exp ?? 0) + amount;
+    const curExp = cur?.exp ?? 0;
+    if (curExp >= LEVEL_MAX_EXP) {
+      return { exp: curExp, level: LEVEL_MAX, gained: 0 };
+    }
+    const gained = Math.min(amount, LEVEL_MAX_EXP - curExp);
+    await this.prisma.expLog.create({
+      data: { userId, amount: gained, reason, refId },
+    });
+    const newExp = curExp + gained;
     const user = await this.prisma.user.update({
       where: { id: userId },
       data: { exp: newExp, level: levelFromExp(newExp) },
       select: { exp: true, level: true },
     });
-    return { exp: user.exp, level: levelFromExp(user.exp) };
+    return { exp: user.exp, level: levelFromExp(user.exp), gained };
   }
 
   private isYesterday(date?: Date | null): boolean {
