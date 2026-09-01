@@ -2813,6 +2813,16 @@ components:
         topContents:
           type: array
           maxItems: 10
+          items:
+            type: object
+            required: [kind, slug, title, views]
+            properties:
+              kind:
+                type: string
+                enum: [wikiPage, guide, forumThread]
+              slug: { type: string }
+              title: { type: string }
+              views: { type: integer }
 
     AuditLog:
       type: object
@@ -2847,16 +2857,6 @@ components:
             $ref: "#/components/schemas/AuditLog"
         pagination:
           $ref: "#/components/schemas/Pagination"
-          items:
-            type: object
-            required: [kind, slug, title, views]
-            properties:
-              kind:
-                type: string
-                enum: [wikiPage, guide, forumThread]
-              slug: { type: string }
-              title: { type: string }
-              views: { type: integer }
 
     AuthSession:
       type: object
