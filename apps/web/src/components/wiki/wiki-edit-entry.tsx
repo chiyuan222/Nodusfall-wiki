@@ -1,20 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { request } from "@/lib/api-client";
-import { getAccessToken } from "@/lib/session";
 
 /**
- * Wiki 编辑入口（客户端）：仅对 admin / editor 角色渲染链接，
+ * Wiki 编辑入口（客户端，契约 PR #51）。
+ * - 编辑：admin / editor / owner 角色
+ * - 新建：上述角色，或被站长授予 wikiCreateGranted 的成员
  * 其余访客不渲染任何内容（避免暴露无权限操作）。
  */
 
-interface Me {
-  role?: string;
-}
+import { useMe } from "@/lib/me";
 
-const EDITOR_ROLES = new Set(["admin", "editor"]);
+const EDITOR_ROLES = new Set(["admin", "editor", "owner"]);
 
 export function WikiEditEntry({
   variant,
@@ -23,17 +20,15 @@ export function WikiEditEntry({
   variant: "new" | "edit";
   slug?: string;
 }) {
-  const [allowed, setAllowed] = useState(false);
+  const { me, pending } = useMe();
 
-  useEffect(() => {
-    if (!getAccessToken()) return;
-    request<{ data: Me }>("/users/me")
-      .then((r) => {
-        const role = r.data.role?.toLowerCase() ?? "";
-        setAllowed(EDITOR_ROLES.has(role));
-      })
-      .catch(() => setAllowed(false));
-  }, []);
+  if (pending || !me) return null;
+
+  const role = me.role?.toLowerCase() ?? "";
+  const allowed =
+    variant === "edit"
+      ? EDITOR_ROLES.has(role)
+      : EDITOR_ROLES.has(role) || me.wikiCreateGranted === true;
 
   if (!allowed) return null;
 

@@ -278,6 +278,32 @@ function GameplaySection({ content }: { content: WorldPageContent }) {
   );
 }
 
+/* ---------- 官方渠道图标（契约 iconKey：official / bilibili / douyin） ---------- */
+const OFFICIAL_ICON_GUESS: [RegExp, string][] = [
+  [/哔哩|bilibili/i, "bilibili"],
+  [/抖音|douyin/i, "douyin"],
+];
+const OFFICIAL_ICON_LABEL: Record<string, string> = {
+  official: "官",
+  bilibili: "B",
+  douyin: "抖",
+};
+
+function OfficialIcon({ iconKey, label }: { iconKey?: string; label: string }) {
+  const key =
+    iconKey ??
+    OFFICIAL_ICON_GUESS.find(([re]) => re.test(label))?.[1] ??
+    "official";
+  return (
+    <span
+      aria-hidden
+      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-amber-soft/60 bg-raised font-serif text-body font-semibold text-amber"
+    >
+      {OFFICIAL_ICON_LABEL[key] ?? OFFICIAL_ICON_LABEL.official}
+    </span>
+  );
+}
+
 /* ---------- 官方信息：主视觉 + 链接卡（含待补充态） ---------- */
 function OfficialSection({ content }: { content: WorldPageContent }) {
   const { official } = content;
@@ -289,17 +315,20 @@ function OfficialSection({ content }: { content: WorldPageContent }) {
           const hasUrl = link.url.trim().length > 0;
           const inner = (
             <>
-              <span>
-                <span className="block text-body font-medium text-primary group-hover:text-amber">
-                  {link.label || "（待填写名称）"}
-                </span>
-                <span className="mt-1 block text-small text-faint">
-                  {link.desc || "待管理员补充说明"}
+              <span className="flex min-w-0 items-center gap-4">
+                <OfficialIcon iconKey={link.iconKey} label={link.label} />
+                <span className="min-w-0">
+                  <span className="block text-body font-medium text-primary group-hover:text-amber">
+                    {link.label || "（待填写名称）"}
+                  </span>
+                  <span className="mt-1 block text-small text-faint">
+                    {link.desc || "待管理员补充说明"}
+                  </span>
                 </span>
               </span>
               <span
                 aria-hidden
-                className="font-mono text-h2 text-faint transition-colors duration-fast group-hover:text-amber"
+                className="shrink-0 font-mono text-h2 text-faint transition-colors duration-fast group-hover:text-amber"
               >
                 {hasUrl ? "↗" : "—"}
               </span>

@@ -150,7 +150,7 @@ export default async function BoardThreadsPage({
                     </span>
                   )}
                   <span className="mt-2 block font-mono text-caption text-faint">
-                    {authorName(t.author)} · 回复 {t.replyCount} · 喜欢 {t.likeCount} ·{" "}
+                    {authorName(t.author)} · 回复 {t.replyCount} · 喜欢 {t.likeCount} · 浏览 {t.viewCount} ·{" "}
                     {t.lastPostAt.slice(0, 10)} 更新
                   </span>
                 </span>

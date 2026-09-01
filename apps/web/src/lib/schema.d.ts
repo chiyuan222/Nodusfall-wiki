@@ -195,6 +195,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/stats/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 站长总览统计（用户数/浏览量/日活月活/在线人数/内容热度） */
+        get: operations["getAdminStatsOverview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 用户列表（搜索/筛选/分页，需 manage_users 开关） */
+        get: operations["listAdminUsers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 用户详情（需 manage_users 开关） */
+        get: operations["getAdminUser"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** 修改用户（组/等级/封禁/解禁/权限开关/角色；role 与 permissions 仅 owner 可改） */
+        patch: operations["updateAdminUser"];
+        trace?: never;
+    };
     "/auth/sessions": {
         parameters: {
             query?: never;
@@ -370,6 +422,42 @@ export interface paths {
         patch: operations["updateWikiPage"];
         trace?: never;
     };
+    "/wiki/pages/{slug}/like": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** 点赞 Wiki 页面（幂等） */
+        put: operations["likeWikiPage"];
+        post?: never;
+        /** 取消点赞 */
+        delete: operations["unlikeWikiPage"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wiki/pages/{slug}/bookmark": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** 收藏 Wiki 页面（幂等） */
+        put: operations["bookmarkWikiPage"];
+        post?: never;
+        /** 取消收藏 */
+        delete: operations["unbookmarkWikiPage"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/wiki/pages/{slug}/revisions": {
         parameters: {
             query?: never;
@@ -439,6 +527,42 @@ export interface paths {
         head?: never;
         /** 更新攻略 */
         patch: operations["updateGuide"];
+        trace?: never;
+    };
+    "/guides/{slug}/like": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** 点赞攻略（幂等） */
+        put: operations["likeGuide"];
+        post?: never;
+        /** 取消点赞 */
+        delete: operations["unlikeGuide"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/guides/{slug}/bookmark": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** 收藏攻略（幂等） */
+        put: operations["bookmarkGuide"];
+        post?: never;
+        /** 取消收藏 */
+        delete: operations["unbookmarkGuide"];
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/guides/{slug}/ratings": {
@@ -580,6 +704,24 @@ export interface paths {
         post?: never;
         /** 取消收藏 */
         delete: operations["unbookmarkThread"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/forum/threads/{threadId}/like": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** 点赞主题（幂等） */
+        put: operations["likeThread"];
+        post?: never;
+        /** 取消点赞 */
+        delete: operations["unlikeThread"];
         options?: never;
         head?: never;
         patch?: never;
@@ -768,15 +910,25 @@ export interface components {
             displayName: string;
             /** Format: uri */
             avatarUrl?: string;
-            /** @enum {string} */
-            role: "guest" | "member" | "editor" | "moderator" | "admin";
+            /**
+             * @description owner 为最高权限管理员（站长），admin/moderator 权限由 permissions 开关控制
+             * @enum {string}
+             */
+            role: "guest" | "member" | "editor" | "moderator" | "admin" | "owner";
             /** Format: date-time */
             createdAt: string;
             /**
-             * @description deleted 表示账号已注销（内容匿名化保留）
+             * @description muted 禁言（可浏览不可发言）；banned 黑名单（禁止登录访问）；deleted 已注销
              * @enum {string}
              */
-            status: "active" | "deleted";
+            status: "active" | "muted" | "banned" | "deleted";
+            /**
+             * @description normal 仅阅览；verified 认证后可评论/发帖；premium 付费组（预留）
+             * @enum {string}
+             */
+            group: "normal" | "verified" | "premium";
+            /** @description 通用用户等级 1-10 */
+            level: number;
         };
         User: components["schemas"]["UserSummary"] & {
             bio?: string;
@@ -784,6 +936,54 @@ export interface components {
             updatedAt?: string;
             emailMasked?: string;
             phoneMasked?: string | null;
+            /** @description 管理员权限开关（仅 owner 可配置，默认空） */
+            permissions?: ("manage_users" | "manage_content" | "manage_forum" | "manage_cms" | "manage_deletion" | "grant_wiki_create")[];
+            /** @description 是否被站长授予 Wiki 词条创建资格 */
+            wikiCreateGranted?: boolean;
+            banReason?: string | null;
+            /** Format: date-time */
+            banUntil?: string | null;
+            /** Format: date-time */
+            mutedUntil?: string | null;
+        };
+        AdminUser: components["schemas"]["User"] & {
+            /** Format: email */
+            email: string;
+            phone: string | null;
+            /** Format: date-time */
+            lastActiveAt: string | null;
+        };
+        AdminUserList: {
+            data: components["schemas"]["AdminUser"][];
+            pagination: components["schemas"]["Pagination"];
+        };
+        AdminStatsDay: {
+            /** Format: date */
+            date: string;
+            pv: number;
+            uv: number;
+            dau: number;
+        };
+        AdminStatsOverview: {
+            users: {
+                total: number;
+                todayNew: number;
+            };
+            today: components["schemas"]["AdminStatsDay"];
+            yesterday: components["schemas"]["AdminStatsDay"];
+            weekly: components["schemas"]["AdminStatsDay"][];
+            monthly: {
+                mau: number;
+            };
+            /** @description 最近 15 分钟活跃登录用户数 */
+            online: number;
+            topContents: {
+                /** @enum {string} */
+                kind: "wikiPage" | "guide" | "forumThread";
+                slug: string;
+                title: string;
+                views: number;
+            }[];
         };
         AuthSession: {
             accessToken: string;
@@ -822,6 +1022,10 @@ export interface components {
             author: components["schemas"]["UserSummary"];
             /** Format: date-time */
             updatedAt: string;
+            viewCount: number;
+            likeCount: number;
+            likedByMe: boolean;
+            bookmarkedByMe: boolean;
         };
         WikiPage: components["schemas"]["WikiPageSummary"] & {
             content: string;
@@ -869,6 +1073,10 @@ export interface components {
             ratingCount?: number;
             /** Format: date-time */
             updatedAt: string;
+            viewCount: number;
+            likeCount: number;
+            likedByMe: boolean;
+            bookmarkedByMe: boolean;
         };
         Guide: components["schemas"]["GuideSummary"] & {
             content: string;
@@ -927,7 +1135,9 @@ export interface components {
             locked: boolean;
             replyCount: number;
             likeCount: number;
+            likedByMe: boolean;
             bookmarkedByMe: boolean;
+            viewCount: number;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -1075,7 +1285,14 @@ export interface components {
             kicker: string;
             title: string;
             lead: string;
-            media: components["schemas"]["MediaSlot"];
+            slides: {
+                media: components["schemas"]["MediaSlot"];
+                title?: string;
+                /** @enum {string} */
+                linkKind?: "wiki" | "guide" | "forum" | "home" | "world" | "external";
+                linkTarget?: string;
+            }[];
+            media?: components["schemas"]["MediaSlot"];
             ctas: components["schemas"]["Cta"][];
         };
         HomeNotice: {
@@ -1106,6 +1323,12 @@ export interface components {
         HomeDigestColumn: {
             title: string;
             emptyText: string;
+            /**
+             * @description auto 由后端 /home/digest 聚合；manual 使用下方手填 items
+             * @default auto
+             * @enum {string}
+             */
+            mode: "auto" | "manual";
             items: components["schemas"]["HomeDigestItem"][];
         };
         HomeDigest: {
@@ -1173,6 +1396,8 @@ export interface components {
             label: string;
             url: string;
             desc: string;
+            /** @description 渠道图标 key（official / bilibili / douyin 等） */
+            iconKey?: string;
         };
         WorldOfficial: {
             hidden?: boolean;
@@ -1472,6 +1697,29 @@ export interface components {
                 };
             };
         };
+        AdminUpdateUserRequest: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    group?: "normal" | "verified" | "premium";
+                    level?: number;
+                    /** @enum {string} */
+                    status?: "active" | "muted" | "banned";
+                    banReason?: string;
+                    /** Format: date-time */
+                    banUntil?: string | null;
+                    /** Format: date-time */
+                    mutedUntil?: string | null;
+                    wikiCreateGranted?: boolean;
+                    permissions?: ("manage_users" | "manage_content" | "manage_forum" | "manage_cms" | "manage_deletion" | "grant_wiki_create")[];
+                    /**
+                     * @description 仅 owner 可修改
+                     * @enum {string}
+                     */
+                    role?: "member" | "editor" | "moderator" | "admin";
+                };
+            };
+        };
         CreateWikiPageRequest: {
             content: {
                 "application/json": {
@@ -1502,6 +1750,9 @@ export interface components {
                     /** @enum {string} */
                     status?: "draft" | "published" | "archived";
                     changelog?: string;
+                    featured?: boolean;
+                    /** Format: date-time */
+                    featuredAt?: string | null;
                 };
             };
         };
@@ -1944,6 +2195,110 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    getAdminStatsOverview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 统计总览 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminStatsOverview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listAdminUsers: {
+        parameters: {
+            query?: {
+                page?: components["parameters"]["Page"];
+                perPage?: components["parameters"]["PerPage"];
+                /** @description 搜索用户名/邮箱/手机号 */
+                q?: string;
+                group?: "normal" | "verified" | "premium";
+                role?: "guest" | "member" | "editor" | "moderator" | "admin" | "owner";
+                status?: "active" | "muted" | "banned" | "deleted";
+                level?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 用户列表 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUserList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getAdminUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 用户详情 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUser"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateAdminUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["AdminUpdateUserRequest"];
+        responses: {
+            /** @description 更新后的用户 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUser"];
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     createSession: {
         parameters: {
             query?: never;
@@ -2309,6 +2664,94 @@ export interface operations {
             409: components["responses"]["Conflict"];
         };
     };
+    likeWikiPage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 已点赞 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    unlikeWikiPage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 已取消 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    bookmarkWikiPage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 已收藏 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    unbookmarkWikiPage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 已取消 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     listWikiPageRevisions: {
         parameters: {
             query?: {
@@ -2478,6 +2921,94 @@ export interface operations {
             400: components["responses"]["ValidationError"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    likeGuide: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 已点赞 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    unlikeGuide: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 已取消 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    bookmarkGuide: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 已收藏 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    unbookmarkGuide: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 已取消 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
         };
     };
@@ -2840,6 +3371,50 @@ export interface operations {
         };
     };
     unbookmarkThread: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                threadId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 已取消 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    likeThread: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                threadId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 已点赞 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    unlikeThread: {
         parameters: {
             query?: never;
             header?: never;

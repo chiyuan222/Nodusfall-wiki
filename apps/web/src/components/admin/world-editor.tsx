@@ -511,7 +511,26 @@ function OfficialForm({ draft, mutate, listOp }: FormProps) {
             <div className="grid gap-3 md:grid-cols-3">
               <Field label="名称" value={link.label} onChange={(v) => mutate((d) => void (d.official.links[i]!.label = v))} />
               <Field label="URL（官方抖音等待补充）" value={link.url} onChange={(v) => mutate((d) => void (d.official.links[i]!.url = v))} />
-              <Field label="说明" value={link.desc} onChange={(v) => mutate((d) => void (d.official.links[i]!.desc = v))} />
+              <label className="block">
+                <span className="mb-1 block font-mono text-caption text-faint">渠道图标（契约 iconKey）</span>
+                <select
+                  value={link.iconKey ?? ""}
+                  onChange={(e) => mutate((d) => {
+                    const v = e.target.value;
+                    if (v) d.official.links[i]!.iconKey = v;
+                    else delete d.official.links[i]!.iconKey;
+                  })}
+                  className="w-full rounded-md border border-border-subtle bg-raised px-3 py-2 text-small text-primary"
+                >
+                  <option value="">自动（按名称猜测）</option>
+                  <option value="official">official 官网</option>
+                  <option value="bilibili">bilibili 哔哩哔哩</option>
+                  <option value="douyin">douyin 抖音</option>
+                </select>
+              </label>
+              <div className="md:col-span-3">
+                <Field label="说明" value={link.desc} onChange={(v) => mutate((d) => void (d.official.links[i]!.desc = v))} />
+              </div>
             </div>
           </ItemCard>
         ))}

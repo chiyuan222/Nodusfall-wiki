@@ -26,6 +26,8 @@ const user = (id: string, name: string): S<"UserSummary"> => ({
   displayName: name,
   role: "member",
   status: "active",
+  group: "verified",
+  level: 3,
   createdAt: now,
 });
 
@@ -64,6 +66,10 @@ export const mockWikiPages: WikiPageSummary[] = [
     status: "published",
     author: mockUsers.archivist,
     updatedAt: now,
+    viewCount: 128,
+    likeCount: 12,
+    likedByMe: false,
+    bookmarkedByMe: false,
   },
   {
     id: "w-02",
@@ -76,6 +82,10 @@ export const mockWikiPages: WikiPageSummary[] = [
     status: "published",
     author: mockUsers.weaver,
     updatedAt: now,
+    viewCount: 56,
+    likeCount: 4,
+    likedByMe: false,
+    bookmarkedByMe: true,
   },
   {
     id: "w-03",
@@ -88,6 +98,10 @@ export const mockWikiPages: WikiPageSummary[] = [
     status: "published",
     author: mockUsers.archivist,
     updatedAt: now,
+    viewCount: 3,
+    likeCount: 0,
+    likedByMe: false,
+    bookmarkedByMe: false,
   },
 ];
 
@@ -106,6 +120,10 @@ export const mockGuides: GuideSummary[] = [
     rating: 4.8,
     ratingCount: 127,
     updatedAt: now,
+    viewCount: 1024,
+    likeCount: 88,
+    likedByMe: true,
+    bookmarkedByMe: false,
   },
   {
     id: "g-02",
@@ -118,6 +136,10 @@ export const mockGuides: GuideSummary[] = [
     author: mockUsers.archivist,
     rating: 0,
     updatedAt: now,
+    viewCount: 7,
+    likeCount: 0,
+    likedByMe: false,
+    bookmarkedByMe: false,
   },
 ];
 
@@ -142,6 +164,8 @@ export const mockThreads: ForumThreadSummary[] = [
     locked: true,
     replyCount: 34,
     likeCount: 56,
+    likedByMe: false,
+    viewCount: 320,
     createdAt: now,
     updatedAt: now,
     lastPostAt: now,
@@ -158,6 +182,8 @@ export const mockThreads: ForumThreadSummary[] = [
     locked: false,
     replyCount: 0,
     likeCount: 0,
+    likedByMe: false,
+    viewCount: 12,
     createdAt: now,
     updatedAt: now,
     lastPostAt: now,
@@ -174,6 +200,8 @@ export const mockThreads: ForumThreadSummary[] = [
     locked: false,
     replyCount: 7,
     likeCount: 3,
+    likedByMe: true,
+    viewCount: 45,
     createdAt: now,
     updatedAt: now,
     lastPostAt: now,

@@ -136,7 +136,7 @@ export default async function WikiIndexPage() {
                           </span>
                         ))}
                         <span className="ml-auto font-mono">
-                          {authorName(p.author)} · {formatDate(p.updatedAt)}
+                          {authorName(p.author)} · {formatDate(p.updatedAt)} · 👍 {p.likeCount} · ◉ {p.viewCount}
                         </span>
                       </span>
                     </span>

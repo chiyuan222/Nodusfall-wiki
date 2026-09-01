@@ -75,7 +75,13 @@ export interface WorldOfficial {
   title: string;
   /** 板块主视觉：幻灯片式大图，管理员可替换 */
   media: MediaSlot;
-  links: { label: string; url: string; desc: string }[];
+  links: {
+    label: string;
+    url: string;
+    desc: string;
+    /** 渠道图标 key（契约 PR #50）：official / bilibili / douyin，缺省按 label 猜测 */
+    iconKey?: string;
+  }[];
 }
 
 /** 官方信息转载条目：本站转载自官方渠道的内容存档 */

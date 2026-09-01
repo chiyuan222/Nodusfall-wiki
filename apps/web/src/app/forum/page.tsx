@@ -140,6 +140,10 @@ export default async function ForumIndexPage() {
                         <span className="block text-small text-primary">{t.likeCount}</span>
                         喜欢
                       </span>
+                      <span>
+                        <span className="block text-small text-primary">{t.viewCount}</span>
+                        浏览
+                      </span>
                     </span>
                   </Link>
                 </li>

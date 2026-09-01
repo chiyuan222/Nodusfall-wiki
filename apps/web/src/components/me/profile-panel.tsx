@@ -12,22 +12,16 @@ import { logout } from "@/lib/api-client";
  * 用户中心资料面板（客户端组件）。
  * 读：GET /users/me；写：PATCH /users/me（displayName / avatarUrl / bio）。
  * 头像走 POST /uploads 直传后回填 url。
+ * 契约 PR #51：展示用户组/等级；管理入口按 role + permissions 开关显示。
  */
 
-interface Me {
-  id: string;
-  username: string;
-  displayName: string;
-  avatarUrl?: string;
-  bio?: string;
-  role?: string;
-  createdAt?: string;
-  /** 联系方式脱敏（仅本人可见，契约 PR #45） */
-  emailMasked?: string;
-  phoneMasked?: string | null;
-}
+import { isAdminRole, hasPermission, type MeUser } from "@/lib/me";
+import { UserGroupBadge } from "@/components/user-marks";
+
+type Me = MeUser;
 
 const ROLE_LABEL: Record<string, string> = {
+  owner: "站长",
   admin: "管理员",
   moderator: "版主",
   editor: "编辑",
@@ -177,6 +171,7 @@ export function ProfilePanel() {
                 {ROLE_LABEL[me.role.toLowerCase()] ?? me.role}
               </span>
             )}
+            <UserGroupBadge group={me.group} level={me.level} />
           </p>
           <p className="mt-0.5 font-mono text-caption text-faint">
             @{me.username}
@@ -202,49 +197,67 @@ export function ProfilePanel() {
         </button>
       </div>
 
-      {/* 管理入口（仅管理员可见） */}
-      {me.role?.toLowerCase() === "admin" && (
+      {/* 管理入口（管理员/站长；用户与统计按 manage_users 开关额外显示） */}
+      {(isAdminRole(me.role) || hasPermission(me, "manage_users")) && (
         <div className="mt-6 rounded-md border border-amber-soft bg-raised p-4">
           <p className="font-mono text-caption uppercase tracking-[0.3em] text-amber">
             内容管理
           </p>
           <div className="mt-3 flex flex-wrap gap-3">
-            <Link
-              href="/admin/home"
-              className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary transition-colors duration-fast hover:border-amber-soft hover:text-amber"
-            >
-              首页内容管理
-            </Link>
-            <Link
-              href="/admin/world"
-              className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary transition-colors duration-fast hover:border-amber-soft hover:text-amber"
-            >
-              总览页内容管理
-            </Link>
-            <Link
-              href="/wiki/new"
-              className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary transition-colors duration-fast hover:border-amber-soft hover:text-amber"
-            >
-              新建 Wiki 条目
-            </Link>
-            <Link
-              href="/admin/wiki"
-              className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary transition-colors duration-fast hover:border-amber-soft hover:text-amber"
-            >
-              Wiki 内容管理
-            </Link>
-            <Link
-              href="/admin/guides"
-              className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary transition-colors duration-fast hover:border-amber-soft hover:text-amber"
-            >
-              攻略内容管理
-            </Link>
-            <Link
-              href="/admin/taxonomy"
-              className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary transition-colors duration-fast hover:border-amber-soft hover:text-amber"
-            >
-              板块与分类管理
-            </Link>
+            {isAdminRole(me.role) && (
+              <>
+                <Link
+                  href="/admin/home"
+                  className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary transition-colors duration-fast hover:border-amber-soft hover:text-amber"
+                >
+                  首页内容管理
+                </Link>
+                <Link
+                  href="/admin/world"
+                  className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary transition-colors duration-fast hover:border-amber-soft hover:text-amber"
+                >
+                  总览页内容管理
+                </Link>
+                <Link
+                  href="/wiki/new"
+                  className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary transition-colors duration-fast hover:border-amber-soft hover:text-amber"
+                >
+                  新建 Wiki 条目
+                </Link>
+                <Link
+                  href="/admin/wiki"
+                  className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary transition-colors duration-fast hover:border-amber-soft hover:text-amber"
+                >
+                  Wiki 内容管理
+                </Link>
+                <Link
+                  href="/admin/guides"
+                  className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary transition-colors duration-fast hover:border-amber-soft hover:text-amber"
+                >
+                  攻略内容管理
+                </Link>
+                <Link
+                  href="/admin/taxonomy"
+                  className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary transition-colors duration-fast hover:border-amber-soft hover:text-amber"
+                >
+                  板块与分类管理
+                </Link>
+                <Link
+                  href="/admin/stats"
+                  className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary transition-colors duration-fast hover:border-amber-soft hover:text-amber"
+                >
+                  站点统计
+                </Link>
+              </>
+            )}
+            {(isAdminRole(me.role) || hasPermission(me, "manage_users")) && (
+              <Link
+                href="/admin/users"
+                className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary transition-colors duration-fast hover:border-amber-soft hover:text-amber"
+              >
+                用户与权限管理
+              </Link>
+            )}
           </div>
         </div>
       )}
