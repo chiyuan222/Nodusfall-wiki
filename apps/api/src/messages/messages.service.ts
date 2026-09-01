@@ -13,10 +13,13 @@ export class MessagesService {
   constructor(private readonly prisma: PrismaService) {}
 
   async list(userId: string, page: number, perPage: number) {
+    const dmWhere = {
+      OR: [{ recipientId: userId }, { senderId: userId }],
+    };
     const [directTotal, directMsgs, announcements, reads] = await Promise.all([
-      this.prisma.directMessage.count({ where: { recipientId: userId } }),
+      this.prisma.directMessage.count({ where: dmWhere }),
       this.prisma.directMessage.findMany({
-        where: { recipientId: userId },
+        where: dmWhere,
         orderBy: { createdAt: 'desc' },
         include: { sender: true },
       }),
