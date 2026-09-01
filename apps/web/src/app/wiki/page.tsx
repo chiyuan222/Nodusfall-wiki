@@ -116,27 +116,38 @@ export default async function WikiIndexPage() {
                 <li key={p.id}>
                   <Link
                     href={`/wiki/${p.slug}`}
-                    className="group block px-5 py-4 transition-colors duration-fast hover:bg-raised"
+                    className="group flex items-center gap-4 px-5 py-4 transition-colors duration-fast hover:bg-raised"
                   >
-                    <h3 className="text-body font-semibold text-primary group-hover:text-amber">
-                      {p.title}
-                    </h3>
-                    <p className="mt-1 line-clamp-2 text-small leading-relaxed text-secondary">
-                      {p.excerpt}
-                    </p>
-                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-faint">
-                      {p.tags.map((t) => (
-                        <span
-                          key={t}
-                          className="rounded-sm border border-border-subtle px-1.5 py-0.5"
-                        >
-                          {t}
-                        </span>
-                      ))}
-                      <span className="ml-auto font-mono">
-                        {p.author.displayName} · {formatDate(p.updatedAt)}
+                    <span className="min-w-0 grow">
+                      <span className="block text-body font-semibold text-primary group-hover:text-amber">
+                        {p.title}
                       </span>
-                    </div>
+                      <span className="mt-1 line-clamp-2 block text-small leading-relaxed text-secondary">
+                        {p.excerpt}
+                      </span>
+                      <span className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-faint">
+                        {p.tags.map((t) => (
+                          <span
+                            key={t}
+                            className="rounded-sm border border-border-subtle px-1.5 py-0.5"
+                          >
+                            {t}
+                          </span>
+                        ))}
+                        <span className="ml-auto font-mono">
+                          {p.author.displayName} · {formatDate(p.updatedAt)}
+                        </span>
+                      </span>
+                    </span>
+                    {p.coverImage && (
+                      // eslint-disable-next-line @next/next/no-img-element -- 契约列表级封面图
+                      <img
+                        src={p.coverImage}
+                        alt=""
+                        loading="lazy"
+                        className="h-16 w-28 shrink-0 rounded-sm border border-border-subtle object-cover"
+                      />
+                    )}
                   </Link>
                 </li>
               ))}

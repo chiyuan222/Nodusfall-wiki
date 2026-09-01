@@ -21,6 +21,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/home/digest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 首页最新动态与精华推荐聚合 */
+        get: operations["getHomeDigest"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/content/pages/{slug}": {
         parameters: {
             query?: never;
@@ -735,6 +752,8 @@ export interface components {
             slug: string;
             title: string;
             excerpt: string;
+            /** Format: uri */
+            coverImage: string | null;
             categorySlug: string;
             tags: string[];
             /** @enum {string} */
@@ -749,6 +768,8 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
             revisionCount: number;
+            /** Format: date-time */
+            featuredAt: string | null;
         };
         WikiPageList: {
             data: components["schemas"]["WikiPageSummary"][];
@@ -777,6 +798,8 @@ export interface components {
             slug: string;
             title: string;
             excerpt: string;
+            /** Format: uri */
+            coverImage: string | null;
             tags: string[];
             /** @enum {string} */
             status: "draft" | "published" | "archived";
@@ -791,6 +814,8 @@ export interface components {
             relatedCharacter?: string;
             /** Format: date-time */
             createdAt: string;
+            /** Format: date-time */
+            featuredAt: string | null;
         };
         GuideList: {
             data: components["schemas"]["GuideSummary"][];
@@ -851,6 +876,8 @@ export interface components {
         };
         ForumThread: components["schemas"]["ForumThreadSummary"] & {
             content: string;
+            /** Format: date-time */
+            featuredAt: string | null;
         };
         ForumThreadList: {
             data: components["schemas"]["ForumThreadSummary"][];
@@ -900,6 +927,8 @@ export interface components {
             id: string;
             title: string;
             excerpt: string;
+            /** Format: uri */
+            coverImage: string | null;
             url: string;
             /** Format: date-time */
             updatedAt?: string;
@@ -1099,6 +1128,42 @@ export interface components {
             data: components["schemas"]["HomePageContent"] | components["schemas"]["WorldPageContent"];
         };
         ContentPageWrite: components["schemas"]["HomePageContent"] | components["schemas"]["WorldPageContent"];
+        DigestStats: {
+            viewCount: number;
+            likeCount: number;
+            commentCount: number;
+            scoreAverage: number | null;
+            scoreCount: number;
+        };
+        DigestItem: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "wiki" | "guide" | "forum";
+            title: string;
+            slug: string;
+            excerpt: string | null;
+            /** Format: uri */
+            coverImage: string | null;
+            author: components["schemas"]["UserSummary"];
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: date-time */
+            publishedAt: string | null;
+            boardSlug: string | null;
+            stats: components["schemas"]["DigestStats"];
+            likedByMe?: boolean | null;
+            bookmarkedByMe?: boolean | null;
+            myScore?: number | null;
+        };
+        HomeDigestResponse: {
+            data: {
+                latest: components["schemas"]["DigestItem"][];
+                featured: components["schemas"]["DigestItem"][];
+            };
+        };
     };
     responses: {
         /** @description 请求校验失败 */
@@ -1304,6 +1369,9 @@ export interface components {
                      */
                     status?: "draft" | "published";
                     changelog?: string;
+                    featured?: boolean;
+                    /** Format: date-time */
+                    featuredAt?: string | null;
                 };
             };
         };
@@ -1345,6 +1413,9 @@ export interface components {
                     /** @enum {string} */
                     status?: "draft" | "published" | "archived";
                     relatedCharacter?: string;
+                    featured?: boolean;
+                    /** Format: date-time */
+                    featuredAt?: string | null;
                 };
             };
         };
@@ -1373,6 +1444,9 @@ export interface components {
                     locked?: boolean;
                     /** Format: uri */
                     coverImage?: string | null;
+                    featured?: boolean;
+                    /** Format: date-time */
+                    featuredAt?: string | null;
                 };
             };
         };
@@ -1423,6 +1497,30 @@ export interface operations {
                     "application/json": components["schemas"]["Health"];
                 };
             };
+        };
+    };
+    getHomeDigest: {
+        parameters: {
+            query?: {
+                latestLimit?: number;
+                featuredLimit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 首页聚合数据 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HomeDigestResponse"];
+                };
+            };
+            400: components["responses"]["ValidationError"];
         };
     };
     getContentPage: {

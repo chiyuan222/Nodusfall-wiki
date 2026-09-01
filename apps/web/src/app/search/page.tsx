@@ -129,28 +129,39 @@ export default async function SearchPage({
               <li key={`${r.kind}-${r.id}`}>
                 <Link
                   href={resolveHref(r)}
-                  className="block rounded-md border border-border-subtle bg-surface p-4 transition-colors duration-fast hover:border-amber-soft"
+                  className="flex items-center gap-4 rounded-md border border-border-subtle bg-surface p-4 transition-colors duration-fast hover:border-amber-soft"
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="rounded-sm border border-amber-soft px-2 py-0.5 font-mono text-caption text-amber">
-                      {KIND_LABEL[r.kind]}
+                  <span className="min-w-0 grow">
+                    <span className="flex items-center gap-3">
+                      <span className="shrink-0 rounded-sm border border-amber-soft px-2 py-0.5 font-mono text-caption text-amber">
+                        {KIND_LABEL[r.kind]}
+                      </span>
+                      <span className="truncate text-body font-semibold text-primary">
+                        {r.title}
+                      </span>
+                      {r.updatedAt && (
+                        <time
+                          dateTime={r.updatedAt}
+                          className="ml-auto shrink-0 font-mono text-caption text-faint"
+                        >
+                          {new Date(r.updatedAt).toLocaleDateString("zh-CN")}
+                        </time>
+                      )}
                     </span>
-                    <h2 className="text-body font-semibold text-primary">
-                      {r.title}
-                    </h2>
-                    {r.updatedAt && (
-                      <time
-                        dateTime={r.updatedAt}
-                        className="ml-auto font-mono text-caption text-faint"
-                      >
-                        {new Date(r.updatedAt).toLocaleDateString("zh-CN")}
-                      </time>
+                    {r.excerpt && (
+                      <span className="mt-2 line-clamp-2 block text-small text-secondary">
+                        {r.excerpt}
+                      </span>
                     )}
-                  </div>
-                  {r.excerpt && (
-                    <p className="mt-2 line-clamp-2 text-small text-secondary">
-                      {r.excerpt}
-                    </p>
+                  </span>
+                  {r.coverImage && (
+                    // eslint-disable-next-line @next/next/no-img-element -- 契约列表级封面图
+                    <img
+                      src={r.coverImage}
+                      alt=""
+                      loading="lazy"
+                      className="h-14 w-24 shrink-0 rounded-sm border border-border-subtle object-cover"
+                    />
                   )}
                 </Link>
               </li>

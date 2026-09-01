@@ -120,6 +120,15 @@ export default async function GuidesIndexPage() {
                     </span>
                   </span>
                 </span>
+                {g.coverImage && (
+                  // eslint-disable-next-line @next/next/no-img-element -- 契约列表级封面图
+                  <img
+                    src={g.coverImage}
+                    alt=""
+                    loading="lazy"
+                    className="hidden h-16 w-28 shrink-0 rounded-sm border border-border-subtle object-cover sm:block"
+                  />
+                )}
               </Link>
             </li>
           ))}

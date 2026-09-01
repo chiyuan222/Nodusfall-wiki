@@ -19,6 +19,7 @@ interface ThreadItem {
   replyCount: number;
   likeCount: number;
   lastPostAt: string;
+  coverImage: string | null;
 }
 
 type Tab = "threads" | "bookmarks";
@@ -135,6 +136,15 @@ export function MyContent() {
                     {t.boardSlug} · 最后回复 {t.lastPostAt.slice(0, 10)}
                   </span>
                 </span>
+                {t.coverImage && (
+                  // eslint-disable-next-line @next/next/no-img-element -- 契约列表级封面图
+                  <img
+                    src={t.coverImage}
+                    alt=""
+                    loading="lazy"
+                    className="h-14 w-24 shrink-0 rounded-sm border border-border-subtle object-cover"
+                  />
+                )}
                 <span className="flex shrink-0 items-center gap-4 text-center font-mono text-caption text-secondary">
                   <span>
                     <span className="block text-small text-primary">{t.replyCount}</span>

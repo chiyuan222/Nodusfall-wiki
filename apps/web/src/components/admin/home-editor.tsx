@@ -324,7 +324,10 @@ export function HomeEditor() {
                   {id === "digest" && (
                     <>
                       <p className="text-caption text-faint">
-                        两栏快报显示在首屏下方：左栏最新动态、右栏精华推荐。条目为空时前台显示虚线空态框。
+                        两栏快报显示在首屏下方：左栏最新动态、右栏精华推荐。条目优先由后端聚合接口
+                        <code className="font-mono text-amber">GET /home/digest</code>
+                        自动提供（最新按发布时间、精华按后端 featured 标记）；此处手填条目仅在接口不可用时作为兜底显示。
+                        栏目标题与空态提示文字仍由这里控制。
                       </p>
                       {(["latest", "featured"] as const).map((key) => (
                         <div key={key} className="rounded-md border border-border-subtle p-4">
