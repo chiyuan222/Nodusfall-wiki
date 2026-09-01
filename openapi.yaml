@@ -319,6 +319,116 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
+  /users/me/messages:
+    get:
+      tags: [Users]
+      operationId: listMyMessages
+      summary: 我的消息（私信 + 全站公告，按时间倒序，分页）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+      responses:
+        "200":
+          description: 消息列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      tags: [Users]
+      operationId: sendDirectMessage
+      summary: 发送私信（仅站长与注册用户之间；普通用户间/管理员间禁止）
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        $ref: "#/components/requestBodies/CreateDirectMessageRequest"
+      responses:
+        "201":
+          description: 发送成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageItem"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /users/me/messages/unread-count:
+    get:
+      tags: [Users]
+      operationId: getMyUnreadCount
+      summary: 未读消息数（头像红点）
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: 未读数
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnreadCount"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /users/me/messages/read-all:
+    post:
+      tags: [Users]
+      operationId: markAllMessagesRead
+      summary: 全部消息标记已读（进入消息页后调用，红点消除）
+      security: [{ bearerAuth: [] }]
+      responses:
+        "204":
+          description: 已全部标记
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /admin/announcements:
+    get:
+      tags: [Admin]
+      operationId: listAnnouncements
+      summary: 公告历史（仅站长）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+      responses:
+        "200":
+          description: 公告列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Admin]
+      operationId: createAnnouncement
+      summary: 发布全站公告（仅站长，广播到所有用户收件箱）
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        $ref: "#/components/requestBodies/CreateAnnouncementRequest"
+      responses:
+        "201":
+          description: 发布成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageItem"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
   /users/{userId}:
     get:
       tags: [Users]
@@ -1882,6 +1992,26 @@ components:
               slug:
                 type: string
                 description: wiki/guide 的 slug；forumThread 传 threadId
+    CreateDirectMessageRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [recipientId, content]
+            properties:
+              recipientId: { type: string, format: uuid }
+              content: { type: string, maxLength: 2000 }
+    CreateAnnouncementRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [title, content]
+            properties:
+              title: { type: string, maxLength: 200 }
+              content: { type: string, maxLength: 5000 }
     AdminUpdateUserRequest:
       required: true
       content:
@@ -2624,6 +2754,38 @@ components:
             $ref: "#/components/schemas/HistoryEntry"
         pagination:
           $ref: "#/components/schemas/Pagination"
+
+    MessageItem:
+      type: object
+      required: [id, kind, sender, content, createdAt, readAt]
+      properties:
+        id: { type: string, format: uuid }
+        kind:
+          type: string
+          enum: [direct, announcement]
+        sender:
+          $ref: "#/components/schemas/UserSummary"
+        title: { type: [string, "null"] }
+        content: { type: string }
+        createdAt: { type: string, format: date-time }
+        readAt: { type: [string, "null"], format: date-time }
+
+    MessageList:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/MessageItem"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+
+    UnreadCount:
+      type: object
+      required: [unread]
+      properties:
+        unread: { type: integer }
 
     SearchResult:
       type: object
