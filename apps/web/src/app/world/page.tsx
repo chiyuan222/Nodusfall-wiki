@@ -569,7 +569,6 @@ export default async function WorldPage() {
         </p>
         <p className="mt-2">
           《源初之结》（NODUSFALL）的商标与素材版权归米哈游 / HoYoverse 所有；本站与官方无关。
-          内容管理入口：<Link href="/admin/world" className="text-amber hover:underline">/admin/world</Link>
         </p>
       </footer>
     </article>
