@@ -10,7 +10,9 @@ import { getAccessToken } from "@/lib/session";
  * Wiki / 攻略内容管理列表（客户端组件，/admin/wiki 与 /admin/guides 共用）。
  * - 门禁：wiki 允许 admin/editor，guides 仅 admin
  * - 列表：GET /wiki/pages 或 /guides，支持状态筛选（草稿/已发布/已归档）
- * - 操作：编辑（跳转编辑器）、发布/归档切换（PATCH status）
+ * - 操作：编辑（跳转编辑器）、发布/归档切换（PATCH status）、精华标记（PATCH featured）
+ * - 精华状态：Summary 无 featuredAt 字段（契约），载入后按详情接口并发补齐；
+ *   首页「精华推荐」按 featuredAt desc 取用（GET /home/digest）
  */
 
 interface Me {
@@ -53,8 +55,11 @@ function describeError(e: unknown, fallback: string): string {
 export function AdminContentList({ kind }: { kind: "wiki" | "guide" }) {
   const isWiki = kind === "wiki";
   const listPath = isWiki ? "/wiki/pages" : "/guides";
-  const itemPath = (slug: string) =>
-    isWiki ? `/wiki/pages/${slug}` : `/guides/${slug}`;
+  const itemPath = useCallback(
+    (slug: string) =>
+      isWiki ? `/wiki/pages/${slug}` : `/guides/${slug}`,
+    [isWiki],
+  );
   const editPath = (slug: string) =>
     isWiki ? `/wiki/${slug}/edit` : `/guides/${slug}/edit`;
   const viewPath = (slug: string) =>
@@ -64,6 +69,10 @@ export function AdminContentList({ kind }: { kind: "wiki" | "guide" }) {
     "loading",
   );
   const [items, setItems] = useState<Item[]>([]);
+  /** slug → featuredAt（null = 非精华）；详情并发补齐，Summary 不含该字段 */
+  const [featuredMap, setFeaturedMap] = useState<Record<string, string | null>>(
+    {},
+  );
   const [status, setStatus] = useState<StatusFilter>("");
   const [loading, setLoading] = useState(false);
   const [busySlug, setBusySlug] = useState<string | null>(null);
@@ -99,11 +108,24 @@ export function AdminContentList({ kind }: { kind: "wiki" | "guide" }) {
           status: statusFilter || undefined,
         },
       })
-        .then((r) => setItems(r.data))
+        .then(async (r) => {
+          setItems(r.data);
+          // 并发补精华状态（详情接口含 featuredAt）；单条失败按 null 处理
+          const entries = await Promise.all(
+            r.data.map((it) =>
+              request<{ data: { featuredAt?: string | null } }>(
+                itemPath(it.slug),
+              )
+                .then((d) => [it.slug, d.data.featuredAt ?? null] as const)
+                .catch(() => [it.slug, null] as const),
+            ),
+          );
+          setFeaturedMap(Object.fromEntries(entries));
+        })
         .catch((e: unknown) => setMsg(describeError(e, "列表加载失败。")))
         .finally(() => setLoading(false));
     },
-    [listPath],
+    [listPath, itemPath],
   );
 
   useEffect(() => {
@@ -120,6 +142,22 @@ export function AdminContentList({ kind }: { kind: "wiki" | "guide" }) {
     })
       .then(() => load(status))
       .catch((e: unknown) => setMsg(describeError(e, "状态更新失败。")))
+      .finally(() => setBusySlug(null));
+  };
+
+  /** 精华标记切换：featured=true → featuredAt=now（首页精华栏按此倒序取） */
+  const toggleFeatured = (slug: string, next: boolean) => {
+    if (busySlug) return;
+    setBusySlug(slug);
+    setMsg("");
+    request<{ data: { featuredAt?: string | null } }>(itemPath(slug), {
+      method: "PATCH",
+      body: { featured: next },
+    })
+      .then((r) =>
+        setFeaturedMap((m) => ({ ...m, [slug]: r.data.featuredAt ?? null })),
+      )
+      .catch((e: unknown) => setMsg(describeError(e, "精华标记失败。")))
       .finally(() => setBusySlug(null));
   };
 
@@ -193,6 +231,10 @@ export function AdminContentList({ kind }: { kind: "wiki" | "guide" }) {
         </p>
       )}
 
+      <p className="text-caption text-faint">
+        ★ 精华内容进入首页「精华推荐」栏（按标记时间倒序，接口最多返回 12 条）；建议只对已发布内容打精华。
+      </p>
+
       {/* 列表 */}
       {loading ? (
         <p className="py-8 text-center text-small text-faint">载入中…</p>
@@ -204,6 +246,7 @@ export function AdminContentList({ kind }: { kind: "wiki" | "guide" }) {
         <ol className="divide-y divide-border-subtle rounded-md border border-border-subtle bg-surface">
           {items.map((item) => {
             const st = normStatus(item.status);
+            const isFeatured = Boolean(featuredMap[item.slug]);
             return (
               <li
                 key={item.slug}
@@ -220,6 +263,11 @@ export function AdminContentList({ kind }: { kind: "wiki" | "guide" }) {
                 >
                   {STATUS_LABEL[st] ?? item.status}
                 </span>
+                {isFeatured && (
+                  <span className="shrink-0 rounded-sm border border-amber-soft bg-amber/10 px-1.5 py-0.5 font-mono text-caption text-amber">
+                    ★ 精华
+                  </span>
+                )}
                 <Link
                   href={viewPath(item.slug)}
                   className="min-w-0 truncate text-small font-medium text-primary hover:text-amber"
@@ -243,6 +291,24 @@ export function AdminContentList({ kind }: { kind: "wiki" | "guide" }) {
                 >
                   编辑
                 </Link>
+                <button
+                  type="button"
+                  disabled={busySlug === item.slug}
+                  aria-pressed={isFeatured}
+                  title={
+                    isFeatured
+                      ? "取消精华：从首页「精华推荐」移除"
+                      : "设为精华：进入首页「精华推荐」栏"
+                  }
+                  onClick={() => toggleFeatured(item.slug, !isFeatured)}
+                  className={`rounded-sm border px-2.5 py-1 text-caption transition-colors duration-fast disabled:opacity-40 ${
+                    isFeatured
+                      ? "border-amber-soft bg-amber/10 text-amber hover:bg-transparent"
+                      : "border-border-subtle text-secondary hover:border-amber-soft hover:text-amber"
+                  }`}
+                >
+                  {isFeatured ? "★ 撤精华" : "☆ 设精华"}
+                </button>
                 {st !== "published" ? (
                   <button
                     type="button"
