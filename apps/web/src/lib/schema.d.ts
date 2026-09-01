@@ -281,6 +281,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/users/me/checkin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 今日签到状态与连续签到天数 */
+        get: operations["getCheckInStatus"];
+        put?: never;
+        /** 每日签到（+10 经验，连续 7 天额外 +30；重复签到 409） */
+        post: operations["checkIn"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/me/exp-log": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 我的经验记录（来源/数值/时间，分页） */
+        get: operations["listExpLog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/users/me/messages/read-all": {
         parameters: {
             query?: never;
@@ -1145,6 +1180,10 @@ export interface components {
             updatedAt?: string;
             emailMasked?: string;
             phoneMasked?: string | null;
+            /** @description 累计经验（等级由经验换算） */
+            exp?: number;
+            /** @description 升到下一级所需累计经验；满级为 null */
+            nextLevelExp?: number | null;
             /** @description 管理员权限开关（仅 owner 可配置，默认空） */
             permissions?: ("manage_users" | "manage_content" | "manage_forum" | "manage_cms" | "manage_deletion" | "grant_wiki_create")[];
             /** @description 是否被站长授予 Wiki 词条创建资格 */
@@ -1481,6 +1520,36 @@ export interface components {
         };
         UnreadCount: {
             unread: number;
+        };
+        CheckInStatus: {
+            today: boolean;
+            /** @description 连续签到天数（今日未签则按截至昨日） */
+            streak: number;
+            /** @description 累计签到天数 */
+            total: number;
+        };
+        CheckInResult: {
+            today: boolean;
+            streak: number;
+            total: number;
+            gainedExp: number;
+            exp: number;
+            level: number;
+            nextLevelExp: number | null;
+        };
+        ExpLogEntry: {
+            /** Format: uuid */
+            id: string;
+            amount: number;
+            /** @enum {string} */
+            reason: "checkin" | "wiki" | "guide" | "thread" | "reply" | "comment" | "bookmark" | "like";
+            refId?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        ExpLogList: {
+            data: components["schemas"]["ExpLogEntry"][];
+            pagination: components["schemas"]["Pagination"];
         };
         SearchResult: {
             /** @enum {string} */
@@ -2042,7 +2111,7 @@ export interface components {
                     wikiCreateGranted?: boolean;
                     permissions?: ("manage_users" | "manage_content" | "manage_forum" | "manage_cms" | "manage_deletion" | "grant_wiki_create")[];
                     /**
-                     * @description 仅 owner 可修改
+                     * @description 仅站长可为任意用户分配角色（成员/编辑/版主/管理员；不含 owner）
                      * @enum {string}
                      */
                     role?: "member" | "editor" | "moderator" | "admin";
@@ -2651,6 +2720,73 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UnreadCount"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    getCheckInStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 签到状态 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CheckInStatus"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    checkIn: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 签到成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CheckInResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    listExpLog: {
+        parameters: {
+            query?: {
+                page?: components["parameters"]["Page"];
+                perPage?: components["parameters"]["PerPage"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 经验记录 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpLogList"];
                 };
             };
             401: components["responses"]["Unauthorized"];
