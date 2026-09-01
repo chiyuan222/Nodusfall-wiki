@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export function SiteFooter() {
   return (
     <footer className="mt-16 border-t border-border-subtle pb-20 lg:pb-0">
@@ -16,6 +18,20 @@ export function SiteFooter() {
           >
             官方网站
           </a>
+        </p>
+        <p className="mt-2 flex gap-4">
+          <Link
+            href="/legal/terms"
+            className="text-secondary underline-offset-4 hover:text-amber hover:underline"
+          >
+            用户协议
+          </Link>
+          <Link
+            href="/legal/privacy"
+            className="text-secondary underline-offset-4 hover:text-amber hover:underline"
+          >
+            隐私政策
+          </Link>
         </p>
       </div>
     </footer>

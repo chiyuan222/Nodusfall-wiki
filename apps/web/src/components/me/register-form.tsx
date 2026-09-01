@@ -11,7 +11,7 @@ import { ApiError } from "@/lib/errors";
  * 注册表单：POST /users（契约 PR #45）。
  * - 邮箱注册：{ username, password, email, emailCode }，验证码 POST /auth/email-codes（60s 倒计时）
  * - 手机号注册：{ username, password, phone }（^1[3-9]\d{9}$，短信验证后续接入）
- * - 需勾选社区协议；成功后自动登录并跳 /me
+ * - 需勾选《用户协议》与《隐私政策》（链接 /legal/terms、/legal/privacy）；成功后自动登录并跳 /me
  */
 
 type Tab = "email" | "phone";
@@ -85,7 +85,7 @@ export function RegisterForm() {
     if (username.trim().length < 2) return setMsg("用户名至少 2 个字符。");
     if (password.length < 8) return setMsg("密码至少 8 位。");
     if (password !== confirm) return setMsg("两次输入的密码不一致。");
-    if (!agreed) return setMsg("请先阅读并勾选社区协议。");
+    if (!agreed) return setMsg("请先阅读并勾选《用户协议》与《隐私政策》。");
 
     const body: Record<string, string> = {
       username: username.trim(),
@@ -311,7 +311,21 @@ export function RegisterForm() {
         />
         <span>
           我已阅读并同意
-          <span className="text-amber">《社区协议》</span>：本站为《源初之结》玩家非官方社区，不发布侵权与违规内容。
+          <Link
+            href="/legal/terms"
+            target="_blank"
+            className="text-amber underline-offset-4 hover:underline"
+          >
+            《用户协议》
+          </Link>
+          与
+          <Link
+            href="/legal/privacy"
+            target="_blank"
+            className="text-amber underline-offset-4 hover:underline"
+          >
+            《隐私政策》
+          </Link>
         </span>
       </label>
 
