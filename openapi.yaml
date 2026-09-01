@@ -1747,7 +1747,7 @@ components:
                 type: array
                 items:
                   type: string
-                  enum: [manage_users, manage_content, manage_forum, manage_cms, grant_wiki_create]
+                  enum: [manage_users, manage_content, manage_forum, manage_cms, manage_deletion, grant_wiki_create]
               role:
                 type: string
                 enum: [member, editor, moderator, admin]
@@ -2035,7 +2035,7 @@ components:
               type: array
               items:
                 type: string
-                enum: [manage_users, manage_content, manage_forum, manage_cms, grant_wiki_create]
+                enum: [manage_users, manage_content, manage_forum, manage_cms, manage_deletion, grant_wiki_create]
               description: 管理员权限开关（仅 owner 可配置，默认空）
             wikiCreateGranted:
               type: boolean
