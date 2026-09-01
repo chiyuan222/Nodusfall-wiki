@@ -91,11 +91,11 @@ export function AdminContentList({ kind }: { kind: "wiki" | "guide" }) {
       setLoading(true);
       setMsg("");
       request<ListResult<Item>>(listPath, {
-        // 契约已声明 sort（wiki: updatedAt/createdAt/title；攻略: rating/updatedAt/createdAt），
-        // 但后端 /wiki/pages 与 /guides 的查询 DTO 白名单尚未放行 sort（实测 400
-        // "property sort should not exist"，2026-09-01）。后端修复后在此加 sort: "updatedAt"。
+        // sort 契约（openapi.yaml）：wiki 支持 updatedAt/createdAt/title，攻略支持 rating/updatedAt/createdAt
+        // 管理列表统一按「最近更新」排序（后端 DTO 已放行，2026-09-01 联调实测 200）
         query: {
           perPage: 50,
+          sort: "updatedAt",
           status: statusFilter || undefined,
         },
       })
