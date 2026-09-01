@@ -32,4 +32,8 @@ export class CreateGuideDto {
   @IsOptional()
   @IsString()
   relatedCharacter?: string;
+
+  @IsOptional()
+  @IsString()
+  coverImage?: string | null;
 }

@@ -27,4 +27,15 @@ export class UpdateWikiPageDto {
   @IsString()
   @MaxLength(200)
   changelog?: string;
+
+  @IsOptional()
+  @IsString()
+  coverImage?: string | null;
+
+  @IsOptional()
+  featured?: boolean;
+
+  @IsOptional()
+  @IsString()
+  featuredAt?: string | null;
 }

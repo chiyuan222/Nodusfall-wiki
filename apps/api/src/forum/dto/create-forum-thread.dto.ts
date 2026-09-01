@@ -12,4 +12,11 @@ export class CreateForumThreadDto {
   @IsOptional()
   @IsUrl()
   coverImage?: string | null;
+
+  @IsOptional()
+  featured?: boolean;
+
+  @IsOptional()
+  @IsString()
+  featuredAt?: string | null;
 }

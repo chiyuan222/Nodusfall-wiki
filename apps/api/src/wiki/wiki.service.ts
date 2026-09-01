@@ -11,6 +11,7 @@ import {
   WikiPageRevision,
 } from '@prisma/client';
 import { pageInfo } from '../common/pagination';
+import { extractFirstImage } from '../common/markdown';
 import { PrismaService } from '../prisma/prisma.service';
 import { toUserSummary } from '../users/users.service';
 
@@ -40,6 +41,7 @@ function pageSummary(page: PageWithRelations) {
     slug: page.slug,
     title: page.title,
     excerpt: page.excerpt,
+    coverImage: page.coverImage ?? extractFirstImage(page.content),
     categorySlug: page.category.slug,
     tags: page.tags,
     status: page.status.toLowerCase(),
@@ -55,6 +57,7 @@ function pageDetail(page: PageWithRelations) {
     version: page.version,
     createdAt: page.createdAt,
     revisionCount: page._count?.revisions ?? 0,
+    featuredAt: page.featuredAt,
   };
 }
 
@@ -184,6 +187,7 @@ export class WikiService {
     content: string;
     status?: 'draft' | 'published';
     changelog?: string;
+    coverImage?: string | null;
   }) {
     const category = await this.prisma.wikiCategory.findUnique({
       where: { slug: dto.categorySlug },
@@ -198,6 +202,7 @@ export class WikiService {
         title: dto.title,
         content: dto.content,
         excerpt: excerpt(dto.content),
+        coverImage: dto.coverImage ?? extractFirstImage(dto.content),
         categoryId: category.id,
         tags: dto.tags ?? [],
         status: dto.status ? (dto.status.toUpperCase() as ContentStatus) : 'DRAFT',
@@ -234,6 +239,9 @@ export class WikiService {
     content?: string;
     status?: 'draft' | 'published' | 'archived';
     changelog?: string;
+    coverImage?: string | null;
+    featured?: boolean;
+    featuredAt?: string | null;
   }) {
     const existing = await this.prisma.wikiPage.findUnique({ where: { slug } });
     if (!existing) throw new NotFoundException('page not found');
@@ -256,9 +264,17 @@ export class WikiService {
         title,
         content,
         excerpt: excerpt(content),
+        coverImage: dto.coverImage !== undefined ? dto.coverImage : extractFirstImage(content),
         categoryId,
         tags: dto.tags ?? existing.tags,
         status: dto.status ? (dto.status.toUpperCase() as ContentStatus) : existing.status,
+        featuredAt: dto.featuredAt
+          ? new Date(dto.featuredAt)
+          : dto.featured === true
+            ? new Date()
+            : dto.featured === false
+              ? null
+              : existing.featuredAt,
         version: nextVersion,
         revisions: {
           create: {
