@@ -70,6 +70,9 @@ model User {
   guideLikes    GuideLike[]    @relation("GuideLikeUser")
   guideBookmarks GuideBookmark[] @relation("GuideBookmarkUser")
   threadLikes   ForumThreadLike[] @relation("ThreadLikeUser")
+  sentMessages  DirectMessage[]   @relation("DirectMessageSender")
+  receivedMessages DirectMessage[] @relation("DirectMessageRecipient")
+  announcements Announcement[]    @relation("AnnouncementAuthor")
   wikiPages     WikiPage[]        @relation("WikiPageAuthor")
   wikiRevisions WikiPageRevision[] @relation("WikiRevisionAuthor")
   guides        Guide[]           @relation("GuideAuthor")
@@ -387,4 +390,38 @@ model DailyActiveUser {
 
   @@unique([userId, date])
   @@index([date])
+}
+
+model DirectMessage {
+  id          String   @id @default(uuid())
+  senderId    String
+  sender      User     @relation("DirectMessageSender", fields: [senderId], references: [id])
+  recipientId String
+  recipient   User     @relation("DirectMessageRecipient", fields: [recipientId], references: [id])
+  content     String
+  readAt      DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([recipientId, readAt])
+  @@index([senderId])
+}
+
+model Announcement {
+  id        String   @id @default(uuid())
+  authorId  String
+  author    User     @relation("AnnouncementAuthor", fields: [authorId], references: [id])
+  title     String
+  content   String
+  createdAt DateTime @default(now())
+  reads     AnnouncementRead[]
+}
+
+model AnnouncementRead {
+  id             String       @id @default(uuid())
+  announcementId String
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  userId         String
+  readAt         DateTime     @default(now())
+
+  @@unique([announcementId, userId])
 }
