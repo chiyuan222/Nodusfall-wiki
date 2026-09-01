@@ -6,6 +6,7 @@ import { commentApi, type Comment } from "@/lib/api";
 import { request, type ListResult, type Pagination } from "@/lib/api-client";
 import { ApiError } from "@/lib/errors";
 import { getAccessToken } from "@/lib/session";
+import { authorName } from "@/lib/author";
 
 /**
  * 评论区（Wiki 条目 / 攻略共用，客户端组件）。
@@ -187,7 +188,7 @@ export function CommentSection({
             <li key={c.id} className="py-4 first:pt-0 last:pb-0">
               <div className="flex items-baseline gap-2">
                 <span className="text-small font-medium text-primary">
-                  {c.author.displayName}
+                  {authorName(c.author)}
                 </span>
                 <time
                   dateTime={c.createdAt}

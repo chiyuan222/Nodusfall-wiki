@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { forumApi } from "@/lib/api";
 import { ApiError } from "@/lib/errors";
 import { EmptyState } from "@/components/empty-state";
+import { authorName } from "@/lib/author";
 
 export const dynamic = "force-dynamic";
 
@@ -149,7 +150,7 @@ export default async function BoardThreadsPage({
                     </span>
                   )}
                   <span className="mt-2 block font-mono text-caption text-faint">
-                    {t.author.displayName} · 回复 {t.replyCount} · 喜欢 {t.likeCount} ·{" "}
+                    {authorName(t.author)} · 回复 {t.replyCount} · 喜欢 {t.likeCount} ·{" "}
                     {t.lastPostAt.slice(0, 10)} 更新
                   </span>
                 </span>

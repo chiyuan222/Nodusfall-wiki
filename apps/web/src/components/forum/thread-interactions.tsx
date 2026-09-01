@@ -8,6 +8,7 @@ import { request, type ListResult, type Pagination } from "@/lib/api-client";
 import { ApiError } from "@/lib/errors";
 import { getAccessToken } from "@/lib/session";
 import { Markdown } from "@/components/markdown";
+import { authorName } from "@/lib/author";
 
 interface Me {
   id: string;
@@ -271,7 +272,7 @@ export function PostSection({
                   #{p.floor}
                 </span>
                 <span className="text-small font-medium text-primary">
-                  {p.author.displayName}
+                  {authorName(p.author)}
                 </span>
                 <time
                   dateTime={p.createdAt}

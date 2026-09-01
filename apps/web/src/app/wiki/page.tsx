@@ -5,6 +5,7 @@ import { WikiEditEntry } from "@/components/wiki/wiki-edit-entry";
 import { Carousel } from "@/components/carousel";
 import { getWikiIndexData, USE_MOCK } from "@/lib/data";
 import { getWikiCarousel } from "@/lib/carousel-data";
+import { authorName } from "@/lib/author";
 
 export const dynamic = "force-dynamic";
 
@@ -135,7 +136,7 @@ export default async function WikiIndexPage() {
                           </span>
                         ))}
                         <span className="ml-auto font-mono">
-                          {p.author.displayName} · {formatDate(p.updatedAt)}
+                          {authorName(p.author)} · {formatDate(p.updatedAt)}
                         </span>
                       </span>
                     </span>

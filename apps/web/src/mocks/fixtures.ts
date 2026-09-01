@@ -25,6 +25,7 @@ const user = (id: string, name: string): S<"UserSummary"> => ({
   username: name.toLowerCase(),
   displayName: name,
   role: "member",
+  status: "active",
   createdAt: now,
 });
 

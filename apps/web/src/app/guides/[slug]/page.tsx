@@ -8,6 +8,8 @@ import { CommentSection } from "@/components/comment-section";
 import { RatingPanel } from "@/components/rating-panel";
 import { RatingStars } from "@/components/rating-stars";
 import { GuideEditEntry } from "@/components/guides/guide-edit-entry";
+import { HistoryReporter } from "@/components/history-reporter";
+import { authorName } from "@/lib/author";
 
 async function loadGuide(slug: string): Promise<Guide> {
   try {
@@ -55,6 +57,7 @@ export default async function GuideDetailPage({
 
   return (
     <div className="mx-auto max-w-page">
+      <HistoryReporter kind="guide" slug={guide.slug} />
       {/* 面包屑 */}
       <nav aria-label="面包屑" className="flex items-center gap-2 font-mono text-caption text-faint">
         <Link href="/guides" className="text-secondary transition-colors duration-fast hover:text-amber">
@@ -72,7 +75,7 @@ export default async function GuideDetailPage({
               <p className="text-body text-secondary">{guide.excerpt}</p>
             )}
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-caption text-faint">
-              <span>{guide.author.displayName}</span>
+              <span>{authorName(guide.author)}</span>
               <span aria-hidden>·</span>
               <time dateTime={guide.updatedAt}>
                 更新于 {new Date(guide.updatedAt).toLocaleDateString("zh-CN")}
