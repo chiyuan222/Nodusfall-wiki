@@ -7,6 +7,7 @@ import { Markdown } from "@/components/markdown";
 import { CommentSection } from "@/components/comment-section";
 import { RatingPanel } from "@/components/rating-panel";
 import { RatingStars } from "@/components/rating-stars";
+import { GuideEditEntry } from "@/components/guides/guide-edit-entry";
 
 async function loadGuide(slug: string): Promise<Guide> {
   try {
@@ -78,6 +79,7 @@ export default async function GuideDetailPage({
               </time>
               <span aria-hidden>·</span>
               <RatingStars rating={guide.rating} count={guide.ratingCount} />
+              <GuideEditEntry slug={guide.slug} authorId={guide.author.id} />
             </div>
             {guide.tags.length > 0 && (
               <ul className="flex flex-wrap gap-2" aria-label="标签">
