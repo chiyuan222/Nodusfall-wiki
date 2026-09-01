@@ -1054,6 +1054,98 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
 
+  /videos:
+    get:
+      tags: [Videos]
+      operationId: listVideos
+      summary: 相关视频导航列表（按分区筛选，仅已发布）
+      security: []
+      parameters:
+        - name: kind
+          in: query
+          schema:
+            type: string
+            enum: [official, analysis, gameplay]
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+      responses:
+        "200":
+          description: 视频列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoList"
+
+  /admin/videos:
+    post:
+      tags: [Videos]
+      operationId: createVideo
+      summary: 新增视频导航条目（管理员）
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        $ref: "#/components/requestBodies/CreateVideoRequest"
+      responses:
+        "201":
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoEntry"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /admin/videos/{videoId}:
+    patch:
+      tags: [Videos]
+      operationId: updateVideo
+      summary: 修改视频导航条目（管理员）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: videoId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        $ref: "#/components/requestBodies/UpdateVideoRequest"
+      responses:
+        "200":
+          description: 更新后的条目
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoEntry"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Videos]
+      operationId: deleteVideo
+      summary: 删除视频导航条目（管理员）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: videoId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204":
+          description: 已删除
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /guides/{slug}:
     get:
       tags: [Guides]
@@ -2012,6 +2104,45 @@ components:
             properties:
               title: { type: string, maxLength: 200 }
               content: { type: string, maxLength: 5000 }
+    CreateVideoRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [kind, title, url]
+            properties:
+              kind:
+                type: string
+                enum: [official, analysis, gameplay]
+              title: { type: string, maxLength: 200 }
+              url: { type: string, format: uri }
+              platform:
+                type: string
+                enum: [bilibili, douyin, youtube, other]
+              coverImage: { type: [string, "null"], format: uri }
+              description: { type: [string, "null"], maxLength: 500 }
+              published: { type: boolean }
+              sortOrder: { type: integer }
+    UpdateVideoRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              kind:
+                type: string
+                enum: [official, analysis, gameplay]
+              title: { type: string, maxLength: 200 }
+              url: { type: string, format: uri }
+              platform:
+                type: string
+                enum: [bilibili, douyin, youtube, other]
+              coverImage: { type: [string, "null"], format: uri }
+              description: { type: [string, "null"], maxLength: 500 }
+              published: { type: boolean }
+              sortOrder: { type: integer }
     AdminUpdateUserRequest:
       required: true
       content:
@@ -2559,6 +2690,38 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/GuideSummary"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+
+    VideoEntry:
+      type: object
+      required: [id, kind, title, url, platform, coverImage, description, published, sortOrder, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        kind:
+          type: string
+          enum: [official, analysis, gameplay]
+          description: official 官方视频 / analysis 考究杂谈 / gameplay 实况攻略
+        title: { type: string }
+        url: { type: string, format: uri }
+        platform:
+          type: string
+          enum: [bilibili, douyin, youtube, other]
+        coverImage: { type: [string, "null"], format: uri }
+        description: { type: [string, "null"] }
+        published: { type: boolean }
+        sortOrder: { type: integer }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    VideoList:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/VideoEntry"
         pagination:
           $ref: "#/components/schemas/Pagination"
 
