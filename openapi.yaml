@@ -50,6 +50,78 @@ paths:
               schema:
                 $ref: "#/components/schemas/Health"
 
+  /site/sections:
+    get:
+      tags: [Site]
+      operationId: getSiteSections
+      summary: 获取内容分区显示开关（禁用的分区前端隐藏/维护中）
+      security: []
+      responses:
+        "200":
+          description: 分区开关
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SiteSections"
+
+  /admin/site/sections:
+    put:
+      tags: [Site]
+      operationId: updateSiteSections
+      summary: 更新内容分区显示开关（仅站长或具备 manage_cms 的管理员）
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        $ref: "#/components/requestBodies/UpdateSiteSectionsRequest"
+      responses:
+        "200":
+          description: 更新后的分区开关
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SiteSections"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /site/floating-windows:
+    get:
+      tags: [Site]
+      operationId: getFloatingWindows
+      summary: 获取论坛页左右漂浮引流窗配置
+      security: []
+      responses:
+        "200":
+          description: 漂浮窗配置
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FloatingWindows"
+
+  /admin/site/floating-windows:
+    put:
+      tags: [Site]
+      operationId: updateFloatingWindows
+      summary: 更新论坛页左右漂浮引流窗（仅站长或具备 manage_cms 的管理员）
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        $ref: "#/components/requestBodies/UpdateFloatingWindowsRequest"
+      responses:
+        "200":
+          description: 更新后的配置
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FloatingWindows"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
   /home/digest:
     get:
       tags: [Content]
@@ -2124,6 +2196,30 @@ components:
               description: { type: [string, "null"], maxLength: 500 }
               published: { type: boolean }
               sortOrder: { type: integer }
+    UpdateSiteSectionsRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              home: { type: boolean }
+              world: { type: boolean }
+              wiki: { type: boolean }
+              guides: { type: boolean }
+              forum: { type: boolean }
+              videos: { type: boolean }
+    UpdateFloatingWindowsRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              left:
+                $ref: "#/components/schemas/FloatingWindowConfig"
+              right:
+                $ref: "#/components/schemas/FloatingWindowConfig"
     UpdateVideoRequest:
       required: true
       content:
@@ -2417,6 +2513,32 @@ components:
           type: object
           additionalProperties:
             type: string
+
+    SiteSections:
+      type: object
+      required: [home, world, wiki, guides, forum, videos]
+      properties:
+        home: { type: boolean }
+        world: { type: boolean }
+        wiki: { type: boolean }
+        guides: { type: boolean }
+        forum: { type: boolean }
+        videos: { type: boolean }
+
+    FloatingWindowConfig:
+      type: object
+      required: [enabled, imageUrl, linkUrl]
+      properties:
+        enabled: { type: boolean }
+        imageUrl: { type: [string, "null"], format: uri }
+        linkUrl: { type: [string, "null"], format: uri }
+
+    FloatingWindows:
+      type: object
+      required: [left, right]
+      properties:
+        left: { $ref: "#/components/schemas/FloatingWindowConfig" }
+        right: { $ref: "#/components/schemas/FloatingWindowConfig" }
 
     UserSummary:
       type: object
