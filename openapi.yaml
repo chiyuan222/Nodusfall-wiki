@@ -1667,6 +1667,8 @@ components:
               changelog:
                 type: string
                 maxLength: 200
+              featured: { type: boolean }
+              featuredAt: { type: [string, "null"], format: date-time }
     CreateGuideRequest:
       required: true
       content:
@@ -2299,12 +2301,25 @@ components:
 
     HomeHero:
       type: object
-      required: [kicker, title, lead, media, ctas]
+      required: [kicker, title, lead, slides, ctas]
       properties:
         hidden: { type: boolean }
         kicker: { type: string }
         title: { type: string }
         lead: { type: string }
+        slides:
+          type: array
+          maxItems: 5
+          items:
+            type: object
+            required: [media]
+            properties:
+              media: { $ref: "#/components/schemas/MediaSlot" }
+              title: { type: string }
+              linkKind:
+                type: string
+                enum: [wiki, guide, forum, home, world, external]
+              linkTarget: { type: string }
         media: { $ref: "#/components/schemas/MediaSlot" }
         ctas:
           type: array
@@ -2355,6 +2370,11 @@ components:
       properties:
         title: { type: string }
         emptyText: { type: string }
+        mode:
+          type: string
+          enum: [auto, manual]
+          default: auto
+          description: auto 由后端 /home/digest 聚合；manual 使用下方手填 items
         items:
           type: array
           items: { $ref: "#/components/schemas/HomeDigestItem" }
@@ -2467,6 +2487,9 @@ components:
         label: { type: string }
         url: { type: string }
         desc: { type: string }
+        iconKey:
+          type: string
+          description: 渠道图标 key（official / bilibili / douyin 等）
 
     WorldOfficial:
       type: object
