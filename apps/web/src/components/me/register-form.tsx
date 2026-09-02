@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { request } from "@/lib/api-client";
 import { saveSession } from "@/lib/session";
 import { ApiError } from "@/lib/errors";
+import { featurePhoneEnabled } from "@/lib/feature-flags";
 
 /**
  * 注册表单：POST /users（契约 PR #45 / #82）。
@@ -151,37 +152,39 @@ export function RegisterForm() {
 
   return (
     <form className="mt-8 space-y-4" aria-label="注册表单" onSubmit={submit}>
-      {/* 注册方式切换 */}
-      <div
-        role="tablist"
-        aria-label="注册方式"
-        className="grid grid-cols-2 rounded-md border border-border-subtle"
-      >
-        {(
-          [
-            ["email", "邮箱注册"],
-            ["phone", "手机号注册"],
-          ] as const
-        ).map(([key, label]) => (
-          <button
-            key={key}
-            type="button"
-            role="tab"
-            aria-selected={tab === key}
-            onClick={() => {
-              setTab(key);
-              setMsg("");
-            }}
-            className={`px-3 py-2 text-small transition-colors duration-fast ${
-              tab === key
-                ? "bg-amber font-medium text-amber-fg"
-                : "text-secondary hover:text-amber"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      {/* 注册方式切换（手机号注册暂封闭：featurePhoneEnabled，契约 #82 代码保留） */}
+      {featurePhoneEnabled && (
+        <div
+          role="tablist"
+          aria-label="注册方式"
+          className="grid grid-cols-2 rounded-md border border-border-subtle"
+        >
+          {(
+            [
+              ["email", "邮箱注册"],
+              ["phone", "手机号注册"],
+            ] as const
+          ).map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-selected={tab === key}
+              onClick={() => {
+                setTab(key);
+                setMsg("");
+              }}
+              className={`px-3 py-2 text-small transition-colors duration-fast ${
+                tab === key
+                  ? "bg-amber font-medium text-amber-fg"
+                  : "text-secondary hover:text-amber"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div>
         <label htmlFor="reg-username" className={labelCls}>
