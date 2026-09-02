@@ -690,7 +690,8 @@ paths:
           schema: { type: string, enum: [PENDING, RESOLVED, REJECTED] }
         - name: targetType
           in: query
-          schema: { type: string, enum: [forumThread, forumPost, comment, wikiPage, guide] }
+          schema: { type: string, enum: [forumThread, forumPost, comment, wikiPage, guide, user] }
+          description: 按目标类型筛选（user 为用户资料/头像/昵称举报）
       responses:
         "200":
           description: 举报列表
@@ -2176,7 +2177,7 @@ paths:
     post:
       tags: [Moderation]
       operationId: createReport
-      summary: 举报内容（论坛主题/回复/评论/Wiki/攻略）
+      summary: 举报内容或用户（论坛主题/回复/评论/Wiki/攻略/用户）
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
@@ -2188,8 +2189,10 @@ paths:
               properties:
                 targetType:
                   type: string
-                  enum: [forumThread, forumPost, comment, wikiPage, guide]
-                targetId: { type: string }
+                  enum: [forumThread, forumPost, comment, wikiPage, guide, user]
+                targetId:
+                  type: string
+                  description: 内容 id/slug；targetType 为 user 时传用户 uuid
                 reason:
                   type: string
                   enum: [spam, porn, politics, violence, illegal, other]
@@ -3000,8 +3003,13 @@ components:
         id: { type: string, format: uuid }
         targetType:
           type: string
-          enum: [forumThread, forumPost, comment, wikiPage, guide]
+          enum: [forumThread, forumPost, comment, wikiPage, guide, user]
         targetId: { type: string }
+        targetUser:
+          nullable: true
+          description: 被举报用户摘要；仅 targetType=user 时回填，其余为 null
+          allOf:
+            - $ref: "#/components/schemas/UserSummary"
         reason:
           type: string
           enum: [spam, porn, politics, violence, illegal, other]
