@@ -10,7 +10,7 @@ import { InteractionBar } from "@/components/interaction-bar";
 import { ContentActions } from "@/components/content-actions";
 import { authorName } from "@/lib/author";
 import { UserGroupBadge, UserStatusMark, SiteIdMark } from "@/components/user-marks";
-import { ReportButton } from "@/components/report-button";
+import { ReportButton, ReportUserButton } from "@/components/report-button";
 import { Avatar } from "@/components/avatar";
 
 export const dynamic = "force-dynamic";
@@ -120,6 +120,7 @@ export default async function ThreadPage({
               author={{ id: thread.author.id, displayName: authorName(thread.author) }}
             />
             <ReportButton targetType="forumThread" targetId={thread.id} />
+            <ReportUserButton author={thread.author} />
           </div>
         </header>
 

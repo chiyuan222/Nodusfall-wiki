@@ -9,7 +9,7 @@ import { getAccessToken } from "@/lib/session";
 import { authorName } from "@/lib/author";
 import { useMe, canPost, isAdminRole } from "@/lib/me";
 import { UserGroupBadge, UserStatusMark, SiteIdMark } from "@/components/user-marks";
-import { ReportButton } from "@/components/report-button";
+import { ReportButton, ReportUserButton } from "@/components/report-button";
 import { Avatar } from "@/components/avatar";
 
 /**
@@ -207,6 +207,7 @@ export function CommentSection({
                 </time>
                 <span className="grow" />
                 <ReportButton targetType="comment" targetId={c.id} />
+                <ReportUserButton author={c.author} />
                 <button
                   type="button"
                   onClick={() => toggleLike(c)}

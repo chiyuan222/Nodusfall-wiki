@@ -11,7 +11,7 @@ import { InteractionBar } from "@/components/interaction-bar";
 import { ContentActions } from "@/components/content-actions";
 import { authorName } from "@/lib/author";
 import { SiteIdMark } from "@/components/user-marks";
-import { ReportButton } from "@/components/report-button";
+import { ReportButton, ReportUserButton } from "@/components/report-button";
 
 async function loadPage(slug: string): Promise<WikiPage> {
   try {
@@ -106,6 +106,7 @@ export default async function WikiPageDetail({
                 author={{ id: page.author.id, displayName: authorName(page.author) }}
               />
               <ReportButton targetType="wikiPage" targetId={page.id} />
+              <ReportUserButton author={page.author} />
             </div>
             {page.tags.length > 0 && (
               <ul className="flex flex-wrap gap-2" aria-label="标签">

@@ -13,7 +13,7 @@ import { InteractionBar } from "@/components/interaction-bar";
 import { ContentActions } from "@/components/content-actions";
 import { authorName } from "@/lib/author";
 import { SiteIdMark } from "@/components/user-marks";
-import { ReportButton } from "@/components/report-button";
+import { ReportButton, ReportUserButton } from "@/components/report-button";
 
 async function loadGuide(slug: string): Promise<Guide> {
   try {
@@ -104,6 +104,7 @@ export default async function GuideDetailPage({
                 author={{ id: guide.author.id, displayName: authorName(guide.author) }}
               />
               <ReportButton targetType="guide" targetId={guide.id} />
+              <ReportUserButton author={guide.author} />
             </div>
             {guide.tags.length > 0 && (
               <ul className="flex flex-wrap gap-2" aria-label="标签">
