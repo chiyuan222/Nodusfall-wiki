@@ -9,6 +9,7 @@ import { hasPermission, PERMISSIONS } from '../common/roles';
 import { PrismaService } from '../prisma/prisma.service';
 import { toUserSummary } from '../users/users.service';
 import { ExpService } from '../exp/exp.service';
+import { TextFilterService } from '../moderation/text-filter.service';
 
 type CommentWithAuthor = Comment & { author: User };
 
@@ -31,6 +32,7 @@ export class CommentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly expService: ExpService,
+    private readonly textFilter: TextFilterService,
   ) {}
 
   private async resolveTarget(type: 'WIKI_PAGE' | 'GUIDE', slug: string): Promise<string> {
@@ -94,6 +96,7 @@ export class CommentsService {
     ) {
       throw new ForbiddenException('verified account required');
     }
+    await this.textFilter.assertSafe(content);
     const targetId = await this.resolveTarget(type, slug);
     const comment = await this.prisma.comment.create({
       data: { targetType: type, targetId, authorId: userId, content },
@@ -104,6 +107,7 @@ export class CommentsService {
   }
 
   async update(userId: string, commentId: string, content: string) {
+    await this.textFilter.assertSafe(content);
     const comment = await this.prisma.comment.findUnique({ where: { id: commentId } });
     if (!comment) throw new NotFoundException('comment not found');
     if (comment.authorId !== userId) throw new ForbiddenException('not your comment');

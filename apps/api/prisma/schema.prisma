@@ -84,6 +84,8 @@ model User {
   threads       ForumThread[]     @relation("ThreadAuthor")
   posts         ForumPost[]       @relation("PostAuthor")
   comments      Comment[]         @relation("CommentAuthor")
+  reports       Report[]          @relation("ReportReporter")
+  handledReports Report[]         @relation("ReportHandler")
   uploads       Upload[]          @relation("UploadUser")
   postLikes     ForumPostLike[]   @relation("PostLikeUser")
   bookmarks     ForumThreadBookmark[] @relation("ThreadBookmarkUser")
@@ -502,4 +504,29 @@ model AuditLog {
   @@index([actorId, createdAt])
   @@index([action, createdAt])
   @@index([createdAt])
+}
+
+model SensitiveWord {
+  id        String   @id @default(uuid())
+  word      String   @unique
+  createdAt DateTime @default(now())
+}
+
+model Report {
+  id          String    @id @default(uuid())
+  reporterId  String
+  reporter    User      @relation("ReportReporter", fields: [reporterId], references: [id])
+  targetType  String
+  targetId    String
+  reason      String
+  detail      String?
+  status      String    @default("PENDING")
+  note        String?
+  handledById String?
+  handledBy   User?     @relation("ReportHandler", fields: [handledById], references: [id])
+  handledAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([status, createdAt])
+  @@index([targetType, targetId])
 }

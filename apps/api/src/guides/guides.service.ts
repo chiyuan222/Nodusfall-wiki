@@ -10,6 +10,7 @@ import { hasPermission, isManagerRole, PERMISSIONS } from '../common/roles';
 import { PrismaService } from '../prisma/prisma.service';
 import { toUserSummary } from '../users/users.service';
 import { ExpService } from '../exp/exp.service';
+import { TextFilterService } from '../moderation/text-filter.service';
 
 type GuideWithAuthor = Guide & { author: User };
 
@@ -68,6 +69,7 @@ export class GuidesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly expService: ExpService,
+    private readonly textFilter: TextFilterService,
   ) {}
 
   private async distribution(guideId: string) {
@@ -149,6 +151,7 @@ export class GuidesService {
     ) {
       throw new ForbiddenException('guide create not granted');
     }
+    await this.textFilter.assertSafe(`${dto.title}\n${dto.content}`);
     const guide = await this.prisma.guide.create({
       data: {
         slug: dto.slug ?? slugify(dto.title),
@@ -196,6 +199,11 @@ export class GuidesService {
     },
     auth?: { role: string; permissions: string[] },
   ) {
+    if (dto.title !== undefined || dto.content !== undefined) {
+      await this.textFilter.assertSafe(
+        `${dto.title ?? ''}\n${dto.content ?? ''}`,
+      );
+    }
     const existing = await this.prisma.guide.findUnique({ where: { slug } });
     if (!existing) throw new NotFoundException('guide not found');
     if (
