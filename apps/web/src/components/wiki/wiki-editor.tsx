@@ -27,7 +27,7 @@ interface Me {
   role?: string;
 }
 
-const EDITOR_ROLES = new Set(["admin", "editor"]);
+const EDITOR_ROLES = new Set(["admin", "editor", "owner"]);
 
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
