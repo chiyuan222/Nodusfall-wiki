@@ -18,6 +18,7 @@ import { logout } from "@/lib/api-client";
 import { isAdminRole, hasPermission, type MeUser } from "@/lib/me";
 import { UserGroupBadge, SiteIdMark } from "@/components/user-marks";
 import { CheckinPanel } from "@/components/me/checkin-panel";
+import { Avatar } from "@/components/avatar";
 import { PhoneBind } from "@/components/me/phone-bind";
 import { featurePhoneEnabled } from "@/lib/feature-flags";
 
@@ -151,21 +152,7 @@ export function ProfilePanel() {
     <div className="rounded-md border border-border-subtle bg-surface p-6">
       {/* 资料卡 */}
       <div className="flex flex-wrap items-center gap-4">
-        {avatarUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element -- 用户自传头像
-          <img
-            src={avatarUrl}
-            alt={`${me.displayName} 的头像`}
-            className="h-16 w-16 rounded-full border border-border-subtle object-cover"
-          />
-        ) : (
-          <span
-            aria-hidden
-            className="flex h-16 w-16 items-center justify-center rounded-full border border-amber-soft bg-raised font-serif text-h2 text-amber"
-          >
-            {(me.displayName || me.username).slice(0, 1)}
-          </span>
-        )}
+        <Avatar url={avatarUrl} name={me.displayName || me.username} size="lg" />
         <div className="min-w-0">
           <p className="flex flex-wrap items-center gap-2 text-body font-semibold text-primary">
             {me.displayName}

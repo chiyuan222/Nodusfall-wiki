@@ -10,6 +10,7 @@ import { getAccessToken } from "@/lib/session";
 import { Markdown } from "@/components/markdown";
 import { authorName } from "@/lib/author";
 import { ReportButton } from "@/components/report-button";
+import { Avatar } from "@/components/avatar";
 
 interface Me {
   id: string;
@@ -268,10 +269,11 @@ export function PostSection({
               key={p.id}
               className="rounded-md border border-border-subtle bg-surface p-5"
             >
-              <div className="flex items-baseline gap-3">
+              <div className="flex items-center gap-3">
                 <span className="font-mono text-caption text-amber">
                   #{p.floor}
                 </span>
+                <Avatar url={p.author.avatarUrl} name={authorName(p.author)} size="sm" />
                 <span className="text-small font-medium text-primary">
                   {authorName(p.author)}
                 </span>

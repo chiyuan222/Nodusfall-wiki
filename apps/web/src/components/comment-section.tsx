@@ -10,6 +10,7 @@ import { authorName } from "@/lib/author";
 import { useMe, canPost, isAdminRole } from "@/lib/me";
 import { UserGroupBadge, UserStatusMark, SiteIdMark } from "@/components/user-marks";
 import { ReportButton } from "@/components/report-button";
+import { Avatar } from "@/components/avatar";
 
 /**
  * 评论区（Wiki 条目 / 攻略共用，客户端组件）。
@@ -187,7 +188,8 @@ export function CommentSection({
         <ol className="mt-6 divide-y divide-border-subtle">
           {items.map((c) => (
             <li key={c.id} className="py-4 first:pt-0 last:pb-0">
-              <div className="flex flex-wrap items-baseline gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <Avatar url={c.author.avatarUrl} name={authorName(c.author)} size="sm" />
                 <span className="text-small font-medium text-primary">
                   {authorName(c.author)}
                 </span>
