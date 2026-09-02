@@ -5,10 +5,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { login } from "@/lib/api-client";
 import { ApiError } from "@/lib/errors";
+import { featurePhoneEnabled } from "@/lib/feature-flags";
 
 /**
  * 登录表单：POST /auth/sessions（grantType=password）。
  * 账号栏自动识别：匹配 ^1[3-9]\d{9}$ 按手机号登录，否则按邮箱登录（契约 PR #45）。
+ * 手机号登录暂封闭（featurePhoneEnabled=false）：识别到手机号时提示改用邮箱。
  * 成功后跳用户中心 /me。
  */
 
@@ -28,6 +30,10 @@ export function LoginForm() {
     const id = account.trim();
     let credential: { email: string } | { phone: string };
     if (PHONE_RE.test(id)) {
+      if (!featurePhoneEnabled) {
+        setMsg("手机号登录暂未开放，请使用邮箱登录。");
+        return;
+      }
       credential = { phone: id };
     } else if (EMAIL_RE.test(id)) {
       credential = { email: id };
@@ -60,7 +66,7 @@ export function LoginForm() {
     <form className="mt-8 space-y-4" aria-label="登录表单" onSubmit={submit}>
       <div>
         <label htmlFor="account" className="mb-1 block text-small text-secondary">
-          邮箱或手机号
+          {featurePhoneEnabled ? "邮箱或手机号" : "邮箱"}
         </label>
         <input
           id="account"
@@ -69,7 +75,7 @@ export function LoginForm() {
           required
           value={account}
           onChange={(e) => setAccount(e.target.value)}
-          placeholder="自动识别邮箱 / 手机号"
+          placeholder={featurePhoneEnabled ? "自动识别邮箱 / 手机号" : "注册时使用的邮箱"}
           className="w-full rounded-md border border-border-subtle bg-raised px-4 py-2.5 text-body text-primary placeholder:text-faint focus:border-amber-soft"
         />
       </div>

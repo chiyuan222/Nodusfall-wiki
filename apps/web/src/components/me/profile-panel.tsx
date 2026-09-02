@@ -19,6 +19,7 @@ import { isAdminRole, hasPermission, type MeUser } from "@/lib/me";
 import { UserGroupBadge, SiteIdMark } from "@/components/user-marks";
 import { CheckinPanel } from "@/components/me/checkin-panel";
 import { PhoneBind } from "@/components/me/phone-bind";
+import { featurePhoneEnabled } from "@/lib/feature-flags";
 
 type Me = MeUser;
 
@@ -187,22 +188,24 @@ export function ProfilePanel() {
               <> · 注册于 {new Date(me.createdAt).toLocaleDateString("zh-CN")}</>
             )}
           </p>
-          {(me.emailMasked || me.phoneMasked) && (
+          {(me.emailMasked || (featurePhoneEnabled && me.phoneMasked)) && (
             <p className="mt-0.5 font-mono text-caption text-faint">
               {me.emailMasked && <>邮箱 {me.emailMasked}</>}
-              {me.emailMasked && me.phoneMasked && <> · </>}
-              {me.phoneMasked && <>手机 {me.phoneMasked}</>}
+              {me.emailMasked && featurePhoneEnabled && me.phoneMasked && <> · </>}
+              {featurePhoneEnabled && me.phoneMasked && <>手机 {me.phoneMasked}</>}
             </p>
           )}
-          <p className="mt-0.5">
-            <PhoneBind
-              phoneMasked={me.phoneMasked}
-              onBound={(u) => {
-                setMe(u);
-                setMsg("手机号绑定成功，已完成手机认证，可评论/发帖。");
-              }}
-            />
-          </p>
+          {featurePhoneEnabled && (
+            <p className="mt-0.5">
+              <PhoneBind
+                phoneMasked={me.phoneMasked}
+                onBound={(u) => {
+                  setMe(u);
+                  setMsg("手机号绑定成功，已完成手机认证，可评论/发帖。");
+                }}
+              />
+            </p>
+          )}
         </div>
         <span className="grow" />
         <button
