@@ -161,7 +161,8 @@ export class UsersService {
         passwordHash,
         emailVerifiedAt: email ? new Date() : null,
         phoneVerifiedAt: phone ? new Date() : null,
-        group: phone ? 'VERIFIED' : 'NORMAL',
+        // 注册即完成邮箱或手机号验证码验证，直接授予认证用户组（可评论/发帖）
+        group: 'VERIFIED',
       },
     });
   }
