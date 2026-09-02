@@ -10,6 +10,7 @@ import { InteractionBar } from "@/components/interaction-bar";
 import { ContentActions } from "@/components/content-actions";
 import { authorName } from "@/lib/author";
 import { UserGroupBadge, UserStatusMark, SiteIdMark } from "@/components/user-marks";
+import { ReportButton } from "@/components/report-button";
 
 export const dynamic = "force-dynamic";
 
@@ -109,13 +110,14 @@ export default async function ThreadPage({
             likedByMe={thread.likedByMe}
             bookmarkedByMe={thread.bookmarkedByMe}
           />
-          <div className="flex flex-wrap items-center">
+          <div className="flex flex-wrap items-center gap-2">
             <ContentActions
               kind="thread"
               target={thread.id}
               boardSlug={thread.boardSlug}
               author={{ id: thread.author.id, displayName: authorName(thread.author) }}
             />
+            <ReportButton targetType="forumThread" targetId={thread.id} />
           </div>
         </header>
 

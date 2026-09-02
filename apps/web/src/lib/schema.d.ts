@@ -419,6 +419,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 举报列表（内容审核） */
+        get: operations["listReports"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/reports/{reportId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** 处理举报（RESOLVED 已处理 / REJECTED 驳回） */
+        patch: operations["handleReport"];
+        trace?: never;
+    };
+    "/admin/moderation/content": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 内容巡查列表（论坛主题/回复/评论/Wiki/攻略） */
+        get: operations["listModerationContent"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/users": {
         parameters: {
             query?: never;
@@ -1075,6 +1126,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 举报内容（论坛主题/回复/评论/Wiki/攻略） */
+        post: operations["createReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/search": {
         parameters: {
             query?: never;
@@ -1305,6 +1373,48 @@ export interface components {
         };
         AuditLogList: {
             data: components["schemas"]["AuditLog"][];
+            pagination: components["schemas"]["Pagination"];
+        };
+        Report: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            targetType: "forumThread" | "forumPost" | "comment" | "wikiPage" | "guide";
+            targetId: string;
+            /** @enum {string} */
+            reason: "spam" | "porn" | "politics" | "violence" | "illegal" | "other";
+            detail?: string | null;
+            /** @enum {string} */
+            status: "PENDING" | "RESOLVED" | "REJECTED";
+            /** @description 处理备注 */
+            note?: string | null;
+            reporter: components["schemas"]["UserSummary"] | null;
+            handledBy?: components["schemas"]["UserSummary"] | null;
+            /** Format: date-time */
+            handledAt?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        ReportList: {
+            data: components["schemas"]["Report"][];
+            pagination: components["schemas"]["Pagination"];
+        };
+        ModerationContentItem: {
+            id: string;
+            /** @enum {string} */
+            type: "forumThread" | "forumPost" | "comment" | "wikiPage" | "guide";
+            /** @description 主题/标题；回复/评论为空串 */
+            title: string;
+            /** @description 内容前 120 字纯文本 */
+            excerpt: string;
+            author: components["schemas"]["UserSummary"] | null;
+            /** @description 内容状态（published/deleted 等，按类型） */
+            status: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        ModerationContentList: {
+            data: components["schemas"]["ModerationContentItem"][];
             pagination: components["schemas"]["Pagination"];
         };
         AuthSession: {
@@ -3051,6 +3161,94 @@ export interface operations {
             403: components["responses"]["Forbidden"];
         };
     };
+    listReports: {
+        parameters: {
+            query?: {
+                page?: number;
+                perPage?: number;
+                status?: "PENDING" | "RESOLVED" | "REJECTED";
+                targetType?: "forumThread" | "forumPost" | "comment" | "wikiPage" | "guide";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 举报列表 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    handleReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reportId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    status: "RESOLVED" | "REJECTED";
+                    note?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description 已处理 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["Report"];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listModerationContent: {
+        parameters: {
+            query?: {
+                page?: number;
+                perPage?: number;
+                type?: "forumThread" | "forumPost" | "comment" | "wikiPage" | "guide";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 巡查列表 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationContentList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
     listAdminUsers: {
         parameters: {
             query?: {
@@ -4586,6 +4784,44 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    createReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    targetType: "forumThread" | "forumPost" | "comment" | "wikiPage" | "guide";
+                    targetId: string;
+                    /** @enum {string} */
+                    reason: "spam" | "porn" | "politics" | "violence" | "illegal" | "other";
+                    detail?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description 举报已提交 */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthorized"];
+            /** @description 同一用户对同一内容已有待处理举报 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     search: {

@@ -11,6 +11,7 @@ import { InteractionBar } from "@/components/interaction-bar";
 import { ContentActions } from "@/components/content-actions";
 import { authorName } from "@/lib/author";
 import { SiteIdMark } from "@/components/user-marks";
+import { ReportButton } from "@/components/report-button";
 
 async function loadPage(slug: string): Promise<WikiPage> {
   try {
@@ -98,12 +99,13 @@ export default async function WikiPageDetail({
               likedByMe={page.likedByMe}
               bookmarkedByMe={page.bookmarkedByMe}
             />
-            <div className="flex flex-wrap items-center">
+            <div className="flex flex-wrap items-center gap-2">
               <ContentActions
                 kind="wiki"
                 target={page.slug}
                 author={{ id: page.author.id, displayName: authorName(page.author) }}
               />
+              <ReportButton targetType="wikiPage" targetId={page.id} />
             </div>
             {page.tags.length > 0 && (
               <ul className="flex flex-wrap gap-2" aria-label="标签">

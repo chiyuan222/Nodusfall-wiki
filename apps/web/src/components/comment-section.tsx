@@ -9,6 +9,7 @@ import { getAccessToken } from "@/lib/session";
 import { authorName } from "@/lib/author";
 import { useMe, canPost, isAdminRole } from "@/lib/me";
 import { UserGroupBadge, UserStatusMark, SiteIdMark } from "@/components/user-marks";
+import { ReportButton } from "@/components/report-button";
 
 /**
  * 评论区（Wiki 条目 / 攻略共用，客户端组件）。
@@ -203,6 +204,7 @@ export function CommentSection({
                   })}
                 </time>
                 <span className="grow" />
+                <ReportButton targetType="comment" targetId={c.id} />
                 <button
                   type="button"
                   onClick={() => toggleLike(c)}
