@@ -14,6 +14,7 @@ import {
 import { pageInfo } from '../common/pagination';
 import { extractFirstImage } from '../common/markdown';
 import { hasPermission, isManagerRole, PERMISSIONS } from '../common/roles';
+import { TextFilterService } from '../moderation/text-filter.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { toUserSummary } from '../users/users.service';
 import { ExpService } from '../exp/exp.service';
@@ -94,6 +95,7 @@ export class WikiService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly expService: ExpService,
+    private readonly textFilter: TextFilterService,
   ) {}
 
   listCategories() {
@@ -226,6 +228,7 @@ export class WikiService {
     ) {
       throw new ForbiddenException('wiki create not granted');
     }
+    await this.textFilter.assertSafe(`${dto.title}\n${dto.content}`);
     const category = await this.prisma.wikiCategory.findUnique({
       where: { slug: dto.categorySlug },
     });
@@ -291,6 +294,11 @@ export class WikiService {
     },
     auth?: { role: string; permissions: string[] },
   ) {
+    if (dto.title !== undefined || dto.content !== undefined) {
+      await this.textFilter.assertSafe(
+        `${dto.title ?? ''}\n${dto.content ?? ''}`,
+      );
+    }
     const existing = await this.prisma.wikiPage.findUnique({ where: { slug } });
     if (!existing) throw new NotFoundException('page not found');
     if (

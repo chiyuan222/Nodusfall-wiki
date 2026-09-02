@@ -11,6 +11,7 @@ import { hasPermission, PERMISSIONS } from '../common/roles';
 import { PrismaService } from '../prisma/prisma.service';
 import { toUserSummary } from '../users/users.service';
 import { ExpService } from '../exp/exp.service';
+import { TextFilterService } from '../moderation/text-filter.service';
 
 type BoardWithCount = ForumBoard & { _count: { threads: number } };
 type ThreadWithAuthor = ForumThread & { author: User };
@@ -79,6 +80,7 @@ export class ForumService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly expService: ExpService,
+    private readonly textFilter: TextFilterService,
   ) {}
 
   listBoards() {
@@ -205,6 +207,7 @@ export class ForumService {
     if (auth?.group !== 'VERIFIED' && !hasPermission(auth?.role, auth?.permissions, PERMISSIONS.MANAGE_FORUM)) {
       throw new ForbiddenException('verified account required');
     }
+    await this.textFilter.assertSafe(`${dto.title}\n${dto.content}`);
     const board = await this.prisma.forumBoard.findUnique({ where: { slug: boardSlug } });
     if (!board) throw new NotFoundException('board not found');
     const thread = await this.prisma.forumThread.create({
@@ -262,6 +265,9 @@ export class ForumService {
     },
     auth?: { role: string; permissions: string[] },
   ) {
+    if (dto.title !== undefined) {
+      await this.textFilter.assertSafe(dto.title);
+    }
     const existing = await this.prisma.forumThread.findUnique({ where: { id: threadId } });
     if (!existing) throw new NotFoundException('thread not found');
     const isManager = hasPermission(auth?.role, auth?.permissions, PERMISSIONS.MANAGE_FORUM);
@@ -399,6 +405,7 @@ export class ForumService {
     if (auth?.group !== 'VERIFIED' && !hasPermission(auth?.role, auth?.permissions, PERMISSIONS.MANAGE_FORUM)) {
       throw new ForbiddenException('verified account required');
     }
+    await this.textFilter.assertSafe(dto.content);
     const thread = await this.prisma.forumThread.findUnique({ where: { id: threadId } });
     if (!thread) throw new NotFoundException('thread not found');
     if (thread.locked) throw new ForbiddenException('thread is locked');
@@ -418,6 +425,7 @@ export class ForumService {
   }
 
   async updatePost(userId: string, postId: string, content: string) {
+    await this.textFilter.assertSafe(content);
     const post = await this.prisma.forumPost.findUnique({ where: { id: postId } });
     if (!post) throw new NotFoundException('post not found');
     if (post.authorId !== userId) throw new ForbiddenException('not your post');

@@ -64,7 +64,44 @@ async function main(): Promise<void> {
     create: { slug: 'help', name: '求助与答疑', sortOrder: 2 },
   });
 
-  console.log('Seed 完成：home/world 内容、站长账号、Wiki 分类、论坛板块');
+  const sensitiveWords = [
+    '法轮功',
+    '台独',
+    '藏独',
+    '疆独',
+    '港独',
+    '赌博',
+    '博彩',
+    '色情',
+    '淫秽',
+    '嫖娼',
+    '卖淫',
+    '毒品',
+    '海洛因',
+    '冰毒',
+    '大麻',
+    '摇头丸',
+    '枪支',
+    '弹药',
+    '爆炸物',
+    '恐怖袭击',
+    '炸弹',
+    '电信诈骗',
+    '刷单',
+    '传销',
+    '洗钱',
+    '代开发票',
+    '办假证',
+    '假钞',
+    '管制刀具',
+    '邪教组织',
+  ];
+  await prisma.sensitiveWord.createMany({
+    data: sensitiveWords.map((word) => ({ word })),
+    skipDuplicates: true,
+  });
+
+  console.log('Seed 完成：home/world 内容、站长账号、Wiki 分类、论坛板块、敏感词库');
 }
 
 main()

@@ -79,8 +79,12 @@ export class SmsCodeService {
 
   private async deliver(phone: string, code: string): Promise<void> {
     const secretId = this.config.get<string>('SMS_SECRET_ID');
+    const secretKey = this.config.get<string>('SMS_SECRET_KEY');
+    const signName = this.config.get<string>('SMS_SIGN_NAME');
+    const templateId = this.config.get<string>('SMS_TEMPLATE_ID');
+    const sdkAppId = this.config.get<string>('SMS_SDK_APP_ID');
 
-    if (!secretId) {
+    if (!secretId || !secretKey || !signName || !templateId || !sdkAppId) {
       // 开发模式：验证码写入 .dev/sms-codes.log 并输出控制台，便于本地联调
       const line = `[${new Date().toISOString()}] ${phone} code=${code}\n`;
       try {
@@ -95,14 +99,6 @@ export class SmsCodeService {
     }
 
     // 腾讯云短信发送（需安装 tencentcloud-sdk-nodejs-sms 并配置短信签名/模板）
-    const secretKey = this.config.get<string>('SMS_SECRET_KEY');
-    if (!secretKey) {
-      this.logger.error('SMS_SECRET_KEY 未配置，短信发送失败');
-      throw new HttpException(
-        { detail: '短信服务暂不可用，请稍后再试' },
-        HttpStatus.SERVICE_UNAVAILABLE,
-      );
-    }
     try {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const { sms } = require('tencentcloud-sdk-nodejs-sms');

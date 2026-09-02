@@ -19,6 +19,7 @@ import { VideosModule } from './videos/videos.module';
 import { SiteModule } from './site/site.module';
 import { ExpModule } from './exp/exp.module';
 import { AuditModule } from './audit/audit.module';
+import { ModerationModule } from './moderation/moderation.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { AuditModule } from './audit/audit.module';
     SiteModule,
     ExpModule,
     AuditModule,
+    ModerationModule,
   ],
 })
 export class AppModule implements NestModule {
