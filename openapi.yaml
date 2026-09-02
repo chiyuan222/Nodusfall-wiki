@@ -29,6 +29,8 @@ tags:
     description: 板块、主题与回复
   - name: Comments
     description: 内容评论与点赞
+  - name: Moderation
+    description: 内容举报、审核与巡查
   - name: Search
     description: 跨内容搜索
   - name: Uploads
@@ -665,6 +667,105 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AuditLogList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /admin/reports:
+    get:
+      tags: [Admin]
+      operationId: listReports
+      summary: 举报列表（内容审核）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: perPage
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - name: status
+          in: query
+          schema: { type: string, enum: [PENDING, RESOLVED, REJECTED] }
+        - name: targetType
+          in: query
+          schema: { type: string, enum: [forumThread, forumPost, comment, wikiPage, guide] }
+      responses:
+        "200":
+          description: 举报列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /admin/reports/{reportId}:
+    patch:
+      tags: [Admin]
+      operationId: handleReport
+      summary: 处理举报（RESOLVED 已处理 / REJECTED 驳回）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: reportId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [RESOLVED, REJECTED]
+                note: { type: string, maxLength: 500 }
+      responses:
+        "200":
+          description: 已处理
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Report"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /admin/moderation/content:
+    get:
+      tags: [Admin]
+      operationId: listModerationContent
+      summary: 内容巡查列表（论坛主题/回复/评论/Wiki/攻略）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: perPage
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - name: type
+          in: query
+          schema: { type: string, enum: [forumThread, forumPost, comment, wikiPage, guide] }
+      responses:
+        "200":
+          description: 巡查列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModerationContentList"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -2071,6 +2172,40 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /reports:
+    post:
+      tags: [Moderation]
+      operationId: createReport
+      summary: 举报内容（论坛主题/回复/评论/Wiki/攻略）
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [targetType, targetId, reason]
+              properties:
+                targetType:
+                  type: string
+                  enum: [forumThread, forumPost, comment, wikiPage, guide]
+                targetId: { type: string }
+                reason:
+                  type: string
+                  enum: [spam, porn, politics, violence, illegal, other]
+                detail:
+                  type: string
+                  maxLength: 500
+      responses:
+        "201":
+          description: 举报已提交
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          description: 同一用户对同一内容已有待处理举报
+
   /search:
     get:
       tags: [Search]
@@ -2855,6 +2990,75 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AuditLog"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+
+    Report:
+      type: object
+      required: [id, targetType, targetId, reason, status, createdAt, reporter]
+      properties:
+        id: { type: string, format: uuid }
+        targetType:
+          type: string
+          enum: [forumThread, forumPost, comment, wikiPage, guide]
+        targetId: { type: string }
+        reason:
+          type: string
+          enum: [spam, porn, politics, violence, illegal, other]
+        detail: { type: string, nullable: true }
+        status:
+          type: string
+          enum: [PENDING, RESOLVED, REJECTED]
+        note: { type: string, nullable: true, description: 处理备注 }
+        reporter:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/UserSummary"
+        handledBy:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/UserSummary"
+        handledAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    ReportList:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Report"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+
+    ModerationContentItem:
+      type: object
+      required: [id, type, title, excerpt, author, createdAt, status]
+      properties:
+        id: { type: string }
+        type:
+          type: string
+          enum: [forumThread, forumPost, comment, wikiPage, guide]
+        title: { type: string, description: 主题/标题；回复/评论为空串 }
+        excerpt: { type: string, description: 内容前 120 字纯文本 }
+        author:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/UserSummary"
+        status:
+          type: string
+          description: 内容状态（published/deleted 等，按类型）
+        createdAt: { type: string, format: date-time }
+
+    ModerationContentList:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ModerationContentItem"
         pagination:
           $ref: "#/components/schemas/Pagination"
 
