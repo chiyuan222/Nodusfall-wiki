@@ -44,7 +44,7 @@ class ListReportsQueryDto {
   status?: string;
 
   @IsOptional()
-  @IsIn(['forumThread', 'forumPost', 'comment', 'wikiPage', 'guide'])
+  @IsIn(['forumThread', 'forumPost', 'comment', 'wikiPage', 'guide', 'user'])
   targetType?: string;
 }
 

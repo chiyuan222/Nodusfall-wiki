@@ -19,7 +19,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ReportsService } from './reports.service';
 
 class CreateReportDto {
-  @IsIn(['forumThread', 'forumPost', 'comment', 'wikiPage', 'guide'])
+  @IsIn(['forumThread', 'forumPost', 'comment', 'wikiPage', 'guide', 'user'])
   targetType!: string;
 
   @IsString()
