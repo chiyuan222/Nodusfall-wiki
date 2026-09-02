@@ -7,10 +7,14 @@ import {
 import { pageInfo } from '../common/pagination';
 import { PrismaService } from '../prisma/prisma.service';
 import { toUserSummary } from '../users/users.service';
+import { TextFilterService } from '../moderation/text-filter.service';
 
 @Injectable()
 export class MessagesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly textFilter: TextFilterService,
+  ) {}
 
   async list(userId: string, page: number, perPage: number) {
     const dmWhere = {
@@ -78,6 +82,7 @@ export class MessagesService {
     if (senderId === dto.recipientId) {
       throw new BadRequestException('cannot message yourself');
     }
+    await this.textFilter.assertSafe(dto.content);
     const [sender, recipient] = await Promise.all([
       this.prisma.user.findUnique({ where: { id: senderId } }),
       this.prisma.user.findUnique({ where: { id: dto.recipientId } }),
