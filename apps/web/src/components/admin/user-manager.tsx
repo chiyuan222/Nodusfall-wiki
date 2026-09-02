@@ -5,6 +5,7 @@ import { request, type ListResult } from "@/lib/api-client";
 import { ApiError } from "@/lib/errors";
 import { useMe, isAdminRole, type MeUser } from "@/lib/me";
 import { UserGroupBadge, UserStatusMark } from "@/components/user-marks";
+import { Avatar } from "@/components/avatar";
 import type { components } from "@/lib/schema";
 
 /**
@@ -211,6 +212,7 @@ export function UserManager() {
                       selected?.id === u.id ? "bg-raised" : ""
                     }`}
                   >
+                    <Avatar url={u.avatarUrl} name={u.displayName || u.username} size="sm" />
                     <span className="min-w-0 grow">
                       <span className="flex flex-wrap items-center gap-2">
                         <span className="truncate text-small font-medium text-primary">
@@ -256,11 +258,14 @@ export function UserManager() {
           ) : (
             <div className="space-y-5">
               <div>
-                <p className="flex flex-wrap items-center gap-2 text-body font-semibold text-primary">
-                  {selected.displayName}
-                  <UserGroupBadge group={selected.group} level={selected.level} />
-                  <UserStatusMark status={selected.status} />
-                </p>
+                <div className="flex items-center gap-3">
+                  <Avatar url={selected.avatarUrl} name={selected.displayName || selected.username} size="lg" />
+                  <p className="flex flex-wrap items-center gap-2 text-body font-semibold text-primary">
+                    {selected.displayName}
+                    <UserGroupBadge group={selected.group} level={selected.level} />
+                    <UserStatusMark status={selected.status} />
+                  </p>
+                </div>
                 <p className="mt-1 font-mono text-caption text-faint">
                   @{selected.username} · {selected.email}
                   {selected.phone ? ` · ${selected.phone}` : ""}
