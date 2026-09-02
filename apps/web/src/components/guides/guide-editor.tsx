@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { request, API_BASE_URL } from "@/lib/api-client";
 import { ApiError } from "@/lib/errors";
 import { getAccessToken } from "@/lib/session";
+import { isAdminRole } from "@/lib/me";
 import type { Guide } from "@/lib/api";
 import { Markdown } from "@/components/markdown";
 
@@ -98,7 +99,7 @@ export function GuideEditor({
       .then((r) => {
         if (mode === "edit" && initial) {
           const isAuthor = r.data.id === initial.author.id;
-          const isAdmin = r.data.role?.toLowerCase() === "admin";
+          const isAdmin = isAdminRole(r.data.role);
           setPhase(isAuthor || isAdmin ? "ready" : "forbidden");
         } else {
           setPhase("ready");

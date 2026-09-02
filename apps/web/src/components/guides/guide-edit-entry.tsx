@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { request } from "@/lib/api-client";
 import { getAccessToken } from "@/lib/session";
+import { isAdminRole } from "@/lib/me";
 
 /**
  * 攻略编辑入口（客户端）：仅对攻略作者本人或 admin 渲染「编辑」链接，
@@ -29,7 +30,7 @@ export function GuideEditEntry({
     request<{ data: Me }>("/users/me")
       .then((r) => {
         const isAuthor = r.data.id === authorId;
-        const isAdmin = r.data.role?.toLowerCase() === "admin";
+        const isAdmin = isAdminRole(r.data.role);
         setAllowed(isAuthor || isAdmin);
       })
       .catch(() => setAllowed(false));

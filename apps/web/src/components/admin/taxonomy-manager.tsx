@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { request } from "@/lib/api-client";
 import { ApiError } from "@/lib/errors";
 import { getAccessToken } from "@/lib/session";
+import { isAdminRole } from "@/lib/me";
 
 /**
  * 板块与分类管理（客户端组件，/admin/taxonomy）。
@@ -99,7 +100,7 @@ export function TaxonomyManager() {
     }
     request<{ data: { role?: string } }>("/users/me")
       .then((r) =>
-        setPhase(r.data.role?.toLowerCase() === "admin" ? "ready" : "forbidden"),
+        setPhase(isAdminRole(r.data.role) ? "ready" : "forbidden"),
       )
       .catch(() => setPhase("forbidden"));
   }, []);

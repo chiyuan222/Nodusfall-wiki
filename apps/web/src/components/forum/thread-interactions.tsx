@@ -11,6 +11,7 @@ import { Markdown } from "@/components/markdown";
 import { authorName } from "@/lib/author";
 import { ReportButton, ReportUserButton } from "@/components/report-button";
 import { Avatar } from "@/components/avatar";
+import { isAdminRole } from "@/lib/me";
 
 interface Me {
   id: string;
@@ -59,7 +60,7 @@ export function AdminThreadControls({
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
 
-  if (me?.role?.toLowerCase() !== "admin") return null;
+  if (!isAdminRole(me?.role)) return null;
 
   const toggle = (field: "pinned" | "locked", next: boolean) => {
     if (busy) return;
@@ -247,7 +248,7 @@ export function PostSection({
   };
 
   const canManage = (p: ForumPost) =>
-    me && (me.id === p.author.id || me.role?.toLowerCase() === "admin");
+    me && (me.id === p.author.id || isAdminRole(me.role));
 
   return (
     <section aria-labelledby="posts-heading" className="space-y-6">

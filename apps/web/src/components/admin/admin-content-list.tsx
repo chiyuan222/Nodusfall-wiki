@@ -5,6 +5,7 @@ import Link from "next/link";
 import { request, type ListResult } from "@/lib/api-client";
 import { ApiError } from "@/lib/errors";
 import { getAccessToken } from "@/lib/session";
+import { isAdminRole } from "@/lib/me";
 
 /**
  * Wiki / 攻略内容管理列表（客户端组件，/admin/wiki 与 /admin/guides 共用）。
@@ -87,9 +88,10 @@ export function AdminContentList({ kind }: { kind: "wiki" | "guide" }) {
     request<{ data: Me }>("/users/me")
       .then((r) => {
         const role = r.data.role?.toLowerCase() ?? "";
+        // owner 为最高管理身份，与 lib/me.ts isAdminRole 语义一致
         const ok = isWiki
-          ? role === "admin" || role === "editor"
-          : role === "admin";
+          ? isAdminRole(role) || role === "editor"
+          : isAdminRole(role);
         setPhase(ok ? "ready" : "forbidden");
       })
       .catch(() => setPhase("forbidden"));
