@@ -20,6 +20,15 @@ export class ReportsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(reporterId: string, input: CreateReportInput) {
+    let targetUser: User | null = null;
+    if (input.targetType === 'user') {
+      targetUser = await this.prisma.user.findUnique({
+        where: { id: input.targetId },
+      });
+      if (!targetUser) {
+        throw new NotFoundException('被举报用户不存在');
+      }
+    }
     const existing = await this.prisma.report.findFirst({
       where: {
         reporterId,
@@ -40,7 +49,7 @@ export class ReportsService {
         detail: input.detail ?? null,
       },
     });
-    return this.toDto(report, null, null);
+    return this.toDto(report, null, null, targetUser);
   }
 
   async list(query: {
@@ -63,8 +72,16 @@ export class ReportsService {
       }),
     ]);
 
+    const targetUserIds = items
+      .filter((i) => i.targetType === 'user')
+      .map((i) => i.targetId);
     const userIds = [
-      ...new Set(items.flatMap((i) => [i.reporterId, i.handledById ?? '']).filter(Boolean)),
+      ...new Set(
+        items
+          .flatMap((i) => [i.reporterId, i.handledById ?? ''])
+          .concat(targetUserIds)
+          .filter(Boolean),
+      ),
     ];
     const users = await this.prisma.user.findMany({
       where: { id: { in: userIds } },
@@ -77,6 +94,7 @@ export class ReportsService {
           r,
           userMap.get(r.reporterId) ?? null,
           r.handledById ? (userMap.get(r.handledById) ?? null) : null,
+          r.targetType === 'user' ? (userMap.get(r.targetId) ?? null) : null,
         ),
       ),
       pagination: pageInfo(query.page, query.perPage, total),
@@ -110,18 +128,24 @@ export class ReportsService {
     const reporter = await this.prisma.user.findUnique({
       where: { id: updated.reporterId },
     });
-    return this.toDto(updated, reporter, handler);
+    const targetUser =
+      updated.targetType === 'user'
+        ? await this.prisma.user.findUnique({ where: { id: updated.targetId } })
+        : null;
+    return this.toDto(updated, reporter, handler, targetUser);
   }
 
   private toDto(
     report: Report,
     reporter: User | null,
     handler: User | null,
+    targetUser: User | null,
   ) {
     return {
       id: report.id,
       targetType: report.targetType,
       targetId: report.targetId,
+      targetUser: targetUser ? toUserSummary(targetUser) : null,
       reason: report.reason,
       detail: report.detail,
       status: report.status,
