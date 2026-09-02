@@ -10,6 +10,7 @@ import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailCodeService } from '../auth/email-code.service';
 import { SmsCodeService } from '../auth/sms-code.service';
+import { TextFilterService } from '../moderation/text-filter.service';
 import { pageInfo } from '../common/pagination';
 import { RegisterDto } from './dto/register.dto';
 import { levelFromExp, nextLevelExp } from '../exp/exp.service';
@@ -96,6 +97,7 @@ export class UsersService {
     private readonly prisma: PrismaService,
     private readonly emailCodeService: EmailCodeService,
     private readonly smsCodeService: SmsCodeService,
+    private readonly textFilter: TextFilterService,
   ) {}
 
   async findById(id: string): Promise<User | null> {
@@ -119,10 +121,17 @@ export class UsersService {
     avatarUrl?: string;
     bio?: string;
   }): Promise<User> {
+    if (data.displayName !== undefined) {
+      await this.textFilter.assertSafe(data.displayName);
+    }
+    if (data.bio !== undefined) {
+      await this.textFilter.assertSafe(data.bio);
+    }
     return this.prisma.user.update({ where: { id }, data });
   }
 
   async register(dto: RegisterDto): Promise<User> {
+    await this.textFilter.assertSafe(dto.username);
     const email = dto.email?.trim().toLowerCase();
     const phone = dto.phone?.trim();
 
