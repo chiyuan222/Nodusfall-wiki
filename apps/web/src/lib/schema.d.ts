@@ -1135,7 +1135,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** 举报内容（论坛主题/回复/评论/Wiki/攻略） */
+        /** 举报内容或用户（论坛主题/回复/评论/Wiki/攻略/用户） */
         post: operations["createReport"];
         delete?: never;
         options?: never;
@@ -1379,8 +1379,10 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            targetType: "forumThread" | "forumPost" | "comment" | "wikiPage" | "guide";
+            targetType: "forumThread" | "forumPost" | "comment" | "wikiPage" | "guide" | "user";
             targetId: string;
+            /** @description 被举报用户摘要；仅 targetType=user 时回填，其余为 null */
+            targetUser?: components["schemas"]["UserSummary"] | null;
             /** @enum {string} */
             reason: "spam" | "porn" | "politics" | "violence" | "illegal" | "other";
             detail?: string | null;
@@ -3167,7 +3169,8 @@ export interface operations {
                 page?: number;
                 perPage?: number;
                 status?: "PENDING" | "RESOLVED" | "REJECTED";
-                targetType?: "forumThread" | "forumPost" | "comment" | "wikiPage" | "guide";
+                /** @description 按目标类型筛选（user 为用户资料/头像/昵称举报） */
+                targetType?: "forumThread" | "forumPost" | "comment" | "wikiPage" | "guide" | "user";
             };
             header?: never;
             path?: never;
@@ -4797,7 +4800,8 @@ export interface operations {
             content: {
                 "application/json": {
                     /** @enum {string} */
-                    targetType: "forumThread" | "forumPost" | "comment" | "wikiPage" | "guide";
+                    targetType: "forumThread" | "forumPost" | "comment" | "wikiPage" | "guide" | "user";
+                    /** @description 内容 id/slug；targetType 为 user 时传用户 uuid */
                     targetId: string;
                     /** @enum {string} */
                     reason: "spam" | "porn" | "politics" | "violence" | "illegal" | "other";

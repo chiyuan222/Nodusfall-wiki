@@ -6,7 +6,8 @@ import { request } from "@/lib/api-client";
 import { ApiError } from "@/lib/errors";
 import type { components } from "@/lib/schema";
 import { useMe, isAdminRole, hasPermission } from "@/lib/me";
-import { SiteIdMark } from "@/components/user-marks";
+import { SiteIdMark, UserGroupBadge, UserStatusMark } from "@/components/user-marks";
+import { Avatar } from "@/components/avatar";
 import {
   TARGET_TYPE_LABEL,
   REPORT_REASON_LABEL,
@@ -232,6 +233,30 @@ export function ReportQueue() {
                   </Link>
                 )}
               </div>
+              {r.targetType === "user" && r.targetUser && (
+                <div className="mt-2 flex flex-wrap items-center gap-3 rounded-sm border border-border-subtle bg-raised px-3 py-2">
+                  <Avatar
+                    url={r.targetUser.avatarUrl}
+                    name={r.targetUser.displayName || r.targetUser.username}
+                    size="sm"
+                  />
+                  <span className="text-small font-medium text-primary">
+                    {r.targetUser.displayName || r.targetUser.username}
+                  </span>
+                  <span className="font-mono text-caption text-faint">
+                    @{r.targetUser.username}
+                  </span>
+                  <SiteIdMark siteId={r.targetUser.siteId} />
+                  <UserGroupBadge group={r.targetUser.group} level={r.targetUser.level} />
+                  <UserStatusMark status={r.targetUser.status} />
+                  <Link
+                    href="/admin/users"
+                    className="text-caption text-amber hover:underline"
+                  >
+                    去用户管理 ↗
+                  </Link>
+                </div>
+              )}
               {r.detail && (
                 <p className="mt-2 rounded-sm bg-raised px-3 py-2 text-small text-secondary">
                   {r.detail}

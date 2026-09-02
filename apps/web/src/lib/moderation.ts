@@ -9,7 +9,8 @@ export type ModerationTargetType =
   | "forumPost"
   | "comment"
   | "wikiPage"
-  | "guide";
+  | "guide"
+  | "user";
 
 export const TARGET_TYPE_LABEL: Record<ModerationTargetType, string> = {
   forumThread: "论坛主题",
@@ -17,6 +18,7 @@ export const TARGET_TYPE_LABEL: Record<ModerationTargetType, string> = {
   comment: "评论",
   wikiPage: "Wiki 词条",
   guide: "攻略",
+  user: "用户",
 };
 
 export const REPORT_REASON_LABEL: Record<string, string> = {

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { request } from "@/lib/api-client";
 import { ApiError } from "@/lib/errors";
 import { getAccessToken } from "@/lib/session";
+import { useMe } from "@/lib/me";
 
 /**
  * 内容举报（契约 PR #90）：POST /reports。
@@ -18,7 +19,8 @@ export type ReportTargetType =
   | "forumPost"
   | "comment"
   | "wikiPage"
-  | "guide";
+  | "guide"
+  | "user";
 
 const REASONS: [string, string][] = [
   ["spam", "广告/垃圾信息"],
@@ -32,10 +34,15 @@ const REASONS: [string, string][] = [
 export function ReportButton({
   targetType,
   targetId,
+  label = "举报",
 }: {
   targetType: ReportTargetType;
   targetId: string;
+  /** 触发按钮文案，默认「举报」 */
+  label?: string;
 }) {
+  const isUser = targetType === "user";
+  const title = isUser ? "举报用户" : "举报内容";
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [detail, setDetail] = useState("");
@@ -65,7 +72,7 @@ export function ReportButton({
       .catch((e: unknown) => {
         if (e instanceof ApiError && e.status === 409) {
           setDone(true);
-          setMsg("你已举报过该内容，请等待处理。");
+          setMsg(isUser ? "你已举报过该用户，请等待处理。" : "你已举报过该内容，请等待处理。");
         } else if (e instanceof ApiError && e.status === 404) {
           setMsg("举报功能即将上线。");
         } else if (e instanceof ApiError && e.status === 401) {
@@ -88,21 +95,21 @@ export function ReportButton({
         }}
         className="rounded-sm border border-border-subtle px-2 py-0.5 text-caption text-faint transition-colors duration-fast hover:border-amber-soft hover:text-amber"
       >
-        举报
+        {label}
       </button>
 
       {open && (
         <div
           role="dialog"
           aria-modal="true"
-          aria-label="举报内容"
+          aria-label={title}
           className="fixed inset-0 z-50 flex items-center justify-center bg-page/80 p-4"
           onClick={(e) => {
             if (e.target === e.currentTarget) setOpen(false);
           }}
         >
           <div className="w-full max-w-sm space-y-4 rounded-md border border-border-subtle bg-surface p-5 shadow-card">
-            <p className="text-body font-semibold text-primary">举报内容</p>
+            <p className="text-body font-semibold text-primary">{title}</p>
 
             {!loggedIn ? (
               <p className="text-small text-secondary">
@@ -189,4 +196,18 @@ export function ReportButton({
       )}
     </>
   );
+}
+
+/**
+ * 举报用户入口（契约 PR #97）：挂在作者信息区，轻量样式避免喧宾夺主。
+ * 对当前登录用户自己隐藏；未登录时仍渲染（弹窗内引导登录，与内容举报一致）。
+ */
+export function ReportUserButton({
+  author,
+}: {
+  author: { id: string; username?: string; displayName?: string | null };
+}) {
+  const { me } = useMe();
+  if (me && me.id === author.id) return null;
+  return <ReportButton targetType="user" targetId={author.id} label="举报用户" />;
 }
