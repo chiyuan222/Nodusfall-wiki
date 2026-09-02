@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsUrl, MaxLength } from 'class-validator';
+import { IsOptional, IsString, Matches, MaxLength } from 'class-validator';
 
 export class UpdateMeDto {
   @IsOptional()
@@ -7,7 +7,11 @@ export class UpdateMeDto {
   displayName?: string;
 
   @IsOptional()
-  @IsUrl()
+  @IsString()
+  @MaxLength(500)
+  @Matches(/^(\/uploads\/[A-Za-z0-9._-]+|https?:\/\/\S+)$/, {
+    message: 'avatarUrl 必须是 /uploads/ 路径或 http(s) 链接',
+  })
   avatarUrl?: string;
 
   @IsOptional()
