@@ -89,6 +89,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/site/appearance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 获取全站标题外观配置（颜色/字体族/字重；null 表示跟随主题默认） */
+        get: operations["getSiteAppearance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/site/appearance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** 更新全站标题外观配置（仅站长或具备 manage_cms 的管理员） */
+        put: operations["updateSiteAppearance"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/home/digest": {
         parameters: {
             query?: never;
@@ -1266,6 +1300,34 @@ export interface components {
             left: components["schemas"]["FloatingWindowConfig"];
             right: components["schemas"]["FloatingWindowConfig"];
         };
+        /** @description 标题外观设置；null 表示跟随站点主题默认，不注入覆盖样式 */
+        AppearanceHeading: {
+            /** @description 标题颜色（#RRGGBB），调色盘取色 */
+            color: string | null;
+            /**
+             * @description 标题字体族预设 key（serif=衬线宋体系默认 / sans=无衬线黑体系 / kaiti=楷体系），由前端映射为 CSS font-family 栈
+             * @enum {string|null}
+             */
+            fontFamily: "serif" | "sans" | "kaiti" | null;
+            /**
+             * @description 标题字重
+             * @enum {integer|null}
+             */
+            fontWeight: 400 | 500 | 600 | 700 | 800 | null;
+        };
+        AppearanceConfig: {
+            heading: components["schemas"]["AppearanceHeading"];
+        };
+        /** @description 部分更新语义：未传字段保持原值；传 null 恢复主题默认 */
+        UpdateAppearance: {
+            heading?: {
+                color?: string | null;
+                /** @enum {string|null} */
+                fontFamily?: "serif" | "sans" | "kaiti" | null;
+                /** @enum {integer|null} */
+                fontWeight?: 400 | 500 | 600 | 700 | 800 | null;
+            };
+        };
         UserSummary: {
             /** Format: uuid */
             id: string;
@@ -2265,6 +2327,11 @@ export interface components {
                 };
             };
         };
+        UpdateAppearanceRequest: {
+            content: {
+                "application/json": components["schemas"]["UpdateAppearance"];
+            };
+        };
         UpdateVideoRequest: {
             content: {
                 "application/json": {
@@ -2532,6 +2599,49 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FloatingWindows"];
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getSiteAppearance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 标题外观配置 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppearanceConfig"];
+                };
+            };
+        };
+    };
+    updateSiteAppearance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["UpdateAppearanceRequest"];
+        responses: {
+            /** @description 更新后的标题外观配置 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppearanceConfig"];
                 };
             };
             400: components["responses"]["ValidationError"];

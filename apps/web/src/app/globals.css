@@ -68,3 +68,29 @@
     @apply rounded-sm bg-raised px-1 font-mono text-small text-amber;
   }
 }
+
+/* ---------- 全站标题外观覆盖（/admin/site 标题外观，契约 PR #101） ----------
+   管理员配置后，JS 在 <html> 注入 --heading-* 变量并按字段打
+   data-heading-color / data-heading-font / data-heading-weight 属性门；
+   未配置的字段没有属性门，以下规则不生效，保持主题默认。
+   规则置于 Tailwind 层之外，确保覆盖各组件上的工具类。 */
+[data-heading-color] h1,
+[data-heading-color] h2,
+[data-heading-color] h3,
+[data-heading-color] .site-heading {
+  color: var(--heading-color);
+}
+
+[data-heading-font] h1,
+[data-heading-font] h2,
+[data-heading-font] h3,
+[data-heading-font] .site-heading {
+  font-family: var(--heading-font);
+}
+
+[data-heading-weight] h1,
+[data-heading-weight] h2,
+[data-heading-weight] h3,
+[data-heading-weight] .site-heading {
+  font-weight: var(--heading-weight);
+}
