@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 
 const SECTIONS_KEY = 'sections';
 const FLOATING_KEY = 'floating-windows';
+const APPEARANCE_KEY = 'appearance';
 
 const DEFAULT_SECTIONS = {
   home: true,
@@ -63,6 +64,52 @@ export class SiteService {
     await this.prisma.siteConfig.upsert({
       where: { key: FLOATING_KEY },
       create: { key: FLOATING_KEY, data: next },
+      update: { data: next },
+    });
+    return next;
+  }
+
+  async getAppearance() {
+    const cfg = await this.prisma.siteConfig.findUnique({
+      where: { key: APPEARANCE_KEY },
+    });
+    const data = (cfg?.data as { heading?: Record<string, unknown> }) ?? {};
+    const heading = data.heading ?? {};
+    return {
+      heading: {
+        color: heading.color ?? null,
+        fontFamily: heading.fontFamily ?? null,
+        fontWeight: heading.fontWeight ?? null,
+      },
+    };
+  }
+
+  async updateAppearance(dto: {
+    heading?: {
+      color?: string | null;
+      fontFamily?: string | null;
+      fontWeight?: number | null;
+    };
+  }) {
+    const current = await this.getAppearance();
+    const next = {
+      heading: dto.heading
+        ? {
+            color: dto.heading.color !== undefined ? dto.heading.color : current.heading.color,
+            fontFamily:
+              dto.heading.fontFamily !== undefined
+                ? dto.heading.fontFamily
+                : current.heading.fontFamily,
+            fontWeight:
+              dto.heading.fontWeight !== undefined
+                ? dto.heading.fontWeight
+                : current.heading.fontWeight,
+          }
+        : current.heading,
+    };
+    await this.prisma.siteConfig.upsert({
+      where: { key: APPEARANCE_KEY },
+      create: { key: APPEARANCE_KEY, data: next },
       update: { data: next },
     });
     return next;
