@@ -12,6 +12,7 @@ import { SiteHeader } from "@/components/site-header";
 import { BottomTabBar } from "@/components/bottom-tab-bar";
 import { SiteFooter } from "@/components/site-footer";
 import { SectionGate } from "@/components/section-gate";
+import { AppearanceLoader } from "@/components/appearance-loader";
 
 export const metadata: Metadata = {
   title: {
@@ -56,6 +57,7 @@ export default function RootLayout({
         />
       </head>
       <body className="flex min-h-dvh flex-col">
+        <AppearanceLoader />
         <SiteHeader />
         <main id="main" className="mx-auto w-full max-w-page flex-1 px-4 py-6 md:px-6">
           <SectionGate>{children}</SectionGate>

@@ -118,7 +118,7 @@ export function Carousel({
               {/* 文案区 */}
               <span className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 p-5 sm:p-6">
                 <span className="min-w-0">
-                  <span className="block truncate font-serif text-h2 font-semibold text-white drop-shadow sm:text-h1">
+                  <span className="site-heading block truncate font-serif text-h2 font-semibold text-white drop-shadow sm:text-h1">
                     {slide?.title || emptyHint}
                   </span>
                   {slide?.subtitle && (

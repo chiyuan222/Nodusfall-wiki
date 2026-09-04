@@ -30,6 +30,9 @@ export type VideoPlatform = VideoEntry["platform"];
 export type SiteSections = Schemas["SiteSections"];
 export type FloatingWindows = Schemas["FloatingWindows"];
 export type FloatingWindowConfig = Schemas["FloatingWindowConfig"];
+export type AppearanceConfig = Schemas["AppearanceConfig"];
+export type AppearanceHeading = Schemas["AppearanceHeading"];
+export type UpdateAppearance = Schemas["UpdateAppearance"];
 
 interface ListEnvelope<S> {
   data: S[];
@@ -330,5 +333,18 @@ export const siteApi = {
     request<FloatingWindows | { data: FloatingWindows }>(
       "/admin/site/floating-windows",
       { method: "PUT", body: config },
+    ).then((r) => ("data" in r ? r.data : r)),
+
+  /** 公开读全站标题外观配置（匿名可访问；null=跟随主题默认） */
+  appearance: () =>
+    request<AppearanceConfig | { data: AppearanceConfig }>(
+      "/site/appearance",
+    ).then((r) => ("data" in r ? r.data : r)),
+
+  /** 部分更新标题外观（owner 或 manage_cms；显式 null 恢复默认） */
+  updateAppearance: (patch: UpdateAppearance) =>
+    request<AppearanceConfig | { data: AppearanceConfig }>(
+      "/admin/site/appearance",
+      { method: "PUT", body: patch },
     ).then((r) => ("data" in r ? r.data : r)),
 };
