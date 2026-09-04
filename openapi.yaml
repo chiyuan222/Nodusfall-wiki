@@ -124,6 +124,42 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
 
+  /site/appearance:
+    get:
+      tags: [Site]
+      operationId: getSiteAppearance
+      summary: 获取全站标题外观配置（颜色/字体族/字重；null 表示跟随主题默认）
+      security: []
+      responses:
+        "200":
+          description: 标题外观配置
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppearanceConfig"
+
+  /admin/site/appearance:
+    put:
+      tags: [Site]
+      operationId: updateSiteAppearance
+      summary: 更新全站标题外观配置（仅站长或具备 manage_cms 的管理员）
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        $ref: "#/components/requestBodies/UpdateAppearanceRequest"
+      responses:
+        "200":
+          description: 更新后的标题外观配置
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppearanceConfig"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
   /home/digest:
     get:
       tags: [Content]
@@ -2515,6 +2551,12 @@ components:
                 $ref: "#/components/schemas/FloatingWindowConfig"
               right:
                 $ref: "#/components/schemas/FloatingWindowConfig"
+    UpdateAppearanceRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/UpdateAppearance"
     UpdateVideoRequest:
       required: true
       content:
@@ -2834,6 +2876,53 @@ components:
       properties:
         left: { $ref: "#/components/schemas/FloatingWindowConfig" }
         right: { $ref: "#/components/schemas/FloatingWindowConfig" }
+
+    AppearanceHeading:
+      type: object
+      required: [color, fontFamily, fontWeight]
+      description: 标题外观设置；null 表示跟随站点主题默认，不注入覆盖样式
+      properties:
+        color:
+          type: string
+          nullable: true
+          pattern: "^#[0-9a-fA-F]{6}$"
+          description: 标题颜色（#RRGGBB），调色盘取色
+        fontFamily:
+          type: string
+          nullable: true
+          enum: [serif, sans, kaiti]
+          description: 标题字体族预设 key（serif=衬线宋体系默认 / sans=无衬线黑体系 / kaiti=楷体系），由前端映射为 CSS font-family 栈
+        fontWeight:
+          type: integer
+          nullable: true
+          enum: [400, 500, 600, 700, 800]
+          description: 标题字重
+
+    AppearanceConfig:
+      type: object
+      required: [heading]
+      properties:
+        heading: { $ref: "#/components/schemas/AppearanceHeading" }
+
+    UpdateAppearance:
+      type: object
+      description: 部分更新语义：未传字段保持原值；传 null 恢复主题默认
+      properties:
+        heading:
+          type: object
+          properties:
+            color:
+              type: string
+              nullable: true
+              pattern: "^#[0-9a-fA-F]{6}$"
+            fontFamily:
+              type: string
+              nullable: true
+              enum: [serif, sans, kaiti]
+            fontWeight:
+              type: integer
+              nullable: true
+              enum: [400, 500, 600, 700, 800]
 
     UserSummary:
       type: object
