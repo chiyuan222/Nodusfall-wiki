@@ -115,25 +115,37 @@ export function Carousel({
                   {slide.badge}
                 </span>
               )}
-              {/* 文案区 */}
-              <span className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 p-5 sm:p-6">
-                <span className="min-w-0">
-                  <span className="site-heading block truncate font-serif text-h2 font-semibold text-white drop-shadow sm:text-h1">
-                    {slide?.title || emptyHint}
-                  </span>
-                  {slide?.subtitle && (
-                    <span className="mt-1 line-clamp-1 block text-small text-white/80">
-                      {slide.subtitle}
+              {/* 文案区：有图片的帧标题留空即不叠加文字（不回退主标题/提示语）；
+                  无图片的占位帧保留 emptyHint 提示 */}
+              {(() => {
+                const caption = slide?.image
+                  ? slide?.title || ""
+                  : slide?.title || emptyHint;
+                return (
+                  <span className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 p-5 sm:p-6">
+                    {(caption || slide?.subtitle) && (
+                      <span className="min-w-0">
+                        {caption && (
+                          <span className="site-heading block truncate font-serif text-h2 font-semibold text-white drop-shadow sm:text-h1">
+                            {caption}
+                          </span>
+                        )}
+                        {slide?.subtitle && (
+                          <span className="mt-1 line-clamp-1 block text-small text-white/80">
+                            {slide.subtitle}
+                          </span>
+                        )}
+                      </span>
+                    )}
+                    <span
+                      aria-hidden
+                      className="shrink-0 font-mono text-caption tracking-[0.3em] text-white/70"
+                    >
+                      {String(i + 1).padStart(2, "0")} / {String(CAROUSEL_SLOTS).padStart(2, "0")}
                     </span>
-                  )}
-                </span>
-                <span
-                  aria-hidden
-                  className="shrink-0 font-mono text-caption tracking-[0.3em] text-white/70"
-                >
-                  {String(i + 1).padStart(2, "0")} / {String(CAROUSEL_SLOTS).padStart(2, "0")}
-                </span>
-              </span>
+                  </span>
+                );
+              })()}
             </>
           );
           const cls = `absolute inset-0 transition-opacity duration-slow ease-out ${

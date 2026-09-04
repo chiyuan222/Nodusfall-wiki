@@ -247,7 +247,7 @@ export function HomeEditor() {
                       <Field label="导语" value={draft.hero.lead} textarea onChange={(v) => mutate((d) => void (d.hero.lead = v))} />
                       <div>
                         <p className="mb-2 font-mono text-caption text-faint">
-                          首屏轮播 slides（5 个轮替位；标题留空时显示首页主标题，链接留空则不可点击；建议用图片）
+                          首屏轮播 slides（5 个轮替位；标题可留空，留空时该张只展示图片不叠加文字，链接留空则不可点击；建议用图片）
                         </p>
                         <div className="space-y-3">
                           {draft.hero.slides.map((slide, j) => (
