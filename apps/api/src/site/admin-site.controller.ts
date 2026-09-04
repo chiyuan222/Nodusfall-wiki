@@ -10,6 +10,7 @@ import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AuditService } from '../audit/audit.service';
 import { hasPermission, PERMISSIONS } from '../common/roles';
+import { UpdateAppearanceDto } from './dto/update-appearance.dto';
 import { UpdateFloatingWindowsDto } from './dto/update-floating-windows.dto';
 import { UpdateSectionsDto } from './dto/update-sections.dto';
 import { SiteService } from './site.service';
@@ -51,6 +52,22 @@ export class AdminSiteController {
       right: dto.right,
     });
     await this.auditService.log(req.user.sub, 'site.floating.update', 'site', 'floating-windows', '更新论坛漂浮引流窗');
+    return { data };
+  }
+
+  @Put('appearance')
+  async appearance(@Req() req: AdminRequest, @Body() dto: UpdateAppearanceDto) {
+    this.assert(req);
+    const data = await this.siteService.updateAppearance({
+      heading: dto.heading,
+    });
+    await this.auditService.log(
+      req.user.sub,
+      'site.appearance.update',
+      'site',
+      'appearance',
+      '更新全站标题外观配置',
+    );
     return { data };
   }
 }

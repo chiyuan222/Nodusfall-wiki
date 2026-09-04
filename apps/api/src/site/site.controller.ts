@@ -14,4 +14,9 @@ export class SiteController {
   async floatingWindows() {
     return { data: await this.siteService.getFloatingWindows() };
   }
+
+  @Get('appearance')
+  async appearance() {
+    return { data: await this.siteService.getAppearance() };
+  }
 }
