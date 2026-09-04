@@ -124,7 +124,7 @@ export default async function HomePage() {
                 emptyHint="主视觉待管理员替换"
                 slides={content.hero.slides.map((s) => ({
                   href: slideHref(s),
-                  title: s.title || content.hero.title,
+                  title: s.title ?? "",
                   image:
                     s.media.kind === "video"
                       ? s.media.poster || undefined

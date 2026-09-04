@@ -21,7 +21,7 @@ export type HomeSlideLinkKind =
 /** 首屏轮播槽位（契约对齐 PR #50）：媒体 + 可选叠加标题 + 可选跳转（管理员在 /admin/home 维护，共 5 个轮替位） */
 export interface HomeHeroSlide {
   media: MediaSlot;
-  /** 叠加在图片上的标题（可留空，留空时显示首页主标题） */
+  /** 叠加在图片上的标题（可留空；留空时不显示，不回退主标题） */
   title?: string;
   /** 跳转类型；与 linkTarget 同时缺省 = 不可点击 */
   linkKind?: HomeSlideLinkKind;
