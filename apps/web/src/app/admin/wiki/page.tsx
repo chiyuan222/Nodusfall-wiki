@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { AdminContentList } from "@/components/admin/admin-content-list";
+import { WikiBoardAdmin } from "@/components/admin/wiki-board-admin";
 
 export const metadata: Metadata = {
-  title: "Wiki 内容管理",
+  title: "Wiki 板块管理",
   robots: { index: false },
 };
 
@@ -13,12 +13,12 @@ export default function AdminWikiPage() {
         <p className="font-mono text-caption uppercase tracking-[0.4em] text-faint">
           Admin · Wiki
         </p>
-        <h1 className="mt-3 font-serif text-h1 font-semibold">Wiki 内容管理</h1>
+        <h1 className="mt-3 font-serif text-h1 font-semibold">Wiki 板块管理</h1>
         <p className="mt-2 text-small text-secondary">
-          查看全部条目（含草稿与归档），可直接发布、归档或进入编辑器。
+          词条内容（草稿/发布/下架/删除/精华）与分类结构管理。
         </p>
       </header>
-      <AdminContentList kind="wiki" />
+      <WikiBoardAdmin />
     </div>
   );
 }

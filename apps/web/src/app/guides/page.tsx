@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { KnotMark } from "@/components/knot-mark";
 import { Carousel } from "@/components/carousel";
+import { GuideCreateEntry } from "@/components/guides/guide-create-entry";
+import { BoardManageEntry } from "@/components/board-manage-entry";
 import { getGuideList, USE_MOCK } from "@/lib/data";
 import { getGuideCarousel } from "@/lib/carousel-data";
 import { authorName } from "@/lib/author";
@@ -63,6 +65,10 @@ export default async function GuidesIndexPage() {
             </span>
           )}
         </p>
+        <div className="mt-5 flex flex-wrap items-center gap-3">
+          <GuideCreateEntry />
+          <BoardManageEntry perm="manage_guide_board" href="/admin/guides" />
+        </div>
       </header>
 
       {/* 轮替推荐框：最新攻略（5 位轮播，角标显示评分，点击跳转对应攻略） */}

@@ -74,11 +74,18 @@ function describeError(e: unknown, unit: string): string {
   return "无法连接后端，操作未生效。";
 }
 
-export function TaxonomyManager() {
+export function TaxonomyManager({
+  fixedKind,
+  hideTabs = false,
+}: {
+  /** 固定管理某一类（嵌入分区板块管理页时隐藏内部切换） */
+  fixedKind?: Kind;
+  hideTabs?: boolean;
+}) {
   const [phase, setPhase] = useState<"loading" | "forbidden" | "ready">(
     "loading",
   );
-  const [tab, setTab] = useState<Kind>("wiki");
+  const [tab, setTab] = useState<Kind>(fixedKind ?? "wiki");
   const [items, setItems] = useState<TaxItem[]>([]);
   const [listMsg, setListMsg] = useState("");
   const [loading, setLoading] = useState(false);
@@ -238,25 +245,27 @@ export function TaxonomyManager() {
 
   return (
     <div>
-      {/* Tab 切换 */}
-      <div className="flex gap-2" role="tablist" aria-label="管理对象">
-        {(Object.keys(KIND_CONFIG) as Kind[]).map((k) => (
-          <button
-            key={k}
-            type="button"
-            role="tab"
-            aria-selected={tab === k}
-            onClick={() => switchTab(k)}
-            className={`rounded-md px-5 py-2 text-small transition-colors duration-fast ${
-              tab === k
-                ? "bg-amber font-medium text-amber-fg"
-                : "border border-border-subtle text-secondary hover:border-amber-soft hover:text-amber"
-            }`}
-          >
-            {KIND_CONFIG[k].label}
-          </button>
-        ))}
-      </div>
+      {/* Tab 切换（fixedKind 嵌入模式下隐藏） */}
+      {!hideTabs && (
+        <div className="flex gap-2" role="tablist" aria-label="管理对象">
+          {(Object.keys(KIND_CONFIG) as Kind[]).map((k) => (
+            <button
+              key={k}
+              type="button"
+              role="tab"
+              aria-selected={tab === k}
+              onClick={() => switchTab(k)}
+              className={`rounded-md px-5 py-2 text-small transition-colors duration-fast ${
+                tab === k
+                  ? "bg-amber font-medium text-amber-fg"
+                  : "border border-border-subtle text-secondary hover:border-amber-soft hover:text-amber"
+              }`}
+            >
+              {KIND_CONFIG[k].label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* 现有列表 */}
       <div className="mt-5 overflow-hidden rounded-md border border-border-subtle bg-surface">

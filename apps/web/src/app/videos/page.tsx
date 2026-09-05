@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { VideoHub } from "@/components/videos/video-hub";
+import { ShareVideoEntry } from "@/components/videos/share-video-entry";
+import { BoardManageEntry } from "@/components/board-manage-entry";
 
 export const metadata: Metadata = {
   title: "相关视频",
@@ -19,6 +21,10 @@ export default function VideosPage() {
           本站为视频导航库：不搬运、不上传，仅收藏外链并跳转到对应平台观看。
           视频版权归原作者与发布平台所有。
         </p>
+        <div className="mt-5 flex flex-wrap items-center gap-3">
+          <ShareVideoEntry />
+          <BoardManageEntry perm="manage_video_board" href="/admin/videos" label="视频管理" />
+        </div>
       </header>
       <VideoHub />
     </div>
