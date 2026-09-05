@@ -66,6 +66,7 @@ export default async function ForumIndexPage() {
           label="论坛热帖轮播"
           slides={carousel}
           emptyHint="热帖推荐 · 待内容接入"
+          variant="compact"
         />
       </section>
 
