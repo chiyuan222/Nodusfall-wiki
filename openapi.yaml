@@ -70,7 +70,7 @@ paths:
     put:
       tags: [Site]
       operationId: updateSiteSections
-      summary: 更新内容分区显示开关（仅站长或具备 manage_cms 的管理员）
+      summary: 更新内容分区显示开关（仅站长或具备内容管理 manage_content 的管理员）
       security: [{ bearerAuth: [] }]
       requestBody:
         $ref: "#/components/requestBodies/UpdateSiteSectionsRequest"
@@ -106,7 +106,7 @@ paths:
     put:
       tags: [Site]
       operationId: updateFloatingWindows
-      summary: 更新论坛页左右漂浮引流窗（仅站长或具备 manage_cms 的管理员）
+      summary: 更新论坛页左右漂浮引流窗（仅站长或具备内容管理 manage_content 的管理员）
       security: [{ bearerAuth: [] }]
       requestBody:
         $ref: "#/components/requestBodies/UpdateFloatingWindowsRequest"
@@ -142,7 +142,7 @@ paths:
     put:
       tags: [Site]
       operationId: updateSiteAppearance
-      summary: 更新全站标题外观配置（仅站长或具备 manage_cms 的管理员）
+      summary: 更新全站标题外观配置（仅站长或具备内容管理 manage_content 的管理员）
       security: [{ bearerAuth: [] }]
       requestBody:
         $ref: "#/components/requestBodies/UpdateAppearanceRequest"
@@ -635,7 +635,7 @@ paths:
     get:
       tags: [Admin]
       operationId: listAdminFeedback
-      summary: 反馈队列（仅站长或具备 manage_content 的管理员）
+      summary: 反馈队列（站长专属；管理员不显示）
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "#/components/parameters/Page"
@@ -2966,15 +2966,17 @@ components:
               banUntil: { type: [string, "null"], format: date-time }
               mutedUntil: { type: [string, "null"], format: date-time }
               wikiCreateGranted: { type: boolean }
+              guideCreateGranted: { type: boolean }
+              videoShareGranted: { type: boolean }
               permissions:
                 type: array
                 items:
                   type: string
-                  enum: [manage_users, manage_content, manage_forum, manage_cms, manage_deletion, grant_wiki_create]
+                enum: [manage_users, manage_content, manage_all_boards, manage_wiki_board, manage_guide_board, manage_forum_board, manage_video_board, manage_reports, grant_wiki_create, grant_guide_create, grant_video_share]
               role:
                 type: string
-                enum: [member, editor, moderator, admin]
-                description: 仅站长可为任意用户分配角色（成员/编辑/版主/管理员；不含 owner）
+                enum: [member, wiki_editor, guide_editor, video_editor, wiki_moderator, guide_moderator, forum_moderator, video_moderator, admin]
+                description: 角色分配（不含 owner）：站长→管理员→各分区版主→各分区小编/成员；管理员可分配版主/小编/成员，细分版主仅可把成员分配为对应分区小编；站长自身固定为站长不可被分配
                 maxLength: 500
     CreateWikiPageRequest:
       required: true
@@ -3307,8 +3309,12 @@ components:
         avatarUrl: { type: string, format: uri }
         role:
           type: string
-          enum: [guest, member, editor, moderator, admin, owner]
-          description: owner 为最高权限管理员（站长），admin/moderator 权限由 permissions 开关控制
+          enum: [member, wiki_editor, guide_editor, video_editor, wiki_moderator, guide_moderator, forum_moderator, video_moderator, admin, owner]
+          description: >
+            owner 站长（唯一、全站最高权限）；admin 管理员（自动开启除角色分配外全部管理与创作权限）；
+            *moderator 分区版主（自动开启对应分区板块管理 + 举报 + 用户管理，可处置低等级账号）；
+            *editor 分区小编（对应分区板块内容下架/恢复，无账号处置）；member 成员。
+            角色分配层级：站长→管理员→各分区版主→各分区小编/成员；论坛未开放前 forum 相关能力置灰。
         createdAt: { type: string, format: date-time }
         status:
           type: string
@@ -3343,11 +3349,17 @@ components:
               type: array
               items:
                 type: string
-                enum: [manage_users, manage_content, manage_forum, manage_cms, manage_deletion, grant_wiki_create]
-              description: 管理员权限开关（仅 owner 可配置，默认空）
+                enum: [manage_users, manage_content, manage_all_boards, manage_wiki_board, manage_guide_board, manage_forum_board, manage_video_board, manage_reports, grant_wiki_create, grant_guide_create, grant_video_share]
+              description: 管理权限开关（仅 owner 可配置；admin 角色自动全开；细分版主/小编按角色自动映射，开关可在角色默认上由站长增减）
             wikiCreateGranted:
               type: boolean
-              description: 是否被站长授予 Wiki 词条创建资格
+              description: 是否被授予 Wiki 词条创建资格（仅解锁 Wiki 创建）
+            guideCreateGranted:
+              type: boolean
+              description: 是否被授予编撰攻略资格（仅解锁攻略创建）
+            videoShareGranted:
+              type: boolean
+              description: 是否被授予视频分享资格（仅解锁相关视频区新增条目）
             banReason: { type: [string, "null"] }
             banUntil: { type: [string, "null"], format: date-time }
             mutedUntil: { type: [string, "null"], format: date-time }
