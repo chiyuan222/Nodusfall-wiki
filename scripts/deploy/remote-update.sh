@@ -39,6 +39,8 @@ echo "==> 同步数据库结构（prisma db push）"
 npx prisma db push --accept-data-loss
 echo "==> RBAC v2 资格迁移（db push 后，列已存在）"
 node "$REPO/scripts/deploy/migrate-rbac-v2.cjs" grants
+echo "==> 攻略默认分类 seed（db push 后）"
+node "$REPO/scripts/deploy/migrate-rbac-v2.cjs" guide-defaults
 echo "==> 分配现有用户网站 ID（siteId 1000000 起）"
 cp /tmp/assign-site-ids.cjs "$REPO/scripts/deploy/assign-site-ids.cjs"
 node "$REPO/scripts/deploy/assign-site-ids.cjs"

@@ -65,6 +65,19 @@ async function main() {
       '旧授予双开 guideCreateGranted',
       `UPDATE "User" SET "guideCreateGranted"=true WHERE "wikiCreateGranted"=true`,
     );
+  } else if (mode === 'guide-defaults') {
+    // 攻略默认分类：无分类攻略归入「综合」
+    await prisma.$executeRawUnsafe(`
+      INSERT INTO "GuideCategory" ("id", "slug", "name", "sortOrder", "createdAt", "updatedAt")
+      VALUES (gen_random_uuid(), 'general', '综合', 1, now(), now())
+      ON CONFLICT ("slug") DO NOTHING
+    `);
+    await prisma.$executeRawUnsafe(`
+      UPDATE "Guide" g
+      SET "categoryId" = c."id"
+      FROM "GuideCategory" c
+      WHERE c.slug = 'general' AND g."categoryId" IS NULL
+    `);
   } else {
     console.error('unknown mode', mode);
     process.exit(1);

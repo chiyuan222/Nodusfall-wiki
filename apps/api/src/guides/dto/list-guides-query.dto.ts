@@ -8,6 +8,10 @@ export class ListGuidesQueryDto extends PaginationQueryDto {
 
   @IsOptional()
   @IsString()
+  category?: string;
+
+  @IsOptional()
+  @IsString()
   q?: string;
 
   @IsOptional()

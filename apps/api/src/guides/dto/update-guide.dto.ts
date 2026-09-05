@@ -1,4 +1,4 @@
-import { IsArray, IsIn, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsIn, IsOptional, IsString, Matches } from 'class-validator';
 
 export class UpdateGuideDto {
   @IsOptional()
@@ -8,6 +8,11 @@ export class UpdateGuideDto {
   @IsOptional()
   @IsString()
   content?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
+  categorySlug?: string | null;
 
   @IsOptional()
   @IsArray()

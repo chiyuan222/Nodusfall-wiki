@@ -1,9 +1,10 @@
 import {
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { ContentStatus, Guide, User } from '@prisma/client';
+import { ContentStatus, Guide, GuideCategory, User } from '@prisma/client';
 import { pageInfo } from '../common/pagination';
 import { extractFirstImage } from '../common/markdown';
 import { hasBoardPermission, isManagerRole } from '../common/roles';
@@ -12,7 +13,7 @@ import { toUserSummary } from '../users/users.service';
 import { ExpService } from '../exp/exp.service';
 import { TextFilterService } from '../moderation/text-filter.service';
 
-type GuideWithAuthor = Guide & { author: User };
+type GuideWithAuthor = Guide & { author: User; category?: GuideCategory | null };
 
 function slugify(text: string): string {
   return text
@@ -47,6 +48,7 @@ function summary(
     viewCount: guide.viewCount,
     likeCount: guide.likeCount,
     dislikeCount: guide.dislikeCount,
+    categorySlug: guide.category?.slug ?? null,
     likedByMe,
     bookmarkedByMe,
     dislikedByMe,
@@ -91,6 +93,7 @@ export class GuidesService {
 
   async list(query: {
     tag?: string;
+    category?: string;
     q?: string;
     status?: ContentStatus;
     sort?: 'rating' | 'updatedAt' | 'createdAt';
@@ -99,6 +102,7 @@ export class GuidesService {
   }, userId?: string) {
     const where: any = {};
     if (query.tag) where.tags = { has: query.tag };
+    if (query.category) where.category = { slug: query.category };
     if (query.status) where.status = query.status;
     if (query.q) {
       where.OR = [
@@ -118,7 +122,7 @@ export class GuidesService {
         orderBy,
         skip: (query.page - 1) * query.perPage,
         take: query.perPage,
-        include: { author: true },
+        include: { author: true, category: true },
       }),
     ]);
     const { likes, bookmarks, dislikes } = await this.interactions(
@@ -139,6 +143,7 @@ export class GuidesService {
     title: string;
     slug?: string;
     content: string;
+    categorySlug?: string;
     tags?: string[];
     status?: 'draft' | 'published';
     relatedCharacter?: string;
@@ -163,6 +168,19 @@ export class GuidesService {
       throw new ForbiddenException('guide create not granted');
     }
     await this.textFilter.assertSafe(`${dto.title}\n${dto.content}`);
+    let categoryId: string | null = null;
+    if (dto.categorySlug) {
+      const cat = await this.prisma.guideCategory.findUnique({
+        where: { slug: dto.categorySlug },
+      });
+      if (!cat) throw new NotFoundException('category not found');
+      categoryId = cat.id;
+    } else {
+      const def = await this.prisma.guideCategory.findUnique({
+        where: { slug: 'general' },
+      });
+      categoryId = def?.id ?? null;
+    }
     const guide = await this.prisma.guide.create({
       data: {
         slug: dto.slug ?? slugify(dto.title),
@@ -173,9 +191,10 @@ export class GuidesService {
         tags: dto.tags ?? [],
         status: dto.status ? (dto.status.toUpperCase() as ContentStatus) : 'DRAFT',
         relatedCharacter: dto.relatedCharacter,
+        categoryId,
         authorId: userId,
       },
-      include: { author: true },
+      include: { author: true, category: true },
     });
     void this.expService.grant(userId, "guide", guide.id);
     return detail(guide);
@@ -188,7 +207,7 @@ export class GuidesService {
     });
     const guide = await this.prisma.guide.findUnique({
       where: { slug },
-      include: { author: true },
+      include: { author: true, category: true },
     });
     if (!guide) throw new NotFoundException('guide not found');
     const { likes, bookmarks, dislikes } = await this.interactions([guide.id], userId);
@@ -201,6 +220,7 @@ export class GuidesService {
     dto: {
     title?: string;
     content?: string;
+    categorySlug?: string | null;
     tags?: string[];
     status?: 'draft' | 'published' | 'archived';
     relatedCharacter?: string;
@@ -223,6 +243,18 @@ export class GuidesService {
     ) {
       throw new ForbiddenException('not your guide');
     }
+    let categoryId = existing.categoryId;
+    if (dto.categorySlug !== undefined) {
+      if (dto.categorySlug === null) {
+        categoryId = null;
+      } else {
+        const cat = await this.prisma.guideCategory.findUnique({
+          where: { slug: dto.categorySlug },
+        });
+        if (!cat) throw new NotFoundException('category not found');
+        categoryId = cat.id;
+      }
+    }
     const guide = await this.prisma.guide.update({
       where: { id: existing.id },
       data: {
@@ -233,6 +265,7 @@ export class GuidesService {
         tags: dto.tags ?? existing.tags,
         status: dto.status ? (dto.status.toUpperCase() as ContentStatus) : existing.status,
         relatedCharacter: dto.relatedCharacter ?? existing.relatedCharacter,
+        categoryId,
         featuredAt: dto.featuredAt
           ? new Date(dto.featuredAt)
           : dto.featured === true
@@ -241,7 +274,7 @@ export class GuidesService {
               ? null
               : existing.featuredAt,
       },
-      include: { author: true },
+      include: { author: true, category: true },
     });
     void this.expService.grant(userId, "guide", guide.id);
     return detail(guide);
@@ -267,6 +300,63 @@ export class GuidesService {
       where: { targetType: 'GUIDE', targetId: guide.id },
     });
     await this.prisma.guide.delete({ where: { id: guide.id } });
+  }
+
+  async listGuideCategories() {
+    const data = await this.prisma.guideCategory.findMany({
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+    });
+    return { data };
+  }
+
+  async createGuideCategory(dto: {
+    slug: string;
+    name: string;
+    description?: string;
+    sortOrder: number;
+  }) {
+    const existing = await this.prisma.guideCategory.findUnique({
+      where: { slug: dto.slug },
+    });
+    if (existing) throw new ConflictException('分类 slug 已存在');
+    const cat = await this.prisma.guideCategory.create({
+      data: {
+        slug: dto.slug,
+        name: dto.name,
+        description: dto.description ?? null,
+        sortOrder: dto.sortOrder,
+      },
+    });
+    return cat;
+  }
+
+  async updateGuideCategory(
+    slug: string,
+    dto: { name?: string; description?: string; sortOrder?: number },
+  ) {
+    const cat = await this.prisma.guideCategory.findUnique({ where: { slug } });
+    if (!cat) throw new NotFoundException('category not found');
+    return this.prisma.guideCategory.update({
+      where: { id: cat.id },
+      data: {
+        name: dto.name ?? cat.name,
+        description:
+          dto.description !== undefined ? dto.description : cat.description,
+        sortOrder: dto.sortOrder ?? cat.sortOrder,
+      },
+    });
+  }
+
+  async deleteGuideCategory(slug: string): Promise<void> {
+    const cat = await this.prisma.guideCategory.findUnique({ where: { slug } });
+    if (!cat) throw new NotFoundException('category not found');
+    const count = await this.prisma.guide.count({
+      where: { categoryId: cat.id },
+    });
+    if (count > 0) {
+      throw new ConflictException('分类下仍有攻略，不能删除');
+    }
+    await this.prisma.guideCategory.delete({ where: { id: cat.id } });
   }
 
   async likeGuide(userId: string, slug: string): Promise<void> {
