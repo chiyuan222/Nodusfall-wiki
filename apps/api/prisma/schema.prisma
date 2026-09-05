@@ -371,6 +371,8 @@ model Comment {
   id         String            @id @default(uuid())
   targetType CommentTargetType
   targetId   String
+  parentId   String?
+  parent     Comment?          @relation("CommentParent", fields: [parentId], references: [id], onDelete: Cascade)
   authorId   String
   author     User              @relation("CommentAuthor", fields: [authorId], references: [id])
   content    String
@@ -378,6 +380,9 @@ model Comment {
   createdAt  DateTime          @default(now())
   updatedAt  DateTime          @updatedAt
   likes      CommentLike[]
+  replies    Comment[]         @relation("CommentParent")
+
+  @@index([parentId, createdAt])
 }
 
 model CommentLike {
