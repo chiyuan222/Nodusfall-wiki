@@ -1504,6 +1504,36 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /wiki/pages/{slug}/dislike:
+    put:
+      tags: [Wiki]
+      operationId: dislikeWikiPage
+      summary: 标记 Wiki 页面「不推荐/内容有误」（幂等；可重复提交，取消用 DELETE）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Slug"
+      responses:
+        "204":
+          description: 已标记
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Wiki]
+      operationId: undislikeWikiPage
+      summary: 取消「不推荐」标记
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Slug"
+      responses:
+        "204":
+          description: 已取消
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /wiki/pages/{slug}/like:
     put:
       tags: [Wiki]
@@ -1809,6 +1839,36 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /guides/{slug}/dislike:
+    put:
+      tags: [Guides]
+      operationId: dislikeGuide
+      summary: 标记攻略「不推荐/内容有误」（幂等；可重复提交，取消用 DELETE）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Slug"
+      responses:
+        "204":
+          description: 已标记
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Guides]
+      operationId: undislikeGuide
+      summary: 取消「不推荐」标记
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Slug"
+      responses:
+        "204":
+          description: 已取消
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -3455,7 +3515,7 @@ components:
 
     WikiPageSummary:
       type: object
-      required: [id, slug, title, excerpt, coverImage, categorySlug, tags, status, author, updatedAt, viewCount, likeCount, likedByMe, bookmarkedByMe]
+      required: [id, slug, title, excerpt, coverImage, categorySlug, tags, status, author, updatedAt, viewCount, likeCount, likedByMe, bookmarkedByMe, dislikeCount, dislikedByMe]
       properties:
         id: { type: string, format: uuid }
         slug: { type: string }
@@ -3476,6 +3536,8 @@ components:
         likeCount: { type: integer }
         likedByMe: { type: boolean }
         bookmarkedByMe: { type: boolean }
+        dislikeCount: { type: integer, description: 「不推荐/内容有误」标记数 }
+        dislikedByMe: { type: boolean, description: 当前登录用户是否已标记（匿名 false） }
 
     WikiPage:
       allOf:
@@ -3527,7 +3589,7 @@ components:
 
     GuideSummary:
       type: object
-      required: [id, slug, title, excerpt, coverImage, tags, status, author, rating, updatedAt, viewCount, likeCount, likedByMe, bookmarkedByMe]
+      required: [id, slug, title, excerpt, coverImage, tags, status, author, rating, updatedAt, viewCount, likeCount, likedByMe, bookmarkedByMe, dislikeCount, dislikedByMe]
       properties:
         id: { type: string, format: uuid }
         slug: { type: string }
@@ -3553,6 +3615,8 @@ components:
         likeCount: { type: integer }
         likedByMe: { type: boolean }
         bookmarkedByMe: { type: boolean }
+        dislikeCount: { type: integer, description: 「不推荐/内容有误」标记数 }
+        dislikedByMe: { type: boolean, description: 当前登录用户是否已标记（匿名 false） }
 
     Guide:
       allOf:
