@@ -4,16 +4,17 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { request } from "@/lib/api-client";
 import { ApiError } from "@/lib/errors";
-import { useMe } from "@/lib/me";
+import { useMe, hasPermission } from "@/lib/me";
 
 /**
- * 内容操作按钮（规范 docs/design/content-action-buttons.md，契约 PR #51/#53）。
+ * 内容操作按钮（规范 docs/design/content-action-buttons.md，契约 PR #51/#53，权限体系 v2 PR #119）。
  *
  * 显示规则：
  * - 未登录：不渲染
  * - 自己的内容：「删除」
- * - 他人内容（管理员）：owner 全开；其余按权限开关独立显示——
- *   manage_deletion →「删除」；manage_users →「封禁作者」；都没开 → 不渲染
+ * - 他人内容（管理人员）：按权限开关独立显示——
+ *   对应分区 manage_*_board / manage_all_boards / manage_content →「删除」；
+ *   manage_users →「封禁作者」；都没开 → 不渲染（admin/owner 默认全开）
  * - 删除：二次确认 → DELETE → 跳转所属列表页
  * - 封禁：确认弹窗 → PATCH /admin/users/{authorId} {status:"banned"} → 刷新
  */
@@ -53,12 +54,18 @@ export function ContentActions({ kind, target, author, boardSlug }: Props) {
   if (pending || !me) return null;
 
   const isSelf = me.id === author.id;
-  const isOwner = me.role === "owner";
-  const isStaff = isOwner || me.role === "admin" || me.role === "moderator";
-  const perms = me.permissions ?? [];
-  // 他人内容：owner 默认全开，其余管理角色按开关（规范「开关独立显示」）
-  const canDeleteOther = !isSelf && isStaff && (isOwner || perms.includes("manage_deletion"));
-  const canBanAuthor = !isSelf && isStaff && (isOwner || perms.includes("manage_users"));
+  // 权限体系 v2（PR #119）：删除他人内容需对应分区/全局内容管理权限；封禁需 manage_users
+  const BOARD_PERM = {
+    wiki: "manage_wiki_board",
+    guide: "manage_guide_board",
+    thread: "manage_forum_board",
+  } as const;
+  const canDeleteOther =
+    !isSelf &&
+    (hasPermission(me, BOARD_PERM[kind]) ||
+      hasPermission(me, "manage_all_boards") ||
+      hasPermission(me, "manage_content"));
+  const canBanAuthor = !isSelf && hasPermission(me, "manage_users");
 
   if (!isSelf && !canDeleteOther && !canBanAuthor) return null;
 

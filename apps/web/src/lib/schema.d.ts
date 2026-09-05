@@ -46,7 +46,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** 更新内容分区显示开关（仅站长或具备 manage_cms 的管理员） */
+        /** 更新内容分区显示开关（仅站长或具备内容管理 manage_content 的管理员） */
         put: operations["updateSiteSections"];
         post?: never;
         delete?: never;
@@ -80,7 +80,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** 更新论坛页左右漂浮引流窗（仅站长或具备 manage_cms 的管理员） */
+        /** 更新论坛页左右漂浮引流窗（仅站长或具备内容管理 manage_content 的管理员） */
         put: operations["updateFloatingWindows"];
         post?: never;
         delete?: never;
@@ -114,7 +114,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** 更新全站标题外观配置（仅站长或具备 manage_cms 的管理员） */
+        /** 更新全站标题外观配置（仅站长或具备内容管理 manage_content 的管理员） */
         put: operations["updateSiteAppearance"];
         post?: never;
         delete?: never;
@@ -297,6 +297,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 提交意见反馈（问题反馈/功能建议/内容申诉/其他） */
+        post: operations["createFeedback"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/me/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 我的反馈记录（含站长回复，分页） */
+        get: operations["listMyFeedback"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/users/me/messages": {
         parameters: {
             query?: never;
@@ -378,6 +412,126 @@ export interface paths {
         put?: never;
         /** 全部消息标记已读（进入消息页后调用，红点消除） */
         post: operations["markAllMessagesRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 反馈队列（站长专属；管理员不显示） */
+        get: operations["listAdminFeedback"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/feedback/{feedbackId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** 回复/关闭反馈（仅站长；回复后站内信通知提交人） */
+        patch: operations["handleFeedback"];
+        trace?: never;
+    };
+    "/users/me/announcements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 我的公告（分页，含已读状态） */
+        get: operations["listMyAnnouncements"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/me/announcements/read-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 公告全部标记已读（进入公告页后调用） */
+        post: operations["markAnnouncementsRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/me/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 私信会话列表（按最后消息时间倒序，含对方摘要/未读数/最后消息） */
+        get: operations["listConversations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/me/conversations/{peerId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 与指定用户的私信记录（时间倒序分页） */
+        get: operations["listConversationMessages"];
+        put?: never;
+        /** 发送私信（普通用户仅可发给站长；站长可主动私信任意用户；禁止发给本人） */
+        post: operations["sendConversationMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/me/conversations/{peerId}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 将该会话中对方发来的消息全部标记已读 */
+        post: operations["markConversationRead"];
         delete?: never;
         options?: never;
         head?: never;
@@ -731,6 +885,24 @@ export interface paths {
         patch: operations["updateWikiPage"];
         trace?: never;
     };
+    "/wiki/pages/{slug}/dislike": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** 标记 Wiki 页面「不推荐/内容有误」（幂等；可重复提交，取消用 DELETE） */
+        put: operations["dislikeWikiPage"];
+        post?: never;
+        /** 取消「不推荐」标记 */
+        delete: operations["undislikeWikiPage"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/wiki/pages/{slug}/like": {
         parameters: {
             query?: never;
@@ -888,6 +1060,24 @@ export interface paths {
         head?: never;
         /** 更新攻略 */
         patch: operations["updateGuide"];
+        trace?: never;
+    };
+    "/guides/{slug}/dislike": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** 标记攻略「不推荐/内容有误」（幂等；可重复提交，取消用 DELETE） */
+        put: operations["dislikeGuide"];
+        post?: never;
+        /** 取消「不推荐」标记 */
+        delete: operations["undislikeGuide"];
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/guides/{slug}/like": {
@@ -1095,7 +1285,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** 获取 Wiki 页面评论 */
+        /** 获取 Wiki 页面顶层评论（分页；回复通过 GET /comments/{commentId}/replies 加载） */
         get: operations["listWikiComments"];
         put?: never;
         /** 发表 Wiki 评论 */
@@ -1113,11 +1303,29 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** 获取攻略评论 */
+        /** 获取攻略顶层评论（分页；回复通过 GET /comments/{commentId}/replies 加载） */
         get: operations["listGuideComments"];
         put?: never;
         /** 发表攻略评论 */
         post: operations["createGuideComment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/comments/{commentId}/replies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 某条顶层评论的回复（按时间正序分页，可翻页加载） */
+        get: operations["listCommentReplies"];
+        put?: never;
+        /** 回复某条顶层评论（认证用户；回复挂在父评论下方，不占独立楼层） */
+        post: operations["createCommentReply"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1338,10 +1546,10 @@ export interface components {
             /** Format: uri */
             avatarUrl?: string;
             /**
-             * @description owner 为最高权限管理员（站长），admin/moderator 权限由 permissions 开关控制
+             * @description owner 站长（唯一、全站最高权限）；admin 管理员（自动开启除角色分配外全部管理与创作权限）； *moderator 分区版主（自动开启对应分区板块管理 + 举报 + 用户管理，可处置低等级账号）； *editor 分区小编（对应分区板块内容下架/恢复，无账号处置）；member 成员。 角色分配层级：站长→管理员→各分区版主→各分区小编/成员；论坛未开放前 forum 相关能力置灰。
              * @enum {string}
              */
-            role: "guest" | "member" | "editor" | "moderator" | "admin" | "owner";
+            role: "member" | "wiki_editor" | "guide_editor" | "video_editor" | "wiki_moderator" | "guide_moderator" | "forum_moderator" | "video_moderator" | "admin" | "owner";
             /** Format: date-time */
             createdAt: string;
             /**
@@ -1367,10 +1575,14 @@ export interface components {
             exp?: number;
             /** @description 升到下一级所需累计经验；满级为 null */
             nextLevelExp?: number | null;
-            /** @description 管理员权限开关（仅 owner 可配置，默认空） */
-            permissions?: ("manage_users" | "manage_content" | "manage_forum" | "manage_cms" | "manage_deletion" | "grant_wiki_create")[];
-            /** @description 是否被站长授予 Wiki 词条创建资格 */
+            /** @description 管理权限开关（仅 owner 可配置；admin 角色自动全开；细分版主/小编按角色自动映射，开关可在角色默认上由站长增减） */
+            permissions?: ("manage_users" | "manage_content" | "manage_all_boards" | "manage_wiki_board" | "manage_guide_board" | "manage_forum_board" | "manage_video_board" | "manage_reports" | "grant_wiki_create" | "grant_guide_create" | "grant_video_share")[];
+            /** @description 是否被授予 Wiki 词条创建资格（仅解锁 Wiki 创建） */
             wikiCreateGranted?: boolean;
+            /** @description 是否被授予编撰攻略资格（仅解锁攻略创建） */
+            guideCreateGranted?: boolean;
+            /** @description 是否被授予视频分享资格（仅解锁相关视频区新增条目） */
+            videoShareGranted?: boolean;
             banReason?: string | null;
             /** Format: date-time */
             banUntil?: string | null;
@@ -1522,6 +1734,10 @@ export interface components {
             likeCount: number;
             likedByMe: boolean;
             bookmarkedByMe: boolean;
+            /** @description 「不推荐/内容有误」标记数 */
+            dislikeCount: number;
+            /** @description 当前登录用户是否已标记（匿名 false） */
+            dislikedByMe: boolean;
         };
         WikiPage: components["schemas"]["WikiPageSummary"] & {
             content: string;
@@ -1573,6 +1789,10 @@ export interface components {
             likeCount: number;
             likedByMe: boolean;
             bookmarkedByMe: boolean;
+            /** @description 「不推荐/内容有误」标记数 */
+            dislikeCount: number;
+            /** @description 当前登录用户是否已标记（匿名 false） */
+            dislikedByMe: boolean;
         };
         Guide: components["schemas"]["GuideSummary"] & {
             content: string;
@@ -1702,6 +1922,11 @@ export interface components {
             /** @enum {string} */
             targetType: "wiki_page" | "guide";
             targetId: string;
+            /**
+             * Format: uuid
+             * @description 回复所属的顶层评论 id；顶层评论为 null
+             */
+            parentId: string | null;
             author: components["schemas"]["UserSummary"];
             content: string;
             /** Format: date-time */
@@ -1710,6 +1935,8 @@ export interface components {
             updatedAt: string;
             likeCount: number;
             likedByMe: boolean;
+            /** @description 顶层评论的回复数；回复自身恒为 0 */
+            replyCount: number;
         };
         CommentList: {
             data: components["schemas"]["Comment"][];
@@ -1768,6 +1995,61 @@ export interface components {
         };
         UnreadCount: {
             unread: number;
+        };
+        DirectMessageItem: {
+            /** Format: uuid */
+            id: string;
+            sender: components["schemas"]["UserSummary"];
+            content: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            readAt: string | null;
+        };
+        DirectMessageList: {
+            data: components["schemas"]["DirectMessageItem"][];
+            pagination: components["schemas"]["Pagination"];
+        };
+        ConversationItem: {
+            peer: components["schemas"]["UserSummary"];
+            /** @description 我方未读条数 */
+            unreadCount: number;
+            lastMessage?: {
+                /** Format: uuid */
+                senderId?: string;
+                content?: string;
+                /** Format: date-time */
+                createdAt?: string;
+            } | null;
+            /**
+             * Format: date-time
+             * @description 最后消息时间；无消息时为会话创建时间
+             */
+            updatedAt: string;
+        };
+        ConversationList: {
+            data: components["schemas"]["ConversationItem"][];
+            pagination: components["schemas"]["Pagination"];
+        };
+        FeedbackItem: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            category: "bug" | "suggestion" | "appeal" | "other";
+            content: string;
+            /** @enum {string} */
+            status: "PENDING" | "REPLIED" | "CLOSED";
+            replyText?: string | null;
+            author: components["schemas"]["UserSummary"];
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            repliedAt?: string | null;
+            handledBy?: components["schemas"]["UserSummary"] | null;
+        };
+        FeedbackList: {
+            data: components["schemas"]["FeedbackItem"][];
+            pagination: components["schemas"]["Pagination"];
         };
         CheckInStatus: {
             today: boolean;
@@ -2281,6 +2563,15 @@ export interface components {
                 };
             };
         };
+        CreateFeedbackRequest: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    category: "bug" | "suggestion" | "appeal" | "other";
+                    content: string;
+                };
+            };
+        };
         CreateAnnouncementRequest: {
             content: {
                 "application/json": {
@@ -2364,12 +2655,15 @@ export interface components {
                     /** Format: date-time */
                     mutedUntil?: string | null;
                     wikiCreateGranted?: boolean;
-                    permissions?: ("manage_users" | "manage_content" | "manage_forum" | "manage_cms" | "manage_deletion" | "grant_wiki_create")[];
+                    guideCreateGranted?: boolean;
+                    videoShareGranted?: boolean;
+                    /** @enum {array} */
+                    permissions?: "manage_users" | "manage_content" | "manage_all_boards" | "manage_wiki_board" | "manage_guide_board" | "manage_forum_board" | "manage_video_board" | "manage_reports" | "grant_wiki_create" | "grant_guide_create" | "grant_video_share";
                     /**
-                     * @description 仅站长可为任意用户分配角色（成员/编辑/版主/管理员；不含 owner）
+                     * @description 角色分配（不含 owner）：站长→管理员→各分区版主→各分区小编/成员；管理员可分配版主/小编/成员，细分版主仅可把成员分配为对应分区小编；站长自身固定为站长不可被分配
                      * @enum {string}
                      */
-                    role?: "member" | "editor" | "moderator" | "admin";
+                    role?: "member" | "wiki_editor" | "guide_editor" | "video_editor" | "wiki_moderator" | "guide_moderator" | "forum_moderator" | "video_moderator" | "admin";
                 };
             };
         };
@@ -2994,6 +3288,55 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
         };
     };
+    createFeedback: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["CreateFeedbackRequest"];
+        responses: {
+            /** @description 提交成功 */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["FeedbackItem"];
+                    };
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthorized"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    listMyFeedback: {
+        parameters: {
+            query?: {
+                page?: components["parameters"]["Page"];
+                perPage?: components["parameters"]["PerPage"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 反馈列表 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeedbackList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
     listMyMessages: {
         parameters: {
             query?: {
@@ -3147,6 +3490,218 @@ export interface operations {
                 content?: never;
             };
             401: components["responses"]["Unauthorized"];
+        };
+    };
+    listAdminFeedback: {
+        parameters: {
+            query?: {
+                page?: components["parameters"]["Page"];
+                perPage?: components["parameters"]["PerPage"];
+                status?: "PENDING" | "REPLIED" | "CLOSED";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 反馈列表 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeedbackList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    handleFeedback: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                feedbackId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    status: "REPLIED" | "CLOSED";
+                    /** @description REPLIED 时必填，作为站内信回复内容 */
+                    replyText?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description 处理结果 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["FeedbackItem"];
+                    };
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listMyAnnouncements: {
+        parameters: {
+            query?: {
+                page?: components["parameters"]["Page"];
+                perPage?: components["parameters"]["PerPage"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 公告列表 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    markAnnouncementsRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 已标记 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    listConversations: {
+        parameters: {
+            query?: {
+                page?: components["parameters"]["Page"];
+                perPage?: components["parameters"]["PerPage"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 会话列表 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    listConversationMessages: {
+        parameters: {
+            query?: {
+                page?: components["parameters"]["Page"];
+                perPage?: components["parameters"]["PerPage"];
+            };
+            header?: never;
+            path: {
+                peerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 私信列表 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DirectMessageList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    sendConversationMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    content: string;
+                };
+            };
+        };
+        responses: {
+            /** @description 发送成功 */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["DirectMessageItem"];
+                    };
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    markConversationRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                peerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 已标记 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
         };
     };
     listAnnouncements: {
@@ -3836,6 +4391,50 @@ export interface operations {
             409: components["responses"]["Conflict"];
         };
     };
+    dislikeWikiPage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 已标记 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    undislikeWikiPage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 已取消 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     likeWikiPage: {
         parameters: {
             query?: never;
@@ -4189,6 +4788,50 @@ export interface operations {
             400: components["responses"]["ValidationError"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    dislikeGuide: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 已标记 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    undislikeGuide: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 已取消 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
         };
     };
@@ -4803,6 +5446,58 @@ export interface operations {
             };
             400: components["responses"]["ValidationError"];
             401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listCommentReplies: {
+        parameters: {
+            query?: {
+                page?: components["parameters"]["Page"];
+                perPage?: components["parameters"]["PerPage"];
+            };
+            header?: never;
+            path: {
+                commentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 回复列表 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommentList"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    createCommentReply: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                commentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["CreateCommentRequest"];
+        responses: {
+            /** @description 回复成功 */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Comment"];
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
         };
     };

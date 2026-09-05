@@ -16,7 +16,17 @@ import { isAdminRole } from "@/lib/me";
 interface Me {
   id: string;
   role?: string;
+  permissions?: string[];
 }
+
+/** 论坛分区管理判定（权限体系 v2 PR #119）：admin/owner、论坛版主或对应开关 */
+const canModerateForum = (me: Me | null): boolean =>
+  !!me &&
+  (isAdminRole(me.role) ||
+    me.role === "forum_moderator" ||
+    (me.permissions ?? []).some(
+      (p) => p === "manage_forum_board" || p === "manage_all_boards",
+    ));
 
 function useMe() {
   const [me, setMe] = useState<Me | null>(null);
@@ -60,7 +70,7 @@ export function AdminThreadControls({
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
 
-  if (!isAdminRole(me?.role)) return null;
+  if (!canModerateForum(me)) return null;
 
   const toggle = (field: "pinned" | "locked", next: boolean) => {
     if (busy) return;
@@ -248,7 +258,7 @@ export function PostSection({
   };
 
   const canManage = (p: ForumPost) =>
-    me && (me.id === p.author.id || isAdminRole(me.role));
+    me && (me.id === p.author.id || canModerateForum(me));
 
   return (
     <section aria-labelledby="posts-heading" className="space-y-6">

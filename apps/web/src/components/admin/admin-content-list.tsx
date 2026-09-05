@@ -5,21 +5,19 @@ import Link from "next/link";
 import { request, type ListResult } from "@/lib/api-client";
 import { ApiError } from "@/lib/errors";
 import { getAccessToken } from "@/lib/session";
-import { isAdminRole } from "@/lib/me";
+import { isAdminRole, hasPermission, type MeUser } from "@/lib/me";
 
 /**
  * Wiki / 攻略内容管理列表（客户端组件，/admin/wiki 与 /admin/guides 共用）。
- * - 门禁：wiki 允许 admin/editor，guides 仅 admin
+ * - 门禁（权限体系 v2 PR #119）：wiki 允许 admin/owner、wiki 小编/版主或
+ *   manage_wiki_board；guides 对应 guide 小编/版主或 manage_guide_board
  * - 列表：GET /wiki/pages 或 /guides，支持状态筛选（草稿/已发布/已归档）
  * - 操作：编辑（跳转编辑器）、发布/归档切换（PATCH status）、精华标记（PATCH featured）
  * - 精华状态：Summary 无 featuredAt 字段（契约），载入后按详情接口并发补齐；
  *   首页「精华推荐」按 featuredAt desc 取用（GET /home/digest）
  */
 
-interface Me {
-  id: string;
-  role?: string;
-}
+type Me = MeUser;
 
 interface Item {
   slug: string;
@@ -88,10 +86,16 @@ export function AdminContentList({ kind }: { kind: "wiki" | "guide" }) {
     request<{ data: Me }>("/users/me")
       .then((r) => {
         const role = r.data.role?.toLowerCase() ?? "";
-        // owner 为最高管理身份，与 lib/me.ts isAdminRole 语义一致
+        // 权限体系 v2：管理可用性走 hasPermission（effective permissions 已由后端回填）
         const ok = isWiki
-          ? isAdminRole(role) || role === "editor"
-          : isAdminRole(role);
+          ? isAdminRole(role) ||
+            role === "wiki_editor" ||
+            role === "wiki_moderator" ||
+            hasPermission(r.data, "manage_wiki_board")
+          : isAdminRole(role) ||
+            role === "guide_editor" ||
+            role === "guide_moderator" ||
+            hasPermission(r.data, "manage_guide_board");
         setPhase(ok ? "ready" : "forbidden");
       })
       .catch(() => setPhase("forbidden"));

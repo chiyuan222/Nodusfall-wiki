@@ -11,7 +11,7 @@ import Link from "next/link";
 
 import { useMe } from "@/lib/me";
 
-const EDITOR_ROLES = new Set(["admin", "editor", "owner"]);
+const EDITOR_ROLES = new Set(["admin", "owner", "wiki_editor", "wiki_moderator"]);
 
 export function WikiEditEntry({
   variant,
