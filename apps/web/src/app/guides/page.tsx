@@ -77,6 +77,7 @@ export default async function GuidesIndexPage() {
           label="攻略推荐轮播"
           slides={carousel}
           emptyHint="攻略推荐 · 待内容接入"
+          variant="compact"
         />
       </section>
 

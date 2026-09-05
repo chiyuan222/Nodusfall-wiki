@@ -62,6 +62,7 @@ export default async function WikiIndexPage() {
           label="Wiki 词条推荐轮播"
           slides={carousel}
           emptyHint="词条推荐 · 待内容接入"
+          variant="compact"
         />
       </section>
 

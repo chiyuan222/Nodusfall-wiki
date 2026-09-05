@@ -40,13 +40,20 @@ export function Carousel({
   slides,
   label,
   emptyHint = "虚位以待 · 待内容接入",
+  variant = "hero",
 }: {
   slides: CarouselSlide[];
   /** aria-label，如「Wiki 推荐轮播」 */
   label: string;
   /** 空槽位提示文字 */
   emptyHint?: string;
+  /**
+   * hero：首页首屏大轮播（16/9 → 21/9，大标题）
+   * compact：分区页推荐条（更扁、标题降一级、内边距收紧），不抢正文列表视觉重心
+   */
+  variant?: "hero" | "compact";
 }) {
+  const compact = variant === "compact";
   // 固定 5 个槽位：真实条目 + 空槽补齐
   const slots: (CarouselSlide | null)[] = Array.from(
     { length: CAROUSEL_SLOTS },
@@ -88,7 +95,11 @@ export function Carousel({
       onBlurCapture={() => setPaused(false)}
     >
       {/* slide 视窗 */}
-      <div className="relative aspect-[16/9] w-full sm:aspect-[21/9]">
+      <div
+        className={`relative w-full ${
+          compact ? "aspect-[16/7] sm:aspect-[21/6]" : "aspect-[16/9] sm:aspect-[21/9]"
+        }`}
+      >
         {slots.map((slide, i) => {
           const active = i === index;
           const inner = (
@@ -123,11 +134,19 @@ export function Carousel({
                   ? slide?.title || ""
                   : slide?.title || emptyHint;
                 return (
-                  <span className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 p-5 sm:p-6">
+                  <span
+                    className={`absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 ${
+                      compact ? "p-4" : "p-5 sm:p-6"
+                    }`}
+                  >
                     {(caption || slide?.subtitle) && (
-                      <span className="min-w-0 rounded-md bg-black/50 px-3.5 py-2.5 backdrop-blur-md">
+                      <span className={`min-w-0 rounded-md bg-black/50 backdrop-blur-md ${compact ? "px-3 py-2" : "px-3.5 py-2.5"}`}>
                         {caption && (
-                          <span className="site-heading block truncate font-serif text-h2 font-semibold text-white [text-shadow:0_1px_6px_rgba(0,0,0,0.7)] sm:text-h1">
+                          <span
+                            className={`site-heading block truncate font-serif font-semibold text-white [text-shadow:0_1px_6px_rgba(0,0,0,0.7)] ${
+                              compact ? "text-h3 sm:text-h2" : "text-h2 sm:text-h1"
+                            }`}
+                          >
                             {caption}
                           </span>
                         )}
