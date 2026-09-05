@@ -18,7 +18,7 @@ import { useMe, isAdminRole, hasPermission } from "@/lib/me";
  * ① 内容分区显示开关（禁用分区对外显示「维护中」、导航隐藏入口）
  * ② 论坛页左右漂浮引流窗（图片 + 跳转链接 + 启用开关，站长贴二维码引流）
  * ③ 全站标题外观（颜色调色盘 / 字体族 / 字重，null=跟随主题默认）
- * 权限：owner 或 manage_cms。保存后 invalidate 全站即时生效。
+ * 权限：owner 或 manage_content（权限体系 v2 PR #119）。保存后 invalidate 全站即时生效。
  */
 
 const SECTION_META: { key: keyof SiteSections; label: string; hint: string }[] = [
@@ -129,7 +129,7 @@ export function SiteConfigManager() {
   const [toast, setToast] = useState("");
 
   const allowed =
-    !!me && (isAdminRole(me.role) || hasPermission(me, "manage_cms"));
+    !!me && (isAdminRole(me.role) || hasPermission(me, "manage_content"));
 
   const load = useCallback(() => {
     setLoading(true);
@@ -166,7 +166,7 @@ export function SiteConfigManager() {
   if (!allowed) {
     return (
       <p className="rounded-md border border-border-subtle bg-surface p-6 text-center text-small text-faint">
-        当前账号无站点设置权限（需站长或 manage_cms 开关）。
+        当前账号无站点设置权限（需站长或 manage_content 开关）。
       </p>
     );
   }

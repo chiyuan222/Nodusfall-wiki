@@ -30,7 +30,9 @@ export function GuideEditEntry({
     request<{ data: Me }>("/users/me")
       .then((r) => {
         const isAuthor = r.data.id === authorId;
-        const isAdmin = isAdminRole(r.data.role);
+        // 权限体系 v2（PR #119）：作者本人、admin/owner 或攻略版主可编辑
+        const isAdmin =
+          isAdminRole(r.data.role) || r.data.role === "guide_moderator";
         setAllowed(isAuthor || isAdmin);
       })
       .catch(() => setAllowed(false));

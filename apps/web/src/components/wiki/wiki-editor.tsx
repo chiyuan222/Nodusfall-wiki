@@ -25,9 +25,10 @@ import { authorName } from "@/lib/author";
 interface Me {
   id: string;
   role?: string;
+  wikiCreateGranted?: boolean;
 }
 
-const EDITOR_ROLES = new Set(["admin", "editor", "owner"]);
+const EDITOR_ROLES = new Set(["admin", "owner", "wiki_editor", "wiki_moderator"]);
 
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -106,10 +107,14 @@ export function WikiEditor({
     request<{ data: Me }>("/users/me")
       .then((r) => {
         const role = r.data.role?.toLowerCase() ?? "";
-        setPhase(EDITOR_ROLES.has(role) ? "ready" : "forbidden");
+        // 权限体系 v2：编辑需小编/版主/管理；新建额外放行 wikiCreateGranted 成员
+        const ok =
+          EDITOR_ROLES.has(role) ||
+          (mode === "create" && r.data.wikiCreateGranted === true);
+        setPhase(ok ? "ready" : "forbidden");
       })
       .catch(() => setPhase("forbidden"));
-  }, []);
+  }, [mode]);
 
   // 启动时探测本地草稿（编辑模式下仅当内容不同才提示）
   useEffect(() => {

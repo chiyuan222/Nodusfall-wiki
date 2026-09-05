@@ -3,39 +3,28 @@
 import { useCallback, useEffect, useState } from "react";
 import { request, type ListResult } from "@/lib/api-client";
 import { ApiError } from "@/lib/errors";
-import { useMe, isAdminRole, type MeUser } from "@/lib/me";
+import { useMe, isAdminRole, hasPermission, type MeUser } from "@/lib/me";
 import { UserGroupBadge, UserStatusMark } from "@/components/user-marks";
 import { Avatar } from "@/components/avatar";
 import type { components } from "@/lib/schema";
+import {
+  PERMISSIONS,
+  ROLE_LABEL,
+  assignableRoles,
+  assignHint,
+} from "@/lib/roles";
 
 /**
- * 用户与权限管理（/admin/users，契约 PR #51）。
- * - 列表：GET /admin/users（q/group/role/status/level 筛选 + 分页）
+ * 用户与权限管理（/admin/users，契约 PR #51 / 权限体系 v2 PR #119）。
+ * - 列表：GET /admin/users（q/group/role/status 筛选 + 分页）
  * - 详情：GET /admin/users/{userId}
- * - 修改：PATCH /admin/users/{userId}（组/等级/封禁解禁禁言/权限开关；role 与 permissions 仅 owner（可为任意用户分配/配置））
+ * - 修改：PATCH /admin/users/{userId}（组/封禁解禁禁言/权限开关/角色；
+ *   等级已锁定 403 不再展示；角色按层级分配：站长→admin，admin→版主/小编/成员，版主→本分区小编/成员；
+ *   非站长不展示 email/phone）
  * 需 manage_users 开关（admin/owner 默认具备）。
  */
 
 type AdminUser = components["schemas"]["AdminUser"];
-type Permission = NonNullable<MeUser["permissions"]>[number];
-
-const PERMISSIONS: { key: Permission; label: string }[] = [
-  { key: "manage_users", label: "用户管理" },
-  { key: "manage_content", label: "内容管理" },
-  { key: "manage_forum", label: "论坛管理" },
-  { key: "manage_cms", label: "页面 CMS" },
-  { key: "manage_deletion", label: "删帖" },
-  { key: "grant_wiki_create", label: "授予建词条" },
-];
-
-const ROLE_LABEL: Record<string, string> = {
-  owner: "站长",
-  admin: "管理员",
-  moderator: "版主",
-  editor: "编辑",
-  member: "成员",
-  guest: "访客",
-};
 
 const STATUS_LABEL: Record<string, string> = {
   active: "正常",
@@ -66,7 +55,8 @@ export function UserManager() {
   const [busy, setBusy] = useState(false);
 
   const isOwner = me?.role === "owner";
-  const allowed = me && (isAdminRole(me.role) || (me.permissions ?? []).includes("manage_users"));
+  const allowed = me && hasPermission(me, "manage_users");
+  const assignable = assignableRoles(me?.role);
 
   const load = useCallback(
     (p: number) => {
@@ -225,7 +215,7 @@ export function UserManager() {
                         <UserStatusMark status={u.status} />
                       </span>
                       <span className="mt-0.5 block truncate font-mono text-caption text-faint">
-                        @{u.username} · {u.email}
+                        @{u.username} · {u.email || "仅站长可见"}
                       </span>
                     </span>
                     <span aria-hidden className="font-mono text-caption text-faint">→</span>
@@ -267,8 +257,10 @@ export function UserManager() {
                   </p>
                 </div>
                 <p className="mt-1 font-mono text-caption text-faint">
-                  @{selected.username} · {selected.email}
-                  {selected.phone ? ` · ${selected.phone}` : ""}
+                  @{selected.username} ·{" "}
+                  {isOwner
+                    ? `${selected.email || "—"}${selected.phone ? ` · ${selected.phone}` : ""}`
+                    : "联系方式仅站长可见"}
                 </p>
                 <p className="mt-1 font-mono text-caption text-faint">
                   注册 {selected.createdAt.slice(0, 10)}
@@ -279,8 +271,8 @@ export function UserManager() {
                 )}
               </div>
 
-              {/* 组与等级 */}
-              <div className="grid grid-cols-2 gap-3">
+              {/* 用户组（等级已由后端经验体系锁定，不再提供手改入口） */}
+              <div>
                 <label className="block">
                   <span className="mb-1 block font-mono text-caption text-faint">用户组</span>
                   <select
@@ -292,19 +284,6 @@ export function UserManager() {
                     <option value="normal">普通（仅阅览）</option>
                     <option value="verified">认证</option>
                     <option value="premium">付费</option>
-                  </select>
-                </label>
-                <label className="block">
-                  <span className="mb-1 block font-mono text-caption text-faint">等级（1-10）</span>
-                  <select
-                    value={selected.level}
-                    disabled={busy}
-                    onChange={(e) => patch({ level: Number(e.target.value) }, "等级已更新。")}
-                    className={selectCls + " w-full"}
-                  >
-                    {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-                      <option key={n} value={n}>Lv.{n}</option>
-                    ))}
                   </select>
                 </label>
               </div>
@@ -343,21 +322,34 @@ export function UserManager() {
                 )}
               </div>
 
-              {/* Wiki 建词条资格 */}
-              <label className="flex items-center gap-2 text-small text-secondary">
-                <input
-                  type="checkbox"
-                  className="accent-amber"
-                  checked={!!selected.wikiCreateGranted}
-                  disabled={busy}
-                  onChange={(e) =>
-                    patch({ wikiCreateGranted: e.target.checked }, e.target.checked ? "已授予 Wiki 建词条资格。" : "已收回 Wiki 建词条资格。")
-                  }
-                />
-                授予 Wiki 词条创建资格（wikiCreateGranted）
-              </label>
+              {/* 创作资格授予（契约 PR #119：三项） */}
+              <div className="space-y-2">
+                {(
+                  [
+                    ["wikiCreateGranted", "授予 Wiki 词条创建资格"],
+                    ["guideCreateGranted", "授予攻略编撰资格"],
+                    ["videoShareGranted", "授予相关视频分享资格"],
+                  ] as const
+                ).map(([key, label]) => (
+                  <label key={key} className="flex items-center gap-2 text-small text-secondary">
+                    <input
+                      type="checkbox"
+                      className="accent-amber"
+                      checked={!!selected[key]}
+                      disabled={busy}
+                      onChange={(e) =>
+                        patch(
+                          { [key]: e.target.checked },
+                          e.target.checked ? `已${label}。` : `已收回：${label}。`,
+                        )
+                      }
+                    />
+                    {label}（{key}）
+                  </label>
+                ))}
+              </div>
 
-              {/* 权限开关（仅 owner） */}
+              {/* 权限开关（仅 owner，11 项，按后端回填的 effective permissions 勾选） */}
               <fieldset disabled={!isOwner || busy}>
                 <legend className="font-mono text-caption text-faint">
                   管理权限开关{isOwner ? "" : "（仅站长可配置）"}
@@ -385,20 +377,28 @@ export function UserManager() {
                 </div>
               </fieldset>
 
-              {/* 角色（仅 owner） */}
-              {isOwner && (
+              {/* 角色分配（按层级：站长→admin；admin→版主/小编/成员；版主→本分区小编/成员） */}
+              {assignable.length > 0 && (
                 <label className="block">
-                  <span className="mb-1 block font-mono text-caption text-faint">角色（仅站长可分配）</span>
+                  <span className="mb-1 block font-mono text-caption text-faint">
+                    角色分配 · {assignHint(me?.role)}
+                  </span>
                   <select
                     value={selected.role}
                     disabled={busy}
                     onChange={(e) => {
-                      if (window.confirm(`确认将 ${selected.displayName} 的角色改为「${ROLE_LABEL[e.target.value]}」？`))
+                      if (window.confirm(`确认将 ${selected.displayName} 的角色改为「${ROLE_LABEL[e.target.value as keyof typeof ROLE_LABEL] ?? e.target.value}」？`))
                         patch({ role: e.target.value }, "角色已更新。");
                     }}
                     className={selectCls + " w-full"}
                   >
-                    {["member", "editor", "moderator", "admin"].map((r) => (
+                    {/* 当前角色若不在可分配集合中（如 owner），保留展示但不可改选 */}
+                    {!assignable.includes(selected.role) && (
+                      <option value={selected.role} disabled>
+                        {ROLE_LABEL[selected.role] ?? selected.role}（当前）
+                      </option>
+                    )}
+                    {assignable.map((r) => (
                       <option key={r} value={r}>{ROLE_LABEL[r]}</option>
                     ))}
                   </select>

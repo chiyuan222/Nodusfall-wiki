@@ -7,7 +7,7 @@ import { request, type ListResult, type Pagination } from "@/lib/api-client";
 import { ApiError } from "@/lib/errors";
 import { getAccessToken } from "@/lib/session";
 import { authorName } from "@/lib/author";
-import { useMe, canPost, isAdminRole } from "@/lib/me";
+import { useMe, canPost, isAdminRole, hasPermission } from "@/lib/me";
 import { UserGroupBadge, UserStatusMark, SiteIdMark } from "@/components/user-marks";
 import { ReportButton, ReportUserButton } from "@/components/report-button";
 import { Avatar } from "@/components/avatar";
@@ -24,18 +24,18 @@ import { Avatar } from "@/components/avatar";
 /** 评论作者行 + 操作按钮（顶层与回复共用） */
 function CommentMeta({
   c,
-  me,
+  manageable,
   onLike,
   onRemove,
   extra,
 }: {
   c: Comment;
-  me: ReturnType<typeof useMe>["me"];
+  /** 作者本人或具备对应分区/内容管理权限（由外层按 targetType 计算） */
+  manageable: boolean;
   onLike: (c: Comment) => void;
   onRemove: (c: Comment) => void;
   extra?: ReactNode;
 }) {
-  const canManage = me && (me.id === c.author.id || isAdminRole(me.role));
   return (
     <>
       <div className="flex flex-wrap items-center gap-2">
@@ -71,7 +71,7 @@ function CommentMeta({
         >
           👍 {c.likeCount}
         </button>
-        {canManage && (
+        {manageable && (
           <button
             type="button"
             onClick={() => onRemove(c)}
@@ -129,12 +129,15 @@ function ReplyThread({
   parent,
   me,
   canReply,
+  canModerate,
   onCountChange,
   onError,
 }: {
   parent: Comment;
   me: ReturnType<typeof useMe>["me"];
   canReply: boolean;
+  /** 是否具备本区评论管理权限（删除他人回复） */
+  canModerate: boolean;
   onCountChange: (delta: number) => void;
   onError: (msg: string) => void;
 }) {
@@ -234,7 +237,7 @@ function ReplyThread({
             <li key={r.id} className="py-3 first:pt-1">
               <CommentMeta
                 c={r}
-                me={me}
+                manageable={!!me && (me.id === r.author.id || canModerate)}
                 onLike={likeReply}
                 onRemove={removeReply}
               />
@@ -277,6 +280,15 @@ export function CommentSection({
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const { me, pending } = useMe();
   const loggedIn = !pending && !!me;
+  // 权限体系 v2（PR #119）：作者本人或对应分区/内容管理权限可删除评论与回复
+  const canModerateComments =
+    !!me &&
+    (isAdminRole(me.role) ||
+      hasPermission(
+        me,
+        targetType === "wiki" ? "manage_wiki_board" : "manage_guide_board",
+      ) ||
+      hasPermission(me, "manage_content"));
 
   const listPath =
     targetType === "wiki"
@@ -442,7 +454,7 @@ export function CommentSection({
             <li key={c.id} className="py-4 first:pt-0 last:pb-0">
               <CommentMeta
                 c={c}
-                me={me}
+                manageable={!!me && (me.id === c.author.id || canModerateComments)}
                 onLike={toggleLike}
                 onRemove={remove}
                 extra={
@@ -467,6 +479,7 @@ export function CommentSection({
                   parent={c}
                   me={me}
                   canReply={loggedIn && canPost(me)}
+                  canModerate={canModerateComments}
                   onCountChange={(d) => changeReplyCount(c.id, d)}
                   onError={setMsg}
                 />

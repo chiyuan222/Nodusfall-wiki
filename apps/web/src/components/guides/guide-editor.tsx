@@ -21,6 +21,7 @@ import { Markdown } from "@/components/markdown";
 interface Me {
   id: string;
   role?: string;
+  guideCreateGranted?: boolean;
 }
 
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -99,10 +100,18 @@ export function GuideEditor({
       .then((r) => {
         if (mode === "edit" && initial) {
           const isAuthor = r.data.id === initial.author.id;
-          const isAdmin = isAdminRole(r.data.role);
+          // 权限体系 v2（PR #119）：作者本人、admin/owner 或攻略版主可编辑
+          const isAdmin =
+            isAdminRole(r.data.role) || r.data.role === "guide_moderator";
           setPhase(isAuthor || isAdmin ? "ready" : "forbidden");
         } else {
-          setPhase("ready");
+          // 新建：攻略小编/版主、admin/owner 或被授予 guideCreateGranted 的成员
+          const canCreate =
+            isAdminRole(r.data.role) ||
+            r.data.role === "guide_editor" ||
+            r.data.role === "guide_moderator" ||
+            r.data.guideCreateGranted === true;
+          setPhase(canCreate ? "ready" : "forbidden");
         }
       })
       .catch(() => setPhase("forbidden"));

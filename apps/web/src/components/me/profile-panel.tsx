@@ -16,6 +16,7 @@ import { logout } from "@/lib/api-client";
  */
 
 import { isAdminRole, hasPermission, type MeUser } from "@/lib/me";
+import { roleLabel } from "@/lib/roles";
 import { UserGroupBadge, SiteIdMark } from "@/components/user-marks";
 import { CheckinPanel } from "@/components/me/checkin-panel";
 import { Avatar } from "@/components/avatar";
@@ -23,15 +24,6 @@ import { PhoneBind } from "@/components/me/phone-bind";
 import { featurePhoneEnabled } from "@/lib/feature-flags";
 
 type Me = MeUser;
-
-const ROLE_LABEL: Record<string, string> = {
-  owner: "站长",
-  admin: "管理员",
-  moderator: "版主",
-  editor: "编辑",
-  member: "成员",
-  guest: "访客",
-};
 
 export function ProfilePanel() {
   const [me, setMe] = useState<Me | null>(null);
@@ -158,7 +150,7 @@ export function ProfilePanel() {
             {me.displayName}
             {me.role && (
               <span className="rounded-sm border border-amber-soft px-1.5 py-0.5 font-mono text-caption font-normal text-amber">
-                {ROLE_LABEL[me.role.toLowerCase()] ?? me.role}
+                {roleLabel(me.role)}
               </span>
             )}
             <UserGroupBadge group={me.group} level={me.level} />
