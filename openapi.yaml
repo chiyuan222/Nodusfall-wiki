@@ -1504,6 +1504,36 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /wiki/pages/{slug}/dislike:
+    put:
+      tags: [Wiki]
+      operationId: dislikeWikiPage
+      summary: 标记 Wiki 页面「不推荐/内容有误」（幂等；可重复提交，取消用 DELETE）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Slug"
+      responses:
+        "204":
+          description: 已标记
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Wiki]
+      operationId: undislikeWikiPage
+      summary: 取消「不推荐」标记
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Slug"
+      responses:
+        "204":
+          description: 已取消
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /wiki/pages/{slug}/like:
     put:
       tags: [Wiki]
@@ -1809,6 +1839,36 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /guides/{slug}/dislike:
+    put:
+      tags: [Guides]
+      operationId: dislikeGuide
+      summary: 标记攻略「不推荐/内容有误」（幂等；可重复提交，取消用 DELETE）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Slug"
+      responses:
+        "204":
+          description: 已标记
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Guides]
+      operationId: undislikeGuide
+      summary: 取消「不推荐」标记
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Slug"
+      responses:
+        "204":
+          description: 已取消
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -2281,7 +2341,7 @@ paths:
     get:
       tags: [Comments]
       operationId: listWikiComments
-      summary: 获取 Wiki 页面评论
+      summary: 获取 Wiki 页面顶层评论（分页；回复通过 GET /comments/{commentId}/replies 加载）
       security: []
       parameters:
         - $ref: "#/components/parameters/Slug"
@@ -2323,7 +2383,7 @@ paths:
     get:
       tags: [Comments]
       operationId: listGuideComments
-      summary: 获取攻略评论
+      summary: 获取攻略顶层评论（分页；回复通过 GET /comments/{commentId}/replies 加载）
       security: []
       parameters:
         - $ref: "#/components/parameters/Slug"
@@ -2358,6 +2418,56 @@ paths:
           $ref: "#/components/responses/ValidationError"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /comments/{commentId}/replies:
+    get:
+      tags: [Comments]
+      operationId: listCommentReplies
+      summary: 某条顶层评论的回复（按时间正序分页，可翻页加载）
+      security: []
+      parameters:
+        - name: commentId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+      responses:
+        "200":
+          description: 回复列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommentList"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [Comments]
+      operationId: createCommentReply
+      summary: 回复某条顶层评论（认证用户；回复挂在父评论下方，不占独立楼层）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: commentId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        $ref: "#/components/requestBodies/CreateCommentRequest"
+      responses:
+        "201":
+          description: 回复成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Comment"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -3455,7 +3565,7 @@ components:
 
     WikiPageSummary:
       type: object
-      required: [id, slug, title, excerpt, coverImage, categorySlug, tags, status, author, updatedAt, viewCount, likeCount, likedByMe, bookmarkedByMe]
+      required: [id, slug, title, excerpt, coverImage, categorySlug, tags, status, author, updatedAt, viewCount, likeCount, likedByMe, bookmarkedByMe, dislikeCount, dislikedByMe]
       properties:
         id: { type: string, format: uuid }
         slug: { type: string }
@@ -3476,6 +3586,8 @@ components:
         likeCount: { type: integer }
         likedByMe: { type: boolean }
         bookmarkedByMe: { type: boolean }
+        dislikeCount: { type: integer, description: 「不推荐/内容有误」标记数 }
+        dislikedByMe: { type: boolean, description: 当前登录用户是否已标记（匿名 false） }
 
     WikiPage:
       allOf:
@@ -3527,7 +3639,7 @@ components:
 
     GuideSummary:
       type: object
-      required: [id, slug, title, excerpt, coverImage, tags, status, author, rating, updatedAt, viewCount, likeCount, likedByMe, bookmarkedByMe]
+      required: [id, slug, title, excerpt, coverImage, tags, status, author, rating, updatedAt, viewCount, likeCount, likedByMe, bookmarkedByMe, dislikeCount, dislikedByMe]
       properties:
         id: { type: string, format: uuid }
         slug: { type: string }
@@ -3553,6 +3665,8 @@ components:
         likeCount: { type: integer }
         likedByMe: { type: boolean }
         bookmarkedByMe: { type: boolean }
+        dislikeCount: { type: integer, description: 「不推荐/内容有误」标记数 }
+        dislikedByMe: { type: boolean, description: 当前登录用户是否已标记（匿名 false） }
 
     Guide:
       allOf:
@@ -3724,13 +3838,17 @@ components:
 
     Comment:
       type: object
-      required: [id, targetType, targetId, author, content, createdAt, updatedAt, likeCount, likedByMe]
+      required: [id, targetType, targetId, author, content, createdAt, updatedAt, likeCount, likedByMe, parentId, replyCount]
       properties:
         id: { type: string, format: uuid }
         targetType:
           type: string
           enum: [wiki_page, guide]
         targetId: { type: string }
+        parentId:
+          type: [string, "null"]
+          format: uuid
+          description: 回复所属的顶层评论 id；顶层评论为 null
         author:
           $ref: "#/components/schemas/UserSummary"
         content: { type: string }
@@ -3738,6 +3856,9 @@ components:
         updatedAt: { type: string, format: date-time }
         likeCount: { type: integer }
         likedByMe: { type: boolean }
+        replyCount:
+          type: integer
+          description: 顶层评论的回复数；回复自身恒为 0
 
     CommentList:
       type: object
