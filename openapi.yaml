@@ -876,7 +876,7 @@ paths:
     get:
       tags: [Users]
       operationId: getUser
-      summary: 获取公开用户资料
+      summary: 获取公开用户主页（他人主页；严格不含任何邮箱/手机等隐私字段）
       security: []
       parameters:
         - name: userId
@@ -887,11 +887,94 @@ paths:
             format: uuid
       responses:
         "200":
-          description: 用户公开资料
+          description: >
+            用户公开主页资料。banned/deleted 用户返回 404（不对外展示）；muted 用户可正常浏览但仅只读。
+            响应只含对外展示字段，不返回 email/phone（含打码列）、权限数组、封禁原因等私有管理字段。
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UserSummary"
+                $ref: "#/components/schemas/PublicUserProfile"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /users/{userId}/threads:
+    get:
+      tags: [Users]
+      operationId: listUserThreads
+      summary: 公开主页——该用户发布的主题（受本人 showThreads 开关控制）
+      security: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+      responses:
+        "200":
+          description: >
+            该用户已发布的主题列表（仅含访问者可见内容：已发布、未删除、未下架）。
+            本人始终可预览；他人视角若 showThreads=false 则响应 403。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForumThreadList"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /users/{userId}/comments:
+    get:
+      tags: [Users]
+      operationId: listUserComments
+      summary: 公开主页——该用户的评论（受本人 showComments 开关控制）
+      security: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+      responses:
+        "200":
+          description: >
+            该用户对 Wiki/攻略的评论列表（复用 MyComment 形状：含被评目标标题与 slug，便于跳回原文）。
+            本人始终可预览；他人视角若 showComments=false 则响应 403。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MyCommentList"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /users/{userId}/bookmarks:
+    get:
+      tags: [Users]
+      operationId: listUserBookmarks
+      summary: 公开主页——该用户的收藏（受本人 showBookmarks 开关控制）
+      security: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+      responses:
+        "200":
+          description: >
+            该用户收藏的主题列表（仅含仍公开可见的主题；原帖已删除/下架则不出现）。
+            本人始终可预览；他人视角若 showBookmarks=false 则响应 403。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForumThreadList"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -3049,6 +3132,19 @@ components:
                 format: uri
               bio:
                 type: string
+              privacy:
+                type: object
+                description: 公开主页各内容分区对外可见性（部分更新，仅传需要修改的字段即可）
+                properties:
+                  showThreads:
+                    type: boolean
+                    description: 对外展示我发布的主题
+                  showComments:
+                    type: boolean
+                    description: 对外展示我的评论
+                  showBookmarks:
+                    type: boolean
+                    description: 对外展示我的收藏
     CreateHistoryEntryRequest:
       required: true
       content:
@@ -3594,12 +3690,47 @@ components:
           maximum: 10
           description: 通用用户等级 1-10
 
+    ProfilePrivacy:
+      type: object
+      required: [showThreads, showComments, showBookmarks]
+      description: 公开主页各内容分区的对外可见性（默认全部开启，与现有行为一致）
+      properties:
+        showThreads:
+          type: boolean
+          default: true
+          description: 对外展示我发布的主题
+        showComments:
+          type: boolean
+          default: true
+          description: 对外展示我的评论
+        showBookmarks:
+          type: boolean
+          default: true
+          description: 对外展示我的收藏
+
+    PublicUserProfile:
+      allOf:
+        - $ref: "#/components/schemas/UserSummary"
+        - type: object
+          description: >
+            用户公开主页资料。仅包含对外展示字段（头像/显示名/用户名/UID(siteId)/等级/简介/注册时间等），
+            严格不返回 email、emailMasked、phone、phoneMasked、permissions、banReason 等私有或管理字段，
+            也不返回“打码后”的邮箱/手机列——这些字段在公开响应中直接不存在。
+            banned/deleted 用户不对外展示（GET /users/{userId} 返回 404）；muted 用户可浏览但仅只读。
+          properties:
+            bio: { type: [string, "null"], description: 个人简介，未填写为 null }
+            updatedAt: { type: string, format: date-time }
+            privacy:
+              $ref: "#/components/schemas/ProfilePrivacy"
+
     User:
       allOf:
         - $ref: "#/components/schemas/UserSummary"
         - type: object
           properties:
             bio: { type: string }
+            privacy:
+              $ref: "#/components/schemas/ProfilePrivacy"
             updatedAt: { type: string, format: date-time }
             emailMasked: { type: string }
             phoneMasked: { type: [string, "null"] }
