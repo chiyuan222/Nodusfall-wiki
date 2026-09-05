@@ -18,7 +18,18 @@ export class AdminListUsersQueryDto {
   group?: string;
 
   @IsOptional()
-  @IsIn(['guest', 'member', 'editor', 'moderator', 'admin', 'owner'])
+  @IsIn([
+    'member',
+    'wiki_editor',
+    'guide_editor',
+    'video_editor',
+    'wiki_moderator',
+    'guide_moderator',
+    'forum_moderator',
+    'video_moderator',
+    'admin',
+    'owner',
+  ])
   role?: string;
 
   @IsOptional()
