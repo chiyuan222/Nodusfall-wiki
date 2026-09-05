@@ -15,9 +15,9 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
 import {
   toUserResponse,
-  toUserSummary,
   UsersService,
 } from './users.service';
 import { RegisterDto } from './dto/register.dto';
@@ -85,11 +85,8 @@ export class UsersController {
   @Get(':userId')
   @HttpCode(HttpStatus.OK)
   async getUser(@Param('userId') userId: string) {
-    const user = await this.usersService.findById(userId);
-    if (!user) {
-      throw new NotFoundException('user not found');
-    }
-    return { data: toUserSummary(user) };
+    const user = await this.usersService.getPublicProfile(userId);
+    return { data: user };
   }
 
   @UseGuards(JwtAuthGuard)
@@ -156,5 +153,67 @@ export class UsersController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async clearMyHistory(@Req() req: AuthenticatedRequest): Promise<void> {
     await this.usersService.clearHistory(req.user.sub);
+  }
+
+  @Get(':userId/threads')
+  @UseGuards(OptionalJwtAuthGuard)
+  async listUserThreads(
+    @Req() req: Request,
+    @Param('userId') userId: string,
+    @Query() pagination: PaginationQueryDto,
+  ) {
+    const viewerId = (req as any).user?.sub;
+    await this.usersService.assertPublicSectionVisible(
+      userId,
+      'showThreads',
+      viewerId,
+    );
+    return this.forumService.userThreads(
+      userId,
+      pagination.page,
+      pagination.perPage,
+      viewerId,
+    );
+  }
+
+  @Get(':userId/comments')
+  @UseGuards(OptionalJwtAuthGuard)
+  async listUserComments(
+    @Req() req: Request,
+    @Param('userId') userId: string,
+    @Query() pagination: PaginationQueryDto,
+  ) {
+    const viewerId = (req as any).user?.sub;
+    await this.usersService.assertPublicSectionVisible(
+      userId,
+      'showComments',
+      viewerId,
+    );
+    return this.usersService.userComments(
+      userId,
+      pagination.page,
+      pagination.perPage,
+    );
+  }
+
+  @Get(':userId/bookmarks')
+  @UseGuards(OptionalJwtAuthGuard)
+  async listUserBookmarks(
+    @Req() req: Request,
+    @Param('userId') userId: string,
+    @Query() pagination: PaginationQueryDto,
+  ) {
+    const viewerId = (req as any).user?.sub;
+    await this.usersService.assertPublicSectionVisible(
+      userId,
+      'showBookmarks',
+      viewerId,
+    );
+    return this.forumService.userBookmarks(
+      userId,
+      pagination.page,
+      pagination.perPage,
+      viewerId,
+    );
   }
 }
