@@ -380,6 +380,13 @@ export const videoApi = {
   adminList: (kind: VideoKind | undefined, page?: number) =>
     list<VideoEntry>("/admin/videos", { kind, page, perPage: 50 }),
 
+  /** 分享视频（POST /videos，需视频分享资格或视频板块管理，契约 PR #121） */
+  share: (input: VideoInput) =>
+    request<{ data: VideoEntry }>("/videos", {
+      method: "POST",
+      body: input,
+    }).then((r) => r.data),
+
   create: (input: VideoInput) =>
     request<{ data: VideoEntry }>("/admin/videos", {
       method: "POST",

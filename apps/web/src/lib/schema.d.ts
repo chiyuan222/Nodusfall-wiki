@@ -637,7 +637,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** 处理举报（RESOLVED 已处理 / REJECTED 驳回） */
+        /** 处理举报（RESOLVED 已处理 / REJECTED 驳回；可附带对账号禁言/封禁） */
         patch: operations["handleReport"];
         trace?: never;
     };
@@ -1001,11 +1001,30 @@ export interface paths {
         /** 相关视频导航列表（按分区筛选，仅已发布） */
         get: operations["listVideos"];
         put?: never;
-        post?: never;
+        /** 分享视频（需视频分享资格或视频板块管理；默认公开，管理可下架） */
+        post: operations["shareVideo"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/videos/{videoId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** 删除分享的视频（作者本人或视频板块管理） */
+        delete: operations["deleteSharedVideo"];
+        options?: never;
+        head?: never;
+        /** 编辑分享的视频（作者本人或视频板块管理；不可改发布状态/排序） */
+        patch: operations["updateSharedVideo"];
         trace?: never;
     };
     "/admin/videos": {
@@ -1809,6 +1828,8 @@ export interface components {
         VideoEntry: {
             /** Format: uuid */
             id: string;
+            /** @description 分享者（管理端条目/未关联作者为 null） */
+            author: components["schemas"]["UserSummary"] | null;
             /**
              * @description official 官方视频 / analysis 考究杂谈 / gameplay 实况攻略
              * @enum {string}
@@ -2595,6 +2616,38 @@ export interface components {
                     description?: string | null;
                     published?: boolean;
                     sortOrder?: number;
+                };
+            };
+        };
+        CreateVideoShareRequest: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    kind: "official" | "analysis" | "gameplay";
+                    title: string;
+                    /** Format: uri */
+                    url: string;
+                    /** @enum {string} */
+                    platform?: "bilibili" | "douyin" | "youtube" | "other";
+                    /** Format: uri */
+                    coverImage?: string | null;
+                    description?: string | null;
+                };
+            };
+        };
+        UpdateVideoShareRequest: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    kind?: "official" | "analysis" | "gameplay";
+                    title?: string;
+                    /** Format: uri */
+                    url?: string;
+                    /** @enum {string} */
+                    platform?: "bilibili" | "douyin" | "youtube" | "other";
+                    /** Format: uri */
+                    coverImage?: string | null;
+                    description?: string | null;
                 };
             };
         };
@@ -3871,6 +3924,15 @@ export interface operations {
                     /** @enum {string} */
                     status: "RESOLVED" | "REJECTED";
                     note?: string;
+                    /** @description 可选：处理举报时对被举报账号执行禁言/封禁。 需要用户管理权限且只能处置等级低于自己的账号；RESOLVED 时可用。 */
+                    discipline?: {
+                        /** @enum {string} */
+                        action?: "mute" | "ban";
+                        /** @description 处置原因（禁言/封禁文案） */
+                        reason?: string;
+                        /** @description 时长（天）；缺省 mute=7 天、ban=永久 */
+                        durationDays?: number;
+                    };
                 };
             };
         };
@@ -4645,6 +4707,82 @@ export interface operations {
                     "application/json": components["schemas"]["VideoList"];
                 };
             };
+        };
+    };
+    shareVideo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["CreateVideoShareRequest"];
+        responses: {
+            /** @description 分享成功 */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["VideoEntry"];
+                    };
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    deleteSharedVideo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                videoId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 已删除 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateSharedVideo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                videoId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["UpdateVideoShareRequest"];
+        responses: {
+            /** @description 更新成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["VideoEntry"];
+                    };
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     createVideo: {

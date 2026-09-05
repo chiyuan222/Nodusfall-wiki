@@ -47,6 +47,17 @@ export default async function ForumIndexPage() {
             </span>
           )}
         </p>
+        <div className="mt-5">
+          {/* 论坛未开放：板块管理入口先建好但置灰（权限体系 v2 第二波） */}
+          <button
+            type="button"
+            disabled
+            title="论坛暂未开放，板块管理稍后上线"
+            className="cursor-not-allowed rounded-md border border-border-subtle px-4 py-1.5 text-small text-faint opacity-60"
+          >
+            ⚙ 板块管理（未开放）
+          </button>
+        </div>
       </header>
 
       {/* 轮替推荐框：板块热帖（置顶优先，5 位轮播，点击跳转对应帖子） */}

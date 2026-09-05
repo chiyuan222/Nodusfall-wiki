@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { KnotMark } from "@/components/knot-mark";
 import { WikiEditEntry } from "@/components/wiki/wiki-edit-entry";
+import { BoardManageEntry } from "@/components/board-manage-entry";
 import { Carousel } from "@/components/carousel";
 import { getWikiIndexData, USE_MOCK } from "@/lib/data";
 import { getWikiCarousel } from "@/lib/carousel-data";
@@ -49,8 +50,9 @@ export default async function WikiIndexPage() {
             </span>
           )}
         </p>
-        <div className="mt-5">
+        <div className="mt-5 flex flex-wrap items-center gap-3">
           <WikiEditEntry variant="new" />
+          <BoardManageEntry perm="manage_wiki_board" href="/admin/wiki" />
         </div>
       </header>
 

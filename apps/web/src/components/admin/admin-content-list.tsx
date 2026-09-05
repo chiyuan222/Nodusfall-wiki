@@ -6,6 +6,7 @@ import { request, type ListResult } from "@/lib/api-client";
 import { ApiError } from "@/lib/errors";
 import { getAccessToken } from "@/lib/session";
 import { hasPermission, type MeUser } from "@/lib/me";
+import { AuthorDiscipline } from "@/components/admin/author-discipline";
 
 /**
  * Wiki / 攻略内容管理列表（客户端组件，/admin/wiki 与 /admin/guides 共用）。
@@ -18,12 +19,11 @@ import { hasPermission, type MeUser } from "@/lib/me";
  */
 
 type Me = MeUser;
-
 interface Item {
   slug: string;
   title: string;
   status?: string;
-  author: { displayName: string };
+  author: { id?: string; displayName: string };
   updatedAt: string;
   categorySlug?: string;
   rating?: number;
@@ -67,6 +67,7 @@ export function AdminContentList({ kind }: { kind: "wiki" | "guide" }) {
   const [phase, setPhase] = useState<"loading" | "forbidden" | "ready">(
     "loading",
   );
+  const [me, setMe] = useState<MeUser | null>(null);
   const [items, setItems] = useState<Item[]>([]);
   /** slug → featuredAt（null = 非精华）；详情并发补齐，Summary 不含该字段 */
   const [featuredMap, setFeaturedMap] = useState<Record<string, string | null>>(
@@ -83,11 +84,12 @@ export function AdminContentList({ kind }: { kind: "wiki" | "guide" }) {
       setPhase("forbidden");
       return;
     }
-    request<{ data: Me }>("/users/me")
+    request<{ data: MeUser }>("/users/me")
       .then((r) => {
         const ok = isWiki
           ? hasPermission(r.data, "manage_wiki_board")
           : hasPermission(r.data, "manage_guide_board");
+        setMe(r.data);
         setPhase(ok ? "ready" : "forbidden");
       })
       .catch(() => setPhase("forbidden"));
@@ -156,6 +158,18 @@ export function AdminContentList({ kind }: { kind: "wiki" | "guide" }) {
         setFeaturedMap((m) => ({ ...m, [slug]: r.data.featuredAt ?? null })),
       )
       .catch((e: unknown) => setMsg(describeError(e, "精华标记失败。")))
+      .finally(() => setBusySlug(null));
+  };
+
+  /** 删除内容（二次确认，不可撤销） */
+  const removeItem = (slug: string, title: string) => {
+    if (busySlug) return;
+    if (!window.confirm(`确认删除「${title}」？此操作不可撤销。`)) return;
+    setBusySlug(slug);
+    setMsg("");
+    request<void>(itemPath(slug), { method: "DELETE" })
+      .then(() => load(status))
+      .catch((e: unknown) => setMsg(describeError(e, "删除失败。")))
       .finally(() => setBusySlug(null));
   };
 
@@ -321,10 +335,27 @@ export function AdminContentList({ kind }: { kind: "wiki" | "guide" }) {
                     type="button"
                     disabled={busySlug === item.slug}
                     onClick={() => setItemStatus(item.slug, "archived")}
+                    title="下架（归档后前台不再展示，可随时恢复）"
                     className="rounded-sm border border-border-subtle px-2.5 py-1 text-caption text-secondary transition-colors duration-fast hover:border-danger hover:text-danger disabled:opacity-40"
                   >
-                    归档
+                    下架
                   </button>
+                )}
+                <button
+                  type="button"
+                  disabled={busySlug === item.slug}
+                  onClick={() => removeItem(item.slug, item.title)}
+                  className="rounded-sm border border-border-subtle px-2.5 py-1 text-caption text-danger transition-colors duration-fast hover:border-danger disabled:opacity-40"
+                >
+                  删除
+                </button>
+                {item.author.id && me && me.id !== item.author.id && (
+                  <AuthorDiscipline
+                    author={{
+                      id: item.author.id,
+                      displayName: item.author.displayName,
+                    }}
+                  />
                 )}
               </li>
             );
