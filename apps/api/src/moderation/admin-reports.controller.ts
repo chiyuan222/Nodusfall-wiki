@@ -20,9 +20,10 @@ import {
   Max,
   MaxLength,
   Min,
+  ValidateNested,
 } from 'class-validator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { hasPermission, isManagerRole, PERMISSIONS } from '../common/roles';
+import { hasPermission, PERMISSIONS } from '../common/roles';
 import { ReportsService } from './reports.service';
 
 class ListReportsQueryDto {
@@ -48,6 +49,23 @@ class ListReportsQueryDto {
   targetType?: string;
 }
 
+class DisciplineDto {
+  @IsIn(['mute', 'ban'])
+  action!: 'mute' | 'ban';
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  reason?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(365)
+  durationDays?: number;
+}
+
 class HandleReportDto {
   @IsIn(['RESOLVED', 'REJECTED'])
   status!: 'RESOLVED' | 'REJECTED';
@@ -56,6 +74,11 @@ class HandleReportDto {
   @IsString()
   @MaxLength(500)
   note?: string;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => DisciplineDto)
+  discipline?: DisciplineDto;
 }
 
 interface AdminRequest extends Request {
@@ -68,10 +91,7 @@ export class AdminReportsController {
   constructor(private readonly reportsService: ReportsService) {}
 
   private assert(req: AdminRequest): void {
-    if (
-      !isManagerRole(req.user.role) ||
-      !hasPermission(req.user.role, req.user.permissions, PERMISSIONS.MANAGE_REPORTS)
-    ) {
+    if (!hasPermission(req.user.role, req.user.permissions, PERMISSIONS.MANAGE_REPORTS)) {
       throw new ForbiddenException('moderator only');
     }
   }
@@ -90,7 +110,10 @@ export class AdminReportsController {
   ) {
     this.assert(req);
     return this.reportsService
-      .handle(reportId, req.user.sub, dto.status, dto.note)
+      .handle(reportId, req.user.sub, dto.status, dto.note, dto.discipline, {
+        role: req.user.role,
+        permissions: req.user.permissions,
+      })
       .then((data) => ({ data }));
   }
 }
