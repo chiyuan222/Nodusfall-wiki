@@ -15,7 +15,7 @@ export default function AdminWikiPage() {
         </p>
         <h1 className="mt-3 font-serif text-h1 font-semibold">Wiki 板块管理</h1>
         <p className="mt-2 text-small text-secondary">
-          词条内容（草稿/发布/下架/删除/精华）与分类结构管理。
+          词条内容（草稿/发布/下架/删除/精华）、分类结构与分区内举报处理。
         </p>
       </header>
       <WikiBoardAdmin />

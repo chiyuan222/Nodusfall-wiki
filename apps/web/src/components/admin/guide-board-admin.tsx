@@ -2,23 +2,21 @@
 
 import { useState } from "react";
 import { AdminContentList } from "@/components/admin/admin-content-list";
-import { TaxonomyManager } from "@/components/admin/taxonomy-manager";
 import { ReportQueue } from "@/components/admin/report-queue";
 
 /**
- * Wiki 分区板块管理（/admin/wiki）：词条内容 + 分类结构 + 举报处理 三个子页签。
- * 举报页签锁定 targetType=wikiPage；评论类举报仍在全站 /admin/reports 处理。
- * 门禁在子组件内（manage_wiki_board / manage_all_boards / manage_reports / admin / owner）。
+ * 攻略分区板块管理（/admin/guides）：攻略内容 + 举报处理 两个子页签。
+ * 举报页签锁定 targetType=guide；评论类举报仍在全站 /admin/reports 处理。
+ * 门禁在子组件内（manage_guide_board / manage_all_boards / manage_reports / admin / owner）。
  */
-export function WikiBoardAdmin() {
-  const [tab, setTab] = useState<"content" | "taxonomy" | "reports">("content");
+export function GuideBoardAdmin() {
+  const [tab, setTab] = useState<"content" | "reports">("content");
   return (
     <div className="space-y-6">
-      <div className="flex gap-2" role="tablist" aria-label="Wiki 板块管理">
+      <div className="flex gap-2" role="tablist" aria-label="攻略板块管理">
         {(
           [
-            ["content", "词条内容"],
-            ["taxonomy", "分类结构"],
+            ["content", "攻略内容"],
             ["reports", "举报处理"],
           ] as const
         ).map(([k, label]) => (
@@ -39,11 +37,9 @@ export function WikiBoardAdmin() {
         ))}
       </div>
       {tab === "content" ? (
-        <AdminContentList kind="wiki" />
-      ) : tab === "taxonomy" ? (
-        <TaxonomyManager fixedKind="wiki" hideTabs />
+        <AdminContentList kind="guide" />
       ) : (
-        <ReportQueue fixedTargetType="wikiPage" />
+        <ReportQueue fixedTargetType="guide" />
       )}
     </div>
   );

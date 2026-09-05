@@ -8,9 +8,10 @@ import { getAccessToken } from "@/lib/session";
 import { useMe } from "@/lib/me";
 
 /**
- * 内容举报（契约 PR #90）：POST /reports。
- * 挂载点：论坛主题/每楼回复、评论、Wiki 词条、攻略详情。
- * 弹窗 = 原因单选 + 补充说明（≤500 字）。
+ * 举报（契约 PR #90 / 权限 v2 第二波模块 5）。
+ * - ReportButton：单一目标举报（保留兼容）。
+ * - ReportEntry：单一「举报」入口，两步弹层——第一步选「举报内容 / 举报用户」，
+ *   第二步选原因 + 补充说明。
  * 409 → 已举报过；404 → 提示功能即将上线（后端未部署时优雅降级）。
  */
 
@@ -31,26 +32,25 @@ const REASONS: [string, string][] = [
   ["other", "其他"],
 ];
 
-export function ReportButton({
+const triggerCls =
+  "rounded-sm border border-border-subtle px-2 py-0.5 text-caption text-faint transition-colors duration-fast hover:border-amber-soft hover:text-amber";
+
+/** 举报表单（第二步：原因 + 补充说明） */
+function ReportForm({
   targetType,
   targetId,
-  label = "举报",
+  onClose,
 }: {
   targetType: ReportTargetType;
   targetId: string;
-  /** 触发按钮文案，默认「举报」 */
-  label?: string;
+  onClose: () => void;
 }) {
   const isUser = targetType === "user";
-  const title = isUser ? "举报用户" : "举报内容";
-  const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [detail, setDetail] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [msg, setMsg] = useState("");
   const [done, setDone] = useState(false);
-
-  const loggedIn = typeof window !== "undefined" && !!getAccessToken();
 
   const submit = () => {
     if (submitting || !reason) return;
@@ -72,7 +72,11 @@ export function ReportButton({
       .catch((e: unknown) => {
         if (e instanceof ApiError && e.status === 409) {
           setDone(true);
-          setMsg(isUser ? "你已举报过该用户，请等待处理。" : "你已举报过该内容，请等待处理。");
+          setMsg(
+            isUser
+              ? "你已举报过该用户，请等待处理。"
+              : "你已举报过该内容，请等待处理。",
+          );
         } else if (e instanceof ApiError && e.status === 404) {
           setMsg("举报功能即将上线。");
         } else if (e instanceof ApiError && e.status === 401) {
@@ -86,113 +90,271 @@ export function ReportButton({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => {
-          setOpen(true);
-          setMsg("");
-          if (!done) setReason("");
-        }}
-        className="rounded-sm border border-border-subtle px-2 py-0.5 text-caption text-faint transition-colors duration-fast hover:border-amber-soft hover:text-amber"
-      >
+      <p className="text-body font-semibold text-primary">
+        {isUser ? "举报用户" : "举报内容"}
+      </p>
+      {done ? (
+        <p role="status" className="text-small text-amber">
+          {msg}
+        </p>
+      ) : (
+        <>
+          <fieldset>
+            <legend className="mb-2 text-small text-secondary">举报原因</legend>
+            <div className="grid grid-cols-2 gap-2">
+              {REASONS.map(([value, label]) => (
+                <label
+                  key={value}
+                  className={`flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-small transition-colors duration-fast ${
+                    reason === value
+                      ? "border-amber-soft text-amber"
+                      : "border-border-subtle text-secondary hover:border-amber-soft"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name={`report-reason-${targetId}`}
+                    value={value}
+                    checked={reason === value}
+                    onChange={() => setReason(value)}
+                    className="accent-amber"
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          <label className="block">
+            <span className="mb-1 block text-small text-secondary">
+              补充说明（可选，≤500 字）
+            </span>
+            <textarea
+              rows={3}
+              maxLength={500}
+              value={detail}
+              onChange={(e) => setDetail(e.target.value)}
+              placeholder="补充具体情况，便于管理员核实…"
+              className="w-full rounded-md border border-border-subtle bg-page px-3 py-2 text-small text-primary placeholder:text-faint focus:border-amber-soft focus:outline-none"
+            />
+          </label>
+          {msg && (
+            <p role="alert" className="text-caption text-danger">
+              {msg}
+            </p>
+          )}
+        </>
+      )}
+      <div className="flex justify-end gap-2">
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary hover:border-amber-soft"
+        >
+          关闭
+        </button>
+        {!done && (
+          <button
+            type="button"
+            disabled={submitting || !reason}
+            onClick={submit}
+            className="rounded-md bg-amber px-4 py-2 text-small font-medium text-amber-fg transition-opacity duration-fast hover:opacity-90 disabled:opacity-40"
+          >
+            {submitting ? "提交中…" : "提交举报"}
+          </button>
+        )}
+      </div>
+    </>
+  );
+}
+
+function Modal({
+  label,
+  onClose,
+  children,
+}: {
+  label: string;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={label}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-page/80 p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="w-full max-w-sm space-y-4 rounded-md border border-border-subtle bg-surface p-5 shadow-card">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function LoginHint() {
+  return (
+    <p className="text-small text-secondary">
+      登录后才能举报。
+      <Link href="/login" className="text-amber hover:underline">
+        去登录
+      </Link>
+    </p>
+  );
+}
+
+/** 单一目标举报（原有用法保留） */
+export function ReportButton({
+  targetType,
+  targetId,
+  label = "举报",
+}: {
+  targetType: ReportTargetType;
+  targetId: string;
+  /** 触发按钮文案，默认「举报」 */
+  label?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const loggedIn = typeof window !== "undefined" && !!getAccessToken();
+  const title = targetType === "user" ? "举报用户" : "举报内容";
+
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(true)} className={triggerCls}>
         {label}
       </button>
-
       {open && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={title}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-page/80 p-4"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setOpen(false);
-          }}
-        >
-          <div className="w-full max-w-sm space-y-4 rounded-md border border-border-subtle bg-surface p-5 shadow-card">
-            <p className="text-body font-semibold text-primary">{title}</p>
-
-            {!loggedIn ? (
-              <p className="text-small text-secondary">
-                登录后才能举报。
-                <Link href="/login" className="text-amber hover:underline">
-                  去登录
-                </Link>
-              </p>
-            ) : done ? (
-              <p role="status" className="text-small text-amber">
-                {msg}
-              </p>
-            ) : (
-              <>
-                <fieldset>
-                  <legend className="mb-2 text-small text-secondary">
-                    举报原因
-                  </legend>
-                  <div className="grid grid-cols-2 gap-2">
-                    {REASONS.map(([value, label]) => (
-                      <label
-                        key={value}
-                        className={`flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-small transition-colors duration-fast ${
-                          reason === value
-                            ? "border-amber-soft text-amber"
-                            : "border-border-subtle text-secondary hover:border-amber-soft"
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name={`report-reason-${targetId}`}
-                          value={value}
-                          checked={reason === value}
-                          onChange={() => setReason(value)}
-                          className="accent-amber"
-                        />
-                        {label}
-                      </label>
-                    ))}
-                  </div>
-                </fieldset>
-                <label className="block">
-                  <span className="mb-1 block text-small text-secondary">
-                    补充说明（可选，≤500 字）
-                  </span>
-                  <textarea
-                    rows={3}
-                    maxLength={500}
-                    value={detail}
-                    onChange={(e) => setDetail(e.target.value)}
-                    placeholder="补充具体情况，便于管理员核实…"
-                    className="w-full rounded-md border border-border-subtle bg-page px-3 py-2 text-small text-primary placeholder:text-faint focus:border-amber-soft focus:outline-none"
-                  />
-                </label>
-                {msg && (
-                  <p role="alert" className="text-caption text-danger">
-                    {msg}
-                  </p>
-                )}
-              </>
-            )}
-
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary hover:border-amber-soft"
-              >
-                关闭
-              </button>
-              {loggedIn && !done && (
+        <Modal label={title} onClose={() => setOpen(false)}>
+          {loggedIn ? (
+            <ReportForm
+              targetType={targetType}
+              targetId={targetId}
+              onClose={() => setOpen(false)}
+            />
+          ) : (
+            <>
+              <p className="text-body font-semibold text-primary">{title}</p>
+              <LoginHint />
+              <div className="flex justify-end">
                 <button
                   type="button"
-                  disabled={submitting || !reason}
-                  onClick={submit}
-                  className="rounded-md bg-amber px-4 py-2 text-small font-medium text-amber-fg transition-opacity duration-fast hover:opacity-90 disabled:opacity-40"
+                  onClick={() => setOpen(false)}
+                  className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary hover:border-amber-soft"
                 >
-                  {submitting ? "提交中…" : "提交举报"}
+                  关闭
                 </button>
-              )}
-            </div>
-          </div>
-        </div>
+              </div>
+            </>
+          )}
+        </Modal>
+      )}
+    </>
+  );
+}
+
+/**
+ * 单入口两步举报（权限 v2 第二波模块 5）：
+ * 第一步选择「举报内容 / 举报用户」，第二步进入对应表单。
+ * 对自己隐藏「举报用户」选项。
+ */
+export function ReportEntry({
+  targetType,
+  targetId,
+  author,
+  label = "举报",
+}: {
+  targetType: Exclude<ReportTargetType, "user">;
+  targetId: string;
+  author: { id: string; username?: string; displayName?: string | null };
+  label?: string;
+}) {
+  const { me } = useMe();
+  const [open, setOpen] = useState(false);
+  const [choice, setChoice] = useState<"content" | "user" | null>(null);
+  const loggedIn = typeof window !== "undefined" && !!getAccessToken();
+  const isSelf = !!me && me.id === author.id;
+
+  const close = () => {
+    setOpen(false);
+    setChoice(null);
+  };
+
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(true)} className={triggerCls}>
+        {label}
+      </button>
+      {open && (
+        <Modal label="举报" onClose={close}>
+          {!loggedIn ? (
+            <>
+              <p className="text-body font-semibold text-primary">举报</p>
+              <LoginHint />
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={close}
+                  className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary hover:border-amber-soft"
+                >
+                  关闭
+                </button>
+              </div>
+            </>
+          ) : choice === null ? (
+            <>
+              <p className="text-body font-semibold text-primary">举报</p>
+              <div className={`grid gap-2 ${isSelf ? "" : "grid-cols-2"}`}>
+                <button
+                  type="button"
+                  onClick={() => setChoice("content")}
+                  className="rounded-md border border-border-subtle px-4 py-3 text-small text-secondary transition-colors duration-fast hover:border-amber-soft hover:text-amber"
+                >
+                  举报内容
+                  <span className="mt-0.5 block text-caption text-faint">
+                    针对这条内容本身
+                  </span>
+                </button>
+                {!isSelf && (
+                  <button
+                    type="button"
+                    onClick={() => setChoice("user")}
+                    className="rounded-md border border-border-subtle px-4 py-3 text-small text-secondary transition-colors duration-fast hover:border-amber-soft hover:text-amber"
+                  >
+                    举报用户
+                    <span className="mt-0.5 block text-caption text-faint">
+                      针对 {author.displayName || author.username || "该作者"}
+                    </span>
+                  </button>
+                )}
+              </div>
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={close}
+                  className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary hover:border-amber-soft"
+                >
+                  取消
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <ReportForm
+                targetType={choice === "user" ? "user" : targetType}
+                targetId={choice === "user" ? author.id : targetId}
+                onClose={close}
+              />
+              <button
+                type="button"
+                onClick={() => setChoice(null)}
+                className="text-caption text-faint hover:text-amber"
+              >
+                ← 返回选择举报对象
+              </button>
+            </>
+          )}
+        </Modal>
       )}
     </>
   );
