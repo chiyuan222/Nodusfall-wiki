@@ -81,6 +81,10 @@ export function GuideEditor({
   const [status, setStatus] = useState<Status>(
     normalizeStatus(initial?.status),
   );
+  const [categorySlug, setCategorySlug] = useState(initial?.categorySlug ?? "");
+  const [categories, setCategories] = useState<
+    { slug: string; name: string }[]
+  >([]);
   const [tab, setTab] = useState<"write" | "preview">("write");
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -116,6 +120,27 @@ export function GuideEditor({
       })
       .catch(() => setPhase("forbidden"));
   }, [mode, initial]);
+
+  // 攻略分类（GET /guides/categories；无默认值时取 general）
+  useEffect(() => {
+    request<{ data: { slug: string; name: string }[] }>("/guides/categories", {
+      auth: false,
+    })
+      .then((r) => {
+        const list = [...r.data].sort(
+          (a, b) =>
+            ((a as { sortOrder?: number }).sortOrder ?? 0) -
+            ((b as { sortOrder?: number }).sortOrder ?? 0),
+        );
+        setCategories(list);
+        setCategorySlug((cur) => {
+          if (cur && list.some((c) => c.slug === cur)) return cur;
+          if (list.some((c) => c.slug === "general")) return "general";
+          return list[0]?.slug ?? "";
+        });
+      })
+      .catch(() => setCategories([]));
+  }, []);
 
   // 启动时探测本地草稿（编辑模式下仅当内容不同才提示）
   useEffect(() => {
@@ -269,6 +294,7 @@ export function GuideEditor({
               content,
               status: status === "archived" ? "draft" : status,
               relatedCharacter: relatedCharacter.trim() || undefined,
+              categorySlug: categorySlug || undefined,
             },
           })
         : request<{ data: Guide }>(`/guides/${initial!.slug}`, {
@@ -279,6 +305,7 @@ export function GuideEditor({
               content,
               status,
               relatedCharacter: relatedCharacter.trim() || undefined,
+              categorySlug: categorySlug || null,
             },
           });
 
@@ -407,6 +434,24 @@ export function GuideEditor({
             placeholder="例如：某位角色的名字"
             className="w-full rounded-md border border-border-subtle bg-raised px-3 py-2 text-small text-primary placeholder:text-faint focus:border-amber-soft"
           />
+        </label>
+
+        <label className="block">
+          <span className="mb-1 block font-mono text-caption text-faint">
+            分类
+          </span>
+          <select
+            value={categorySlug}
+            onChange={(e) => setCategorySlug(e.target.value)}
+            className="w-full rounded-md border border-border-subtle bg-raised px-3 py-2 text-small text-primary focus:border-amber-soft"
+          >
+            {categories.length === 0 && <option value="">未分类</option>}
+            {categories.map((c) => (
+              <option key={c.slug} value={c.slug}>
+                {c.name}
+              </option>
+            ))}
+          </select>
         </label>
 
         <label className="block">

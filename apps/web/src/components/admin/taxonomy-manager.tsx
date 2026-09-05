@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { request } from "@/lib/api-client";
 import { ApiError } from "@/lib/errors";
 import { getAccessToken } from "@/lib/session";
-import { isAdminRole } from "@/lib/me";
+import { isAdminRole, hasPermission, type MeUser } from "@/lib/me";
 
 /**
  * 板块与分类管理（客户端组件，/admin/taxonomy）。
@@ -26,23 +26,39 @@ interface TaxItem {
   threadCount?: number;
 }
 
-type Kind = "wiki" | "forum";
+type Kind = "wiki" | "guide" | "forum";
 
 const KIND_CONFIG: Record<
   Kind,
-  { label: string; unit: string; listPath: string; adminPath: string }
+  {
+    label: string;
+    unit: string;
+    listPath: string;
+    adminPath: string;
+    /** 权限体系 v2：该分区板块管理权限 key */
+    perm: "manage_wiki_board" | "manage_guide_board" | "manage_forum_board";
+  }
 > = {
   wiki: {
     label: "Wiki 分类",
     unit: "分类",
     listPath: "/wiki/categories",
     adminPath: "/admin/wiki/categories",
+    perm: "manage_wiki_board",
+  },
+  guide: {
+    label: "攻略分类",
+    unit: "分类",
+    listPath: "/guides/categories",
+    adminPath: "/admin/guides/categories",
+    perm: "manage_guide_board",
   },
   forum: {
     label: "论坛板块",
     unit: "板块",
     listPath: "/forum/boards",
     adminPath: "/admin/forum/boards",
+    perm: "manage_forum_board",
   },
 };
 
@@ -99,17 +115,23 @@ export function TaxonomyManager({
 
   const cfg = KIND_CONFIG[tab];
 
-  // 角色门禁：仅管理员
+  // 角色门禁：admin/owner、manage_all_boards，或当前分区的板块管理权限
   useEffect(() => {
     if (!getAccessToken()) {
       setPhase("forbidden");
       return;
     }
-    request<{ data: { role?: string } }>("/users/me")
-      .then((r) =>
-        setPhase(isAdminRole(r.data.role) ? "ready" : "forbidden"),
-      )
+    request<{ data: MeUser }>("/users/me")
+      .then((r) => {
+        const m = r.data;
+        const ok =
+          isAdminRole(m.role) ||
+          hasPermission(m, "manage_all_boards") ||
+          hasPermission(m, KIND_CONFIG[fixedKind ?? tab].perm);
+        setPhase(ok ? "ready" : "forbidden");
+      })
       .catch(() => setPhase("forbidden"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 门禁只需校验一次
   }, []);
 
   const load = useCallback(
@@ -231,7 +253,7 @@ export function TaxonomyManager({
     return (
       <div className="rounded-md border border-border-subtle bg-surface p-8 text-center">
         <p className="text-body text-secondary">
-          此页面仅管理员可见。请先登录管理员账号。
+          当前账号无此分区的板块管理权限。请先登录具备权限的账号。
         </p>
       </div>
     );

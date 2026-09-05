@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { guidesApi, type Guide, type RatingSummary } from "@/lib/api";
+import { getGuideCategories } from "@/lib/data";
 import { ApiError } from "@/lib/errors";
 import { Markdown } from "@/components/markdown";
 import { CommentSection } from "@/components/comment-section";
@@ -47,7 +48,7 @@ export default async function GuideDetailPage({
     data: [],
     pagination: { page: 1, perPage: 20, total: 0, totalPages: 0, hasMore: false },
   };
-  const [rating, comments] = await Promise.all([
+  const [rating, comments, categories] = await Promise.all([
     guidesApi.rating(params.slug).catch(
       (): RatingSummary => ({
         average: guide.rating,
@@ -57,7 +58,10 @@ export default async function GuideDetailPage({
       }),
     ),
     guidesApi.comments(params.slug).catch(() => emptyPage),
+    getGuideCategories(),
   ]);
+  const categoryName =
+    categories.find((c) => c.slug === guide.categorySlug)?.name ?? null;
 
   return (
     <div className="mx-auto max-w-page">
@@ -107,8 +111,13 @@ export default async function GuideDetailPage({
               />
               <ReportEntry targetType="guide" targetId={guide.id} author={guide.author} />
             </div>
-            {guide.tags.length > 0 && (
-              <ul className="flex flex-wrap gap-2" aria-label="标签">
+            {(categoryName || guide.tags.length > 0) && (
+              <ul className="flex flex-wrap gap-2" aria-label="分类与标签">
+                {categoryName && (
+                  <li className="rounded-sm border border-amber-soft px-2 py-0.5 font-mono text-caption text-amber">
+                    {categoryName}
+                  </li>
+                )}
                 {guide.tags.map((tag) => (
                   <li
                     key={tag}
