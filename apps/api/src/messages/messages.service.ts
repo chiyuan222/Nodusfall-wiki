@@ -111,6 +111,10 @@ export class MessagesService {
       where: { recipientId: userId, readAt: null },
       data: { readAt: new Date() },
     });
+    await this.markAnnouncementsRead(userId);
+  }
+
+  async markAnnouncementsRead(userId: string): Promise<void> {
     const [announcements, existing] = await Promise.all([
       this.prisma.announcement.findMany({ select: { id: true } }),
       this.prisma.announcementRead.findMany({
@@ -125,6 +129,138 @@ export class MessagesService {
     if (toCreate.length > 0) {
       await this.prisma.announcementRead.createMany({ data: toCreate });
     }
+  }
+
+  async listAnnouncementsForUser(userId: string, page: number, perPage: number) {
+    const [total, announcements, reads] = await Promise.all([
+      this.prisma.announcement.count(),
+      this.prisma.announcement.findMany({
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * perPage,
+        take: perPage,
+        include: { author: true },
+      }),
+      this.prisma.announcementRead.findMany({
+        where: { userId },
+        select: { announcementId: true, readAt: true },
+      }),
+    ]);
+    const readMap = new Map(reads.map((r) => [r.announcementId, r.readAt]));
+    return {
+      data: announcements.map((a) => ({
+        id: a.id,
+        kind: 'announcement' as const,
+        sender: toUserSummary(a.author),
+        title: a.title,
+        content: a.content,
+        createdAt: a.createdAt,
+        readAt: readMap.get(a.id) ?? null,
+      })),
+      pagination: pageInfo(page, perPage, total),
+    };
+  }
+
+  async listConversations(userId: string, page: number, perPage: number) {
+    const msgs = await this.prisma.directMessage.findMany({
+      where: { OR: [{ senderId: userId }, { recipientId: userId }] },
+      orderBy: { createdAt: 'desc' },
+      take: 1000,
+    });
+    const group = new Map<
+      string,
+      { peerId: string; unread: number; last?: (typeof msgs)[number] }
+    >();
+    for (const m of msgs) {
+      const peerId = m.senderId === userId ? m.recipientId : m.senderId;
+      const e = group.get(peerId) ?? { peerId, unread: 0 };
+      if (!e.last) e.last = m;
+      if (m.recipientId === userId && !m.readAt) e.unread += 1;
+      group.set(peerId, e);
+    }
+    const peers = await this.prisma.user.findMany({
+      where: { id: { in: [...group.keys()] } },
+    });
+    const peerMap = new Map(peers.map((u) => [u.id, u]));
+    const convs: {
+      peer: ReturnType<typeof toUserSummary>;
+      unreadCount: number;
+      lastMessage: { senderId: string; content: string; createdAt: Date } | null;
+      updatedAt: Date;
+    }[] = [];
+    for (const e of group.values()) {
+      const peer = peerMap.get(e.peerId);
+      if (!peer) continue;
+      convs.push({
+        peer: toUserSummary(peer),
+        unreadCount: e.unread,
+        lastMessage: e.last
+          ? {
+              senderId: e.last.senderId,
+              content: e.last.content,
+              createdAt: e.last.createdAt,
+            }
+          : null,
+        updatedAt: e.last?.createdAt ?? new Date(0),
+      });
+    }
+    convs.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+    const total = convs.length;
+    const start = (page - 1) * perPage;
+    return {
+      data: convs.slice(start, start + perPage),
+      pagination: pageInfo(page, perPage, total),
+    };
+  }
+
+  async listConversation(userId: string, peerId: string, page: number, perPage: number) {
+    const peer = await this.prisma.user.findUnique({ where: { id: peerId } });
+    if (!peer) throw new NotFoundException('用户不存在');
+    const where = {
+      OR: [
+        { senderId: userId, recipientId: peerId },
+        { senderId: peerId, recipientId: userId },
+      ],
+    };
+    const [total, items] = await this.prisma.$transaction([
+      this.prisma.directMessage.count({ where }),
+      this.prisma.directMessage.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * perPage,
+        take: perPage,
+        include: { sender: true },
+      }),
+    ]);
+    return {
+      data: items.map((m) => ({
+        id: m.id,
+        sender: toUserSummary(m.sender),
+        content: m.content,
+        createdAt: m.createdAt,
+        readAt: m.readAt,
+      })),
+      pagination: pageInfo(page, perPage, total),
+    };
+  }
+
+  async sendToPeer(senderId: string, peerId: string, content: string) {
+    const r = await this.send(senderId, { recipientId: peerId, content });
+    return {
+      id: r.id,
+      sender: r.sender,
+      content: r.content,
+      createdAt: r.createdAt,
+      readAt: r.readAt,
+    };
+  }
+
+  async markConversationRead(userId: string, peerId: string): Promise<void> {
+    const peer = await this.prisma.user.findUnique({ where: { id: peerId } });
+    if (!peer) throw new NotFoundException('用户不存在');
+    await this.prisma.directMessage.updateMany({
+      where: { recipientId: userId, senderId: peerId, readAt: null },
+      data: { readAt: new Date() },
+    });
   }
 
   /**
