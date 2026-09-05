@@ -21,6 +21,11 @@ export class CreateGuideDto {
   content!: string;
 
   @IsOptional()
+  @IsString()
+  @Matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
+  categorySlug?: string;
+
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
   tags?: string[];

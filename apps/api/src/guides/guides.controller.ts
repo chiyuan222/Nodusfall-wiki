@@ -47,12 +47,18 @@ export class GuidesController {
   list(@Req() req: OptionalRequest, @Query() query: ListGuidesQueryDto) {
     return this.guidesService.list({
       tag: query.tag,
+      category: query.category,
       q: query.q,
       status: query.status?.toUpperCase() as any,
       sort: query.sort,
       page: query.page,
       perPage: query.perPage,
     }, req.user?.sub);
+  }
+
+  @Get('categories')
+  categories() {
+    return this.guidesService.listGuideCategories();
   }
 
   @UseGuards(JwtAuthGuard)
