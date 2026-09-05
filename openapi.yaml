@@ -490,7 +490,7 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
         "429":
-          $ref: "#/components/responses/TooManyRequests"
+          $ref: "#/components/responses/RateLimited"
 
   /users/me/feedback:
     get:
