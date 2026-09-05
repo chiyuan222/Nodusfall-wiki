@@ -79,3 +79,17 @@ export function assignHint(meRole?: string): string {
     return "版主仅可分配：本分区小编 / 成员";
   return "当前身份不可分配角色";
 }
+
+/**
+ * 版主/小编的角色默认权限（仅用于管理界面「默认开关」只读展示，
+ * 与后端回填的 effective permissions 对齐；实际生效以后端为准）。
+ */
+export const ROLE_DEFAULT_PERMISSIONS: Partial<Record<Role, Permission[]>> = {
+  wiki_moderator: ["manage_wiki_board"],
+  guide_moderator: ["manage_guide_board"],
+  video_moderator: ["manage_video_board"],
+  forum_moderator: ["manage_forum_board"],
+  wiki_editor: [],
+  guide_editor: [],
+  video_editor: [],
+};

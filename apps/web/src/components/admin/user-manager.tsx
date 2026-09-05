@@ -10,6 +10,7 @@ import type { components } from "@/lib/schema";
 import {
   PERMISSIONS,
   ROLE_LABEL,
+  ROLE_DEFAULT_PERMISSIONS,
   assignableRoles,
   assignHint,
 } from "@/lib/roles";
@@ -211,7 +212,7 @@ export function UserManager() {
                         <span className="rounded-sm border border-amber-soft px-1.5 py-0.5 font-mono text-caption text-amber">
                           {ROLE_LABEL[u.role] ?? u.role}
                         </span>
-                        <UserGroupBadge group={u.group} level={u.level} />
+                        <UserGroupBadge group={u.group} />
                         <UserStatusMark status={u.status} />
                       </span>
                       <span className="mt-0.5 block truncate font-mono text-caption text-faint">
@@ -252,7 +253,7 @@ export function UserManager() {
                   <Avatar url={selected.avatarUrl} name={selected.displayName || selected.username} size="lg" />
                   <p className="flex flex-wrap items-center gap-2 text-body font-semibold text-primary">
                     {selected.displayName}
-                    <UserGroupBadge group={selected.group} level={selected.level} />
+                    <UserGroupBadge group={selected.group} />
                     <UserStatusMark status={selected.status} />
                   </p>
                 </div>
@@ -349,36 +350,72 @@ export function UserManager() {
                 ))}
               </div>
 
-              {/* 权限开关（仅 owner，11 项，按后端回填的 effective permissions 勾选） */}
-              <fieldset disabled={!isOwner || busy}>
-                <legend className="font-mono text-caption text-faint">
-                  管理权限开关{isOwner ? "" : "（仅站长可配置）"}
-                </legend>
-                <div className="mt-2 grid grid-cols-2 gap-2">
-                  {PERMISSIONS.map((p) => {
-                    const on = (selected.permissions ?? []).includes(p.key);
-                    return (
-                      <label key={p.key} className="flex items-center gap-2 text-small text-secondary">
-                        <input
-                          type="checkbox"
-                          className="accent-amber"
-                          checked={on}
-                          onChange={(e) => {
-                            const cur = new Set(selected.permissions ?? []);
-                            if (e.target.checked) cur.add(p.key);
-                            else cur.delete(p.key);
-                            patch({ permissions: [...cur] }, "权限开关已更新。");
-                          }}
-                        />
-                        {p.label}
-                      </label>
-                    );
-                  })}
-                </div>
-              </fieldset>
+              {/* 权限开关（11 项；站长/管理员自动全开只读；版主/小编的角色默认权限只读展示，站长可追加） */}
+              {(() => {
+                const selRole = selected.role;
+                const autoFull = selRole === "owner" || selRole === "admin";
+                const roleDefaults = ROLE_DEFAULT_PERMISSIONS[selRole] ?? [];
+                const editable = isOwner && !autoFull;
+                return (
+                  <fieldset disabled={!editable || busy}>
+                    <legend className="font-mono text-caption text-faint">
+                      管理权限开关
+                      {autoFull
+                        ? "（站长/管理员自动全开，无需配置）"
+                        : editable
+                          ? ""
+                          : "（仅站长可配置）"}
+                    </legend>
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      {PERMISSIONS.map((p) => {
+                        const on =
+                          autoFull ||
+                          (selected.permissions ?? []).includes(p.key);
+                        const isDefault =
+                          !autoFull && roleDefaults.includes(p.key);
+                        return (
+                          <label
+                            key={p.key}
+                            className={`flex items-center gap-2 text-small ${
+                              isDefault ? "text-faint" : "text-secondary"
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              className="accent-amber"
+                              checked={on}
+                              disabled={!editable || isDefault}
+                              onChange={(e) => {
+                                const cur = new Set(selected.permissions ?? []);
+                                if (e.target.checked) cur.add(p.key);
+                                else cur.delete(p.key);
+                                patch({ permissions: [...cur] }, "权限开关已更新。");
+                              }}
+                            />
+                            {p.label}
+                            {isDefault && (
+                              <span className="font-mono text-caption text-faint">
+                                （默认）
+                              </span>
+                            )}
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </fieldset>
+                );
+              })()}
 
               {/* 角色分配（按层级：站长→admin；admin→版主/小编/成员；版主→本分区小编/成员） */}
-              {assignable.length > 0 && (
+              {selected.role === "owner" ? (
+                <div>
+                  <span className="mb-1 block font-mono text-caption text-faint">角色</span>
+                  <p className="rounded-md border border-border-subtle bg-raised px-3 py-2 text-small text-secondary">
+                    站长（固定，不可变更）
+                  </p>
+                </div>
+              ) : (
+                assignable.length > 0 && (
                 <label className="block">
                   <span className="mb-1 block font-mono text-caption text-faint">
                     角色分配 · {assignHint(me?.role)}
@@ -403,6 +440,7 @@ export function UserManager() {
                     ))}
                   </select>
                 </label>
+                )
               )}
 
               {detailMsg && <p role="status" className="text-caption text-secondary">{detailMsg}</p>}
