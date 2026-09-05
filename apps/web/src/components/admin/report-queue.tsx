@@ -19,14 +19,22 @@ import {
 /**
  * 举报处理（契约 PR #90）：GET /admin/reports + PATCH /admin/reports/{id}。
  * 默认 PENDING 待处理；处理（RESOLVED）/驳回（REJECTED）+ 可选备注；行内跳转内容。
- * 权限：owner 或 manage_content。端点未上线（404）时占位。
+ * RESOLVED 时可附带 discipline 处置作者：{ action: mute|ban, reason?, durationDays?: 1-365 }。
+ * 权限：owner 或 manage_reports。端点未上线（404）时占位。
+ * fixedTargetType：分区内举报 Tab 锁定内容类型（wikiPage / guide / forumThread / forumPost），
+ * 此时隐藏类型筛选下拉。
  */
 
 type Report = components["schemas"]["Report"];
+type DisciplineAction = "mute" | "ban";
 
 const PER_PAGE = 20;
 
-export function ReportQueue() {
+export function ReportQueue({
+  fixedTargetType,
+}: {
+  fixedTargetType?: string;
+} = {}) {
   const { me, pending } = useMe();
   const [reports, setReports] = useState<Report[]>([]);
   const [page, setPage] = useState(1);
@@ -38,9 +46,20 @@ export function ReportQueue() {
   const [err, setErr] = useState("");
   const [unsupported, setUnsupported] = useState(false);
   const [busyId, setBusyId] = useState("");
+  // 处理面板：展开中的举报 + 目标状态
+  const [panel, setPanel] = useState<{
+    id: string;
+    next: "RESOLVED" | "REJECTED";
+  } | null>(null);
+  const [note, setNote] = useState("");
+  const [discAction, setDiscAction] = useState<"none" | DisciplineAction>("none");
+  const [discReason, setDiscReason] = useState("");
+  const [discDays, setDiscDays] = useState("7");
 
   const allowed =
     !!me && (isAdminRole(me.role) || hasPermission(me, "manage_reports"));
+
+  const effectiveTargetType = fixedTargetType ?? targetType;
 
   const load = useCallback(
     (p: number) => {
@@ -53,7 +72,7 @@ export function ReportQueue() {
             page: p,
             perPage: PER_PAGE,
             status: status || undefined,
-            targetType: targetType || undefined,
+            targetType: effectiveTargetType || undefined,
           },
         },
       )
@@ -70,7 +89,7 @@ export function ReportQueue() {
         })
         .finally(() => setLoading(false));
     },
-    [status, targetType],
+    [status, effectiveTargetType],
   );
 
   useEffect(() => {
@@ -78,18 +97,43 @@ export function ReportQueue() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 仅首次加载，筛选由「查询」触发
   }, [allowed]);
 
-  const handle = (report: Report, next: "RESOLVED" | "REJECTED") => {
-    if (busyId) return;
-    const note = window.prompt(
-      next === "RESOLVED" ? "处理备注（可选）：" : "驳回备注（可选）：",
-    );
-    if (note === null) return; // 取消
-    setBusyId(report.id);
-    request<{ data: Report }>(`/admin/reports/${report.id}`, {
+  const openPanel = (report: Report, next: "RESOLVED" | "REJECTED") => {
+    setPanel({ id: report.id, next });
+    setNote("");
+    setDiscAction("none");
+    setDiscReason("");
+    setDiscDays("7");
+  };
+
+  const submit = () => {
+    if (!panel || busyId) return;
+    const body: Record<string, unknown> = {
+      status: panel.next,
+      note: note.trim() || undefined,
+    };
+    if (panel.next === "RESOLVED" && discAction !== "none") {
+      const days = parseInt(discDays, 10);
+      const discipline: Record<string, unknown> = {
+        action: discAction,
+        reason: discReason.trim() || undefined,
+      };
+      // 封禁默认永久；显式填 1–365 天则按期封禁
+      if (discAction === "mute" || (discAction === "ban" && discDays.trim())) {
+        if (Number.isFinite(days) && days >= 1 && days <= 365) {
+          discipline.durationDays = days;
+        }
+      }
+      body.discipline = discipline;
+    }
+    setBusyId(panel.id);
+    request<{ data: Report }>(`/admin/reports/${panel.id}`, {
       method: "PATCH",
-      body: { status: next, note: note.trim() || undefined },
+      body,
     })
-      .then(() => load(page))
+      .then(() => {
+        setPanel(null);
+        load(page);
+      })
       .catch((e: unknown) =>
         setErr(
           e instanceof ApiError
@@ -111,7 +155,7 @@ export function ReportQueue() {
   if (!allowed) {
     return (
       <p className="rounded-md border border-border-subtle bg-surface p-6 text-center text-small text-faint">
-        当前账号无举报处理权限（需站长或 manage_content 开关）。
+        当前账号无举报处理权限（需站长或 manage_reports 权限）。
       </p>
     );
   }
@@ -148,19 +192,21 @@ export function ReportQueue() {
           <option value="REJECTED">已驳回</option>
           <option value="">全部状态</option>
         </select>
-        <select
-          aria-label="按内容类型筛选"
-          value={targetType}
-          onChange={(e) => setTargetType(e.target.value)}
-          className={inputCls}
-        >
-          <option value="">全部类型</option>
-          {Object.entries(TARGET_TYPE_LABEL).map(([v, l]) => (
-            <option key={v} value={v}>
-              {l}
-            </option>
-          ))}
-        </select>
+        {!fixedTargetType && (
+          <select
+            aria-label="按内容类型筛选"
+            value={targetType}
+            onChange={(e) => setTargetType(e.target.value)}
+            className={inputCls}
+          >
+            <option value="">全部类型</option>
+            {Object.entries(TARGET_TYPE_LABEL).map(([v, l]) => (
+              <option key={v} value={v}>
+                {l}
+              </option>
+            ))}
+          </select>
+        )}
         <button
           type="submit"
           disabled={loading}
@@ -169,6 +215,12 @@ export function ReportQueue() {
           查询
         </button>
       </form>
+
+      {fixedTargetType && (
+        <p className="text-caption text-faint">
+          本页仅显示「{TARGET_TYPE_LABEL[fixedTargetType as ModerationTargetType] ?? fixedTargetType}」类举报；评论类举报请前往全站举报页处理。
+        </p>
+      )}
 
       {err && (
         <p role="alert" className="rounded-md border border-danger/40 bg-surface px-4 py-2 text-small text-danger">
@@ -180,6 +232,7 @@ export function ReportQueue() {
       <ul className="space-y-3">
         {reports.map((r) => {
           const url = targetUrl(r.targetType, r.targetId);
+          const panelOpen = panel?.id === r.id;
           return (
             <li
               key={r.id}
@@ -266,23 +319,124 @@ export function ReportQueue() {
                 <p className="mt-2 text-caption text-faint">处理备注：{r.note}</p>
               )}
               {r.status === "PENDING" && (
-                <div className="mt-3 flex gap-2">
-                  <button
-                    type="button"
-                    disabled={busyId === r.id}
-                    onClick={() => handle(r, "RESOLVED")}
-                    className="rounded-md bg-amber px-4 py-1.5 text-small font-medium text-amber-fg transition-opacity duration-fast hover:opacity-90 disabled:opacity-40"
-                  >
-                    处理（下架/警告等）
-                  </button>
-                  <button
-                    type="button"
-                    disabled={busyId === r.id}
-                    onClick={() => handle(r, "REJECTED")}
-                    className="rounded-md border border-border-subtle px-4 py-1.5 text-small text-secondary transition-colors duration-fast hover:border-amber-soft hover:text-amber disabled:opacity-40"
-                  >
-                    驳回
-                  </button>
+                <div className="mt-3 space-y-3">
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      disabled={busyId === r.id}
+                      onClick={() =>
+                        panelOpen && panel?.next === "RESOLVED"
+                          ? setPanel(null)
+                          : openPanel(r, "RESOLVED")
+                      }
+                      className="rounded-md bg-amber px-4 py-1.5 text-small font-medium text-amber-fg transition-opacity duration-fast hover:opacity-90 disabled:opacity-40"
+                    >
+                      处理（下架/警告等）
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busyId === r.id}
+                      onClick={() =>
+                        panelOpen && panel?.next === "REJECTED"
+                          ? setPanel(null)
+                          : openPanel(r, "REJECTED")
+                      }
+                      className="rounded-md border border-border-subtle px-4 py-1.5 text-small text-secondary transition-colors duration-fast hover:border-amber-soft hover:text-amber disabled:opacity-40"
+                    >
+                      驳回
+                    </button>
+                  </div>
+
+                  {panelOpen && (
+                    <div className="space-y-3 rounded-md border border-amber-soft bg-raised p-3">
+                      <label className="block">
+                        <span className="mb-1 block text-caption text-faint">
+                          {panel?.next === "RESOLVED" ? "处理备注（可选）" : "驳回备注（可选）"}
+                        </span>
+                        <textarea
+                          value={note}
+                          onChange={(e) => setNote(e.target.value)}
+                          rows={2}
+                          maxLength={200}
+                          className="w-full rounded-sm border border-border-subtle bg-surface px-3 py-2 text-small text-primary focus:border-amber-soft focus:outline-none"
+                        />
+                      </label>
+
+                      {panel?.next === "RESOLVED" && (
+                        <fieldset className="space-y-2">
+                          <legend className="text-caption text-faint">
+                            同时处置作者（可选）
+                          </legend>
+                          <div className="flex flex-wrap gap-3 text-small text-secondary">
+                            {(
+                              [
+                                ["none", "不处置"],
+                                ["mute", "禁言"],
+                                ["ban", "封禁"],
+                              ] as const
+                            ).map(([v, l]) => (
+                              <label key={v} className="flex items-center gap-1.5">
+                                <input
+                                  type="radio"
+                                  name={`disc-${r.id}`}
+                                  checked={discAction === v}
+                                  onChange={() => setDiscAction(v)}
+                                  className="accent-amber"
+                                />
+                                {l}
+                              </label>
+                            ))}
+                          </div>
+                          {discAction !== "none" && (
+                            <div className="flex flex-wrap items-center gap-2">
+                              <input
+                                value={discReason}
+                                onChange={(e) => setDiscReason(e.target.value)}
+                                placeholder="处置原因（可选）"
+                                maxLength={200}
+                                className={`${inputCls} min-w-48 flex-1`}
+                              />
+                              <label className="flex items-center gap-1.5 text-small text-secondary">
+                                时长
+                                <input
+                                  type="number"
+                                  min={1}
+                                  max={365}
+                                  value={discDays}
+                                  onChange={(e) => setDiscDays(e.target.value)}
+                                  className={`${inputCls} w-20`}
+                                />
+                                天
+                              </label>
+                              <span className="text-caption text-faint">
+                                {discAction === "mute"
+                                  ? "禁言默认 7 天，可填 1–365 天"
+                                  : "封禁留空为永久，可填 1–365 天"}
+                              </span>
+                            </div>
+                          )}
+                        </fieldset>
+                      )}
+
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          disabled={busyId === r.id}
+                          onClick={submit}
+                          className="rounded-md bg-amber px-4 py-1.5 text-small font-medium text-amber-fg transition-opacity duration-fast hover:opacity-90 disabled:opacity-40"
+                        >
+                          确认{panel?.next === "RESOLVED" ? "处理" : "驳回"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPanel(null)}
+                          className="rounded-md border border-border-subtle px-4 py-1.5 text-small text-secondary transition-colors duration-fast hover:border-amber-soft hover:text-amber"
+                        >
+                          取消
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </li>

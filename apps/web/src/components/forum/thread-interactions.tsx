@@ -9,7 +9,7 @@ import { ApiError } from "@/lib/errors";
 import { getAccessToken } from "@/lib/session";
 import { Markdown } from "@/components/markdown";
 import { authorName } from "@/lib/author";
-import { ReportButton, ReportUserButton } from "@/components/report-button";
+import { ReportEntry } from "@/components/report-button";
 import { Avatar } from "@/components/avatar";
 import { isAdminRole } from "@/lib/me";
 
@@ -298,8 +298,7 @@ export function PostSection({
                   })}
                 </time>
                 <span className="grow" />
-                <ReportButton targetType="forumPost" targetId={p.id} />
-                <ReportUserButton author={p.author} />
+                <ReportEntry targetType="forumPost" targetId={p.id} author={p.author} />
                 <button
                   type="button"
                   onClick={() => toggleLike(p)}

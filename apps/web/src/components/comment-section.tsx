@@ -9,7 +9,7 @@ import { getAccessToken } from "@/lib/session";
 import { authorName } from "@/lib/author";
 import { useMe, canPost, isAdminRole, hasPermission } from "@/lib/me";
 import { UserGroupBadge, UserStatusMark, SiteIdMark } from "@/components/user-marks";
-import { ReportButton, ReportUserButton } from "@/components/report-button";
+import { ReportEntry } from "@/components/report-button";
 import { Avatar } from "@/components/avatar";
 
 /**
@@ -57,8 +57,7 @@ function CommentMeta({
         </time>
         <span className="grow" />
         {extra}
-        <ReportButton targetType="comment" targetId={c.id} />
-        <ReportUserButton author={c.author} />
+        <ReportEntry targetType="comment" targetId={c.id} author={c.author} />
         <button
           type="button"
           onClick={() => onLike(c)}
