@@ -118,7 +118,7 @@ export function Carousel({
               {/* 底部渐变：加深加高，保证叠加文字在复杂图片上也可读 */}
               <span
                 aria-hidden
-                className="absolute inset-x-0 bottom-0 h-3/4 bg-gradient-to-t from-black/85 via-black/45 to-transparent"
+                className="absolute inset-x-0 bottom-0 h-3/4 bg-gradient-to-t from-black/90 via-black/55 to-transparent"
               />
               {/* 角标 */}
               {slide?.badge && (
@@ -128,7 +128,8 @@ export function Carousel({
               )}
               {/* 文案区：有图片的帧标题留空即不叠加文字（不回退主标题/提示语）；
                   无图片的占位帧保留 emptyHint 提示。
-                  标题与副标题统一压在半透明磨砂底衬上，与任何图片保持区分度。 */}
+                  轮播标题与全站标题外观变量解耦（不加 .site-heading）：强制白字 +
+                  加强文字阴影，浅色主题（starlight/oracle）下对比度不受影响。 */}
               {(() => {
                 const caption = slide?.image
                   ? slide?.title || ""
@@ -143,7 +144,7 @@ export function Carousel({
                       <span className={`min-w-0 rounded-md bg-black/50 backdrop-blur-md ${compact ? "px-3 py-2" : "px-3.5 py-2.5"}`}>
                         {caption && (
                           <span
-                            className={`site-heading block truncate font-serif font-semibold text-white [text-shadow:0_1px_6px_rgba(0,0,0,0.7)] ${
+                            className={`block truncate font-serif font-semibold text-white [text-shadow:0_2px_10px_rgba(0,0,0,0.85)] ${
                               compact ? "text-h3 sm:text-h2" : "text-h2 sm:text-h1"
                             }`}
                           >
