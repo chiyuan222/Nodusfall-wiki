@@ -33,9 +33,12 @@ echo "==> 构建 API"
 cd "$REPO/apps/api"
 npm install --no-audit --no-fund
 echo "==> RBAC v2 数据迁移（旧角色/资格，需在 db push 前）"
-node "$REPO/scripts/deploy/migrate-rbac-v2.cjs"
+cp /tmp/migrate-rbac-v2.cjs "$REPO/scripts/deploy/migrate-rbac-v2.cjs"
+node "$REPO/scripts/deploy/migrate-rbac-v2.cjs" roles
 echo "==> 同步数据库结构（prisma db push）"
 npx prisma db push --accept-data-loss
+echo "==> RBAC v2 资格迁移（db push 后，列已存在）"
+node "$REPO/scripts/deploy/migrate-rbac-v2.cjs" grants
 echo "==> 分配现有用户网站 ID（siteId 1000000 起）"
 cp /tmp/assign-site-ids.cjs "$REPO/scripts/deploy/assign-site-ids.cjs"
 node "$REPO/scripts/deploy/assign-site-ids.cjs"
