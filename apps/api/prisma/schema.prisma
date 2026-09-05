@@ -86,6 +86,8 @@ model User {
   comments      Comment[]         @relation("CommentAuthor")
   reports       Report[]          @relation("ReportReporter")
   handledReports Report[]         @relation("ReportHandler")
+  feedbacks      Feedback[]       @relation("FeedbackAuthor")
+  handledFeedback Feedback[]      @relation("FeedbackHandler")
   uploads       Upload[]          @relation("UploadUser")
   postLikes     ForumPostLike[]   @relation("PostLikeUser")
   bookmarks     ForumThreadBookmark[] @relation("ThreadBookmarkUser")
@@ -529,4 +531,35 @@ model Report {
 
   @@index([status, createdAt])
   @@index([targetType, targetId])
+}
+
+enum FeedbackCategory {
+  BUG
+  SUGGESTION
+  APPEAL
+  OTHER
+}
+
+enum FeedbackStatus {
+  PENDING
+  REPLIED
+  CLOSED
+}
+
+model Feedback {
+  id          String           @id @default(uuid())
+  userId      String
+  user        User             @relation("FeedbackAuthor", fields: [userId], references: [id], onDelete: Cascade)
+  category    FeedbackCategory
+  content     String
+  status      FeedbackStatus   @default(PENDING)
+  replyText   String?
+  repliedById String?
+  repliedBy   User?            @relation("FeedbackHandler", fields: [repliedById], references: [id])
+  repliedAt   DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
 }
