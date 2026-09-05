@@ -68,8 +68,10 @@ model User {
   sessions      Session[]
   history       BrowseHistory[]
   wikiPageLikes WikiPageLike[] @relation("WikiPageLikeUser")
+  wikiPageDislikes WikiPageDislike[] @relation("WikiPageDislikeUser")
   wikiPageBookmarks WikiPageBookmark[] @relation("WikiPageBookmarkUser")
   guideLikes    GuideLike[]    @relation("GuideLikeUser")
+  guideDislikes GuideDislike[] @relation("GuideDislikeUser")
   guideBookmarks GuideBookmark[] @relation("GuideBookmarkUser")
   threadLikes   ForumThreadLike[] @relation("ThreadLikeUser")
   sentMessages  DirectMessage[]   @relation("DirectMessageSender")
@@ -152,6 +154,7 @@ model WikiPage {
   featuredAt  DateTime?
   viewCount   Int         @default(0)
   likeCount   Int         @default(0)
+  dislikeCount Int        @default(0)
   categoryId  String
   category    WikiCategory  @relation(fields: [categoryId], references: [id])
   tags        String[]
@@ -164,6 +167,7 @@ model WikiPage {
   revisions   WikiPageRevision[]
   likes       WikiPageLike[]
   bookmarks   WikiPageBookmark[]
+  dislikes    WikiPageDislike[]
 }
 
 model WikiPageLike {
@@ -183,6 +187,17 @@ model WikiPageBookmark {
   page      WikiPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
   userId    String
   user      User     @relation("WikiPageBookmarkUser", fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([pageId, userId])
+}
+
+model WikiPageDislike {
+  id        String   @id @default(uuid())
+  pageId    String
+  page      WikiPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation("WikiPageDislikeUser", fields: [userId], references: [id])
   createdAt DateTime @default(now())
 
   @@unique([pageId, userId])
@@ -211,6 +226,7 @@ model Guide {
   featuredAt       DateTime?
   viewCount        Int         @default(0)
   likeCount        Int         @default(0)
+  dislikeCount     Int         @default(0)
   tags             String[]
   status           ContentStatus @default(DRAFT)
   relatedCharacter String?
@@ -223,6 +239,7 @@ model Guide {
   ratings          Rating[]
   likes            GuideLike[]
   bookmarks        GuideBookmark[]
+  dislikes         GuideDislike[]
 }
 
 model GuideLike {
@@ -242,6 +259,17 @@ model GuideBookmark {
   guide     Guide  @relation(fields: [guideId], references: [id], onDelete: Cascade)
   userId    String
   user      User   @relation("GuideBookmarkUser", fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([guideId, userId])
+}
+
+model GuideDislike {
+  id        String   @id @default(uuid())
+  guideId   String
+  guide     Guide    @relation(fields: [guideId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation("GuideDislikeUser", fields: [userId], references: [id])
   createdAt DateTime @default(now())
 
   @@unique([guideId, userId])

@@ -30,6 +30,7 @@ function summary(
   guide: GuideWithAuthor,
   likedByMe = false,
   bookmarkedByMe = false,
+  dislikedByMe = false,
 ) {
   return {
     id: guide.id,
@@ -45,8 +46,10 @@ function summary(
     updatedAt: guide.updatedAt,
     viewCount: guide.viewCount,
     likeCount: guide.likeCount,
+    dislikeCount: guide.dislikeCount,
     likedByMe,
     bookmarkedByMe,
+    dislikedByMe,
   };
 }
 
@@ -54,9 +57,10 @@ function detail(
   guide: GuideWithAuthor,
   likedByMe = false,
   bookmarkedByMe = false,
+  dislikedByMe = false,
 ) {
   return {
-    ...summary(guide, likedByMe, bookmarkedByMe),
+    ...summary(guide, likedByMe, bookmarkedByMe, dislikedByMe),
     content: guide.content,
     relatedCharacter: guide.relatedCharacter,
     createdAt: guide.createdAt,
@@ -117,13 +121,13 @@ export class GuidesService {
         include: { author: true },
       }),
     ]);
-    const { likes, bookmarks } = await this.interactions(
+    const { likes, bookmarks, dislikes } = await this.interactions(
       guides.map((g) => g.id),
       userId,
     );
     return {
       data: guides.map((g) =>
-        summary(g, likes.has(g.id), bookmarks.has(g.id)),
+        summary(g, likes.has(g.id), bookmarks.has(g.id), dislikes.has(g.id)),
       ),
       pagination: pageInfo(query.page, query.perPage, total),
     };
@@ -180,8 +184,8 @@ export class GuidesService {
       include: { author: true },
     });
     if (!guide) throw new NotFoundException('guide not found');
-    const { likes, bookmarks } = await this.interactions([guide.id], userId);
-    return detail(guide, likes.has(guide.id), bookmarks.has(guide.id));
+    const { likes, bookmarks, dislikes } = await this.interactions([guide.id], userId);
+    return detail(guide, likes.has(guide.id), bookmarks.has(guide.id), dislikes.has(guide.id));
   }
 
   async update(
@@ -290,6 +294,37 @@ export class GuidesService {
     }
   }
 
+  async dislikeGuide(userId: string, slug: string): Promise<void> {
+    const guide = await this.prisma.guide.findUnique({ where: { slug } });
+    if (!guide) throw new NotFoundException('guide not found');
+    const existing = await this.prisma.guideDislike.findUnique({
+      where: { guideId_userId: { guideId: guide.id, userId } },
+    });
+    if (!existing) {
+      await this.prisma.guideDislike.create({
+        data: { guideId: guide.id, userId },
+      });
+      await this.prisma.guide.update({
+        where: { id: guide.id },
+        data: { dislikeCount: { increment: 1 } },
+      });
+    }
+  }
+
+  async undislikeGuide(userId: string, slug: string): Promise<void> {
+    const guide = await this.prisma.guide.findUnique({ where: { slug } });
+    if (!guide) throw new NotFoundException('guide not found');
+    const result = await this.prisma.guideDislike.deleteMany({
+      where: { guideId: guide.id, userId },
+    });
+    if (result.count > 0) {
+      await this.prisma.guide.update({
+        where: { id: guide.id },
+        data: { dislikeCount: { decrement: 1 } },
+      });
+    }
+  }
+
   async bookmarkGuide(userId: string, slug: string): Promise<void> {
     const guide = await this.prisma.guide.findUnique({ where: { slug } });
     if (!guide) throw new NotFoundException('guide not found');
@@ -311,9 +346,13 @@ export class GuidesService {
 
   private async interactions(guideIds: string[], userId?: string) {
     if (!userId || guideIds.length === 0) {
-      return { likes: new Set<string>(), bookmarks: new Set<string>() };
+      return {
+        likes: new Set<string>(),
+        bookmarks: new Set<string>(),
+        dislikes: new Set<string>(),
+      };
     }
-    const [likes, bookmarks] = await Promise.all([
+    const [likes, bookmarks, dislikes] = await Promise.all([
       this.prisma.guideLike.findMany({
         where: { guideId: { in: guideIds }, userId },
         select: { guideId: true },
@@ -322,10 +361,15 @@ export class GuidesService {
         where: { guideId: { in: guideIds }, userId },
         select: { guideId: true },
       }),
+      this.prisma.guideDislike.findMany({
+        where: { guideId: { in: guideIds }, userId },
+        select: { guideId: true },
+      }),
     ]);
     return {
       likes: new Set(likes.map((l) => l.guideId)),
       bookmarks: new Set(bookmarks.map((b) => b.guideId)),
+      dislikes: new Set(dislikes.map((d) => d.guideId)),
     };
   }
 
