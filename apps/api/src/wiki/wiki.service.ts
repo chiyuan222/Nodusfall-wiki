@@ -43,6 +43,7 @@ function pageSummary(
   page: PageWithRelations,
   likedByMe = false,
   bookmarkedByMe = false,
+  dislikedByMe = false,
 ) {
   return {
     id: page.id,
@@ -57,8 +58,10 @@ function pageSummary(
     updatedAt: page.updatedAt,
     viewCount: page.viewCount,
     likeCount: page.likeCount,
+    dislikeCount: page.dislikeCount,
     likedByMe,
     bookmarkedByMe,
+    dislikedByMe,
   };
 }
 
@@ -66,9 +69,10 @@ function pageDetail(
   page: PageWithRelations,
   likedByMe = false,
   bookmarkedByMe = false,
+  dislikedByMe = false,
 ) {
   return {
-    ...pageSummary(page, likedByMe, bookmarkedByMe),
+    ...pageSummary(page, likedByMe, bookmarkedByMe, dislikedByMe),
     content: page.content,
     version: page.version,
     createdAt: page.createdAt,
@@ -193,13 +197,13 @@ export class WikiService {
         include: { author: true, category: true },
       }),
     ]);
-    const { likes, bookmarks } = await this.pageInteractions(
+    const { likes, bookmarks, dislikes } = await this.pageInteractions(
       pages.map((p) => p.id),
       userId,
     );
     return {
       data: pages.map((p) =>
-        pageSummary(p, likes.has(p.id), bookmarks.has(p.id)),
+        pageSummary(p, likes.has(p.id), bookmarks.has(p.id), dislikes.has(p.id)),
       ),
       pagination: pageInfo(query.page, query.perPage, total),
     };
@@ -274,8 +278,8 @@ export class WikiService {
       include: { author: true, category: true, _count: { select: { revisions: true } } },
     });
     if (!page) throw new NotFoundException('page not found');
-    const { likes, bookmarks } = await this.pageInteractions([page.id], userId);
-    return pageDetail(page, likes.has(page.id), bookmarks.has(page.id));
+    const { likes, bookmarks, dislikes } = await this.pageInteractions([page.id], userId);
+    return pageDetail(page, likes.has(page.id), bookmarks.has(page.id), dislikes.has(page.id));
   }
 
   async updatePage(
@@ -408,6 +412,37 @@ export class WikiService {
     }
   }
 
+  async dislikePage(userId: string, slug: string): Promise<void> {
+    const page = await this.prisma.wikiPage.findUnique({ where: { slug } });
+    if (!page) throw new NotFoundException('page not found');
+    const existing = await this.prisma.wikiPageDislike.findUnique({
+      where: { pageId_userId: { pageId: page.id, userId } },
+    });
+    if (!existing) {
+      await this.prisma.wikiPageDislike.create({
+        data: { pageId: page.id, userId },
+      });
+      await this.prisma.wikiPage.update({
+        where: { id: page.id },
+        data: { dislikeCount: { increment: 1 } },
+      });
+    }
+  }
+
+  async undislikePage(userId: string, slug: string): Promise<void> {
+    const page = await this.prisma.wikiPage.findUnique({ where: { slug } });
+    if (!page) throw new NotFoundException('page not found');
+    const result = await this.prisma.wikiPageDislike.deleteMany({
+      where: { pageId: page.id, userId },
+    });
+    if (result.count > 0) {
+      await this.prisma.wikiPage.update({
+        where: { id: page.id },
+        data: { dislikeCount: { decrement: 1 } },
+      });
+    }
+  }
+
   async bookmarkPage(userId: string, slug: string): Promise<void> {
     const page = await this.prisma.wikiPage.findUnique({ where: { slug } });
     if (!page) throw new NotFoundException('page not found');
@@ -429,9 +464,13 @@ export class WikiService {
 
   private async pageInteractions(pageIds: string[], userId?: string) {
     if (!userId || pageIds.length === 0) {
-      return { likes: new Set<string>(), bookmarks: new Set<string>() };
+      return {
+        likes: new Set<string>(),
+        bookmarks: new Set<string>(),
+        dislikes: new Set<string>(),
+      };
     }
-    const [likes, bookmarks] = await Promise.all([
+    const [likes, bookmarks, dislikes] = await Promise.all([
       this.prisma.wikiPageLike.findMany({
         where: { pageId: { in: pageIds }, userId },
         select: { pageId: true },
@@ -440,10 +479,15 @@ export class WikiService {
         where: { pageId: { in: pageIds }, userId },
         select: { pageId: true },
       }),
+      this.prisma.wikiPageDislike.findMany({
+        where: { pageId: { in: pageIds }, userId },
+        select: { pageId: true },
+      }),
     ]);
     return {
       likes: new Set(likes.map((l) => l.pageId)),
       bookmarks: new Set(bookmarks.map((b) => b.pageId)),
+      dislikes: new Set(dislikes.map((d) => d.pageId)),
     };
   }
 

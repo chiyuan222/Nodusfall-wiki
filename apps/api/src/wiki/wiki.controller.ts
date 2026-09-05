@@ -127,6 +127,26 @@ export class WikiController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Put('pages/:slug/dislike')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async dislikePage(
+    @Req() req: AuthenticatedRequest,
+    @Param('slug') slug: string,
+  ): Promise<void> {
+    await this.wikiService.dislikePage(req.user.sub, slug);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('pages/:slug/dislike')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async undislikePage(
+    @Req() req: AuthenticatedRequest,
+    @Param('slug') slug: string,
+  ): Promise<void> {
+    await this.wikiService.undislikePage(req.user.sub, slug);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Put('pages/:slug/bookmark')
   @HttpCode(HttpStatus.NO_CONTENT)
   async bookmarkPage(

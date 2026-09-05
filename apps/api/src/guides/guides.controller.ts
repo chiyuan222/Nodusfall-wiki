@@ -121,6 +121,26 @@ export class GuidesController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Put(':slug/dislike')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async dislike(
+    @Req() req: AuthenticatedRequest,
+    @Param('slug') slug: string,
+  ): Promise<void> {
+    await this.guidesService.dislikeGuide(req.user.sub, slug);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete(':slug/dislike')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async undislike(
+    @Req() req: AuthenticatedRequest,
+    @Param('slug') slug: string,
+  ): Promise<void> {
+    await this.guidesService.undislikeGuide(req.user.sub, slug);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Put(':slug/bookmark')
   @HttpCode(HttpStatus.NO_CONTENT)
   async bookmark(
