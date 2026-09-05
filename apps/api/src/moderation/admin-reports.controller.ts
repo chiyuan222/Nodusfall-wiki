@@ -70,7 +70,7 @@ export class AdminReportsController {
   private assert(req: AdminRequest): void {
     if (
       !isManagerRole(req.user.role) ||
-      !hasPermission(req.user.role, req.user.permissions, PERMISSIONS.MANAGE_CONTENT)
+      !hasPermission(req.user.role, req.user.permissions, PERMISSIONS.MANAGE_REPORTS)
     ) {
       throw new ForbiddenException('moderator only');
     }

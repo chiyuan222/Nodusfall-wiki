@@ -32,6 +32,8 @@ sudo chown -R ubuntu:ubuntu "$REPO"
 echo "==> 构建 API"
 cd "$REPO/apps/api"
 npm install --no-audit --no-fund
+echo "==> RBAC v2 数据迁移（旧角色/资格，需在 db push 前）"
+node "$REPO/scripts/deploy/migrate-rbac-v2.cjs"
 echo "==> 同步数据库结构（prisma db push）"
 npx prisma db push --accept-data-loss
 echo "==> 分配现有用户网站 ID（siteId 1000000 起）"

@@ -12,7 +12,13 @@ import {
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AuditService } from '../audit/audit.service';
-import { isOwner, hasPermission, PERMISSIONS } from '../common/roles';
+import {
+  canDiscipline,
+  hasPermission,
+  isOwner,
+  PERMISSIONS,
+  roleRank,
+} from '../common/roles';
 import { MessagesService } from '../messages/messages.service';
 import { AdminUpdateUserDto } from './dto/admin-update-user.dto';
 import { AdminListUsersQueryDto } from './dto/admin-list-users-query.dto';
@@ -28,8 +34,13 @@ interface AdminRequest extends Request {
 
 const ROLE_LABEL: Record<string, string> = {
   member: '成员',
-  editor: '编辑',
-  moderator: '版主',
+  wiki_editor: 'Wiki 小编',
+  guide_editor: '攻略小编',
+  video_editor: '视频小编',
+  wiki_moderator: 'Wiki 版主',
+  guide_moderator: '攻略版主',
+  forum_moderator: '论坛版主',
+  video_moderator: '视频版主',
   admin: '管理员',
   owner: '站长',
 };
@@ -43,10 +54,15 @@ const GROUP_LABEL: Record<string, string> = {
 const PERMISSION_LABEL: Record<string, string> = {
   manage_users: '用户管理',
   manage_content: '内容管理',
-  manage_forum: '论坛管理',
-  manage_cms: '站点内容管理',
-  manage_deletion: '删除管理',
-  grant_wiki_create: '词条创建授权',
+  manage_all_boards: '总板块管理',
+  manage_wiki_board: 'Wiki 板块管理',
+  manage_guide_board: '攻略板块管理',
+  manage_forum_board: '论坛板块管理',
+  manage_video_board: '视频板块管理',
+  manage_reports: '举报管理',
+  grant_wiki_create: '授予 Wiki 词条创建',
+  grant_guide_create: '授予编撰攻略',
+  grant_video_share: '授予视频分享',
 };
 
 @Controller('admin/users')
@@ -65,9 +81,9 @@ export class AdminUsersController {
   }
 
   @Get()
-  list(@Req() req: AdminRequest, @Query() query: AdminListUsersQueryDto) {
+  async list(@Req() req: AdminRequest, @Query() query: AdminListUsersQueryDto) {
     this.assertManageUsers(req);
-    return this.usersService.listAdminUsers({
+    const result = await this.usersService.listAdminUsers({
       q: query.q,
       group: query.group,
       role: query.role,
@@ -76,12 +92,21 @@ export class AdminUsersController {
       page: query.page,
       perPage: query.perPage,
     });
+    if (!isOwner(req.user.role)) {
+      result.data = result.data.map((u) => ({ ...u, email: '', phone: '' }));
+    }
+    return result;
   }
 
   @Get(':userId')
   async get(@Req() req: AdminRequest, @Param('userId') userId: string) {
     this.assertManageUsers(req);
-    return { data: await this.usersService.getAdminUser(userId) };
+    const data = await this.usersService.getAdminUser(userId);
+    if (!isOwner(req.user.role)) {
+      data.email = '';
+      data.phone = '';
+    }
+    return { data };
   }
 
   @Patch(':userId')
@@ -90,14 +115,45 @@ export class AdminUsersController {
     @Param('userId') userId: string,
     @Body() dto: AdminUpdateUserDto,
   ) {
-    if (
-      (dto.role !== undefined || dto.permissions !== undefined) &&
-      !isOwner(req.user.role)
-    ) {
-      throw new ForbiddenException('only owner can change role or permissions');
-    }
     this.assertManageUsers(req);
     const before = await this.usersService.getAdminUser(userId);
+    if (dto.level !== undefined) {
+      throw new ForbiddenException('等级不可修改（全员锁定）');
+    }
+    if (dto.group !== undefined && !isOwner(req.user.role)) {
+      throw new ForbiddenException('仅站长可修改用户组');
+    }
+    if (
+      (dto.status === 'banned' || dto.status === 'muted') &&
+      !isOwner(req.user.role) &&
+      !canDiscipline(req.user.role, before.role.toUpperCase())
+    ) {
+      throw new ForbiddenException('无权处置该账号（只能处置低于自己等级的账号）');
+    }
+    if (dto.role !== undefined) {
+      this.assertRoleChange(req.user.role, before.role, dto.role);
+    }
+    if (dto.permissions !== undefined && !isOwner(req.user.role)) {
+      throw new ForbiddenException('only owner can change permissions');
+    }
+    if (
+      dto.wikiCreateGranted !== undefined &&
+      !hasPermission(req.user.role, req.user.permissions, PERMISSIONS.GRANT_WIKI_CREATE)
+    ) {
+      throw new ForbiddenException('无授予 Wiki 词条创建资格权限');
+    }
+    if (
+      dto.guideCreateGranted !== undefined &&
+      !hasPermission(req.user.role, req.user.permissions, PERMISSIONS.GRANT_GUIDE_CREATE)
+    ) {
+      throw new ForbiddenException('无授予编撰攻略资格权限');
+    }
+    if (
+      dto.videoShareGranted !== undefined &&
+      !hasPermission(req.user.role, req.user.permissions, PERMISSIONS.GRANT_VIDEO_SHARE)
+    ) {
+      throw new ForbiddenException('无授予视频分享资格权限');
+    }
     const data = await this.usersService.updateAdminUser(userId, dto);
     await this.auditService.log(
       req.user.sub,
@@ -122,6 +178,45 @@ export class AdminUsersController {
     return { data };
   }
 
+  private assertRoleChange(
+    actorRole: string,
+    beforeRoleLower: string,
+    newRole: string,
+  ): void {
+    const targetRole = beforeRoleLower.toUpperCase();
+    if (targetRole === 'OWNER') {
+      throw new ForbiddenException('不可变更站长角色');
+    }
+    if (actorRole === 'OWNER') {
+      return;
+    }
+    if (actorRole === 'ADMIN') {
+      if (newRole === 'admin') {
+        throw new ForbiddenException('仅站长可分配管理员角色');
+      }
+      if (roleRank(targetRole) >= 3) {
+        throw new ForbiddenException('无权变更管理员角色');
+      }
+      return;
+    }
+    const allowedByModerator: Record<string, string[]> = {
+      WIKI_MODERATOR: ['member', 'wiki_editor'],
+      GUIDE_MODERATOR: ['member', 'guide_editor'],
+      VIDEO_MODERATOR: ['member', 'video_editor'],
+      FORUM_MODERATOR: ['member'],
+    };
+    const allowed = allowedByModerator[actorRole];
+    if (!allowed) {
+      throw new ForbiddenException('无权分配角色');
+    }
+    if (roleRank(targetRole) >= 2) {
+      throw new ForbiddenException('无权变更同级或更高级角色的账号');
+    }
+    if (!allowed.includes(newRole)) {
+      throw new ForbiddenException('只能分配对应分区的成员或小编角色');
+    }
+  }
+
   private buildChangeLines(
     before: {
       role: string;
@@ -129,6 +224,8 @@ export class AdminUsersController {
       status: string;
       permissions: string[];
       wikiCreateGranted: boolean;
+      guideCreateGranted: boolean;
+      videoShareGranted: boolean;
       [key: string]: unknown;
     },
     after: {
@@ -137,6 +234,8 @@ export class AdminUsersController {
       status: string;
       permissions: string[];
       wikiCreateGranted: boolean;
+      guideCreateGranted: boolean;
+      videoShareGranted: boolean;
       [key: string]: unknown;
     },
     dto: AdminUpdateUserDto,
@@ -183,6 +282,26 @@ export class AdminUsersController {
         after.wikiCreateGranted
           ? '你已获得 Wiki 词条创建权限。'
           : '你的 Wiki 词条创建权限已被收回。',
+      );
+    }
+    if (
+      dto.guideCreateGranted !== undefined &&
+      before.guideCreateGranted !== after.guideCreateGranted
+    ) {
+      lines.push(
+        after.guideCreateGranted
+          ? '你已获得编撰攻略资格。'
+          : '你的编撰攻略资格已被收回。',
+      );
+    }
+    if (
+      dto.videoShareGranted !== undefined &&
+      before.videoShareGranted !== after.videoShareGranted
+    ) {
+      lines.push(
+        after.videoShareGranted
+          ? '你已获得视频分享资格。'
+          : '你的视频分享资格已被收回。',
       );
     }
     if (dto.permissions !== undefined) {

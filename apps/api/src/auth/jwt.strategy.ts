@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PrismaService } from '../prisma/prisma.service';
+import { effectivePermissions } from '../common/roles';
 
 export interface JwtPayload {
   sub: string;
@@ -38,6 +39,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         group: true,
         level: true,
         wikiCreateGranted: true,
+        guideCreateGranted: true,
+        videoShareGranted: true,
       },
     });
     if (!user || user.status === 'BANNED' || user.status === 'DELETED') {
@@ -48,11 +51,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       email: payload.email,
       role: user.role,
       type: payload.type,
-      permissions: user.permissions,
+      permissions: effectivePermissions(user.role, user.permissions),
       status: user.status,
       group: user.group,
       level: user.level,
       wikiCreateGranted: user.wikiCreateGranted,
+      guideCreateGranted: user.guideCreateGranted,
+      videoShareGranted: user.videoShareGranted,
     };
   }
 }

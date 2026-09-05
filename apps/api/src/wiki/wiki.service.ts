@@ -13,7 +13,7 @@ import {
 } from '@prisma/client';
 import { pageInfo } from '../common/pagination';
 import { extractFirstImage } from '../common/markdown';
-import { hasPermission, isManagerRole, PERMISSIONS } from '../common/roles';
+import { hasBoardPermission, isManagerRole } from '../common/roles';
 import { TextFilterService } from '../moderation/text-filter.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { toUserSummary } from '../users/users.service';
@@ -226,10 +226,7 @@ export class WikiService {
     if (auth?.status === 'MUTED' || auth?.status === 'BANNED') {
       throw new ForbiddenException('account restricted');
     }
-    if (
-      !auth?.wikiCreateGranted &&
-      !hasPermission(auth?.role, auth?.permissions, PERMISSIONS.MANAGE_CONTENT)
-    ) {
+    if (!auth?.wikiCreateGranted && !isManagerRole(auth?.role)) {
       throw new ForbiddenException('wiki create not granted');
     }
     await this.textFilter.assertSafe(`${dto.title}\n${dto.content}`);
@@ -307,7 +304,7 @@ export class WikiService {
     if (!existing) throw new NotFoundException('page not found');
     if (
       existing.authorId !== userId &&
-      !hasPermission(auth?.role, auth?.permissions, PERMISSIONS.MANAGE_CONTENT)
+      !hasBoardPermission(auth?.role, auth?.permissions, 'wiki')
     ) {
       throw new ForbiddenException('not your page');
     }
@@ -369,7 +366,7 @@ export class WikiService {
     }
     if (
       page.authorId !== userId &&
-      !hasPermission(auth?.role, auth?.permissions, PERMISSIONS.MANAGE_DELETION)
+      !hasBoardPermission(auth?.role, auth?.permissions, 'wiki')
     ) {
       throw new ForbiddenException('not your page');
     }

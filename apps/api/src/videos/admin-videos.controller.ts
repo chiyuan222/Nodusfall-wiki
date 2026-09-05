@@ -18,7 +18,7 @@ import { Type } from 'class-transformer';
 import { IsIn, IsInt, IsOptional, Max, Min } from 'class-validator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AuditService } from '../audit/audit.service';
-import { hasPermission, PERMISSIONS } from '../common/roles';
+import { hasBoardPermission, hasPermission, PERMISSIONS } from '../common/roles';
 import { CreateVideoDto } from './dto/create-video.dto';
 import { UpdateVideoDto } from './dto/update-video.dto';
 import { VideosService } from './videos.service';
@@ -55,7 +55,7 @@ export class AdminVideosController {
   ) {}
 
   private assert(req: AdminRequest): void {
-    if (!hasPermission(req.user.role, req.user.permissions, PERMISSIONS.MANAGE_CONTENT)) {
+    if (!hasBoardPermission(req.user.role, req.user.permissions, 'video')) {
       throw new ForbiddenException('admin only');
     }
   }

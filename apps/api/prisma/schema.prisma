@@ -8,10 +8,14 @@ datasource db {
 }
 
 enum UserRole {
-  GUEST
   MEMBER
-  EDITOR
-  MODERATOR
+  WIKI_EDITOR
+  GUIDE_EDITOR
+  VIDEO_EDITOR
+  WIKI_MODERATOR
+  GUIDE_MODERATOR
+  FORUM_MODERATOR
+  VIDEO_MODERATOR
   ADMIN
   OWNER
 }
@@ -57,6 +61,8 @@ model User {
   exp          Int       @default(0)
   permissions  String[]
   wikiCreateGranted Boolean @default(false)
+  guideCreateGranted Boolean @default(false)
+  videoShareGranted  Boolean @default(false)
   banReason    String?
   banUntil     DateTime?
   mutedUntil   DateTime?
