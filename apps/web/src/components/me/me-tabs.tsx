@@ -5,24 +5,26 @@ import { useSearchParams } from "next/navigation";
 import { ProfilePanel } from "@/components/me/profile-panel";
 import { MyContent } from "@/components/me/my-content";
 import { MyMessages } from "@/components/me/my-messages";
+import { MyFeedback } from "@/components/me/my-feedback";
 import { MyHistory } from "@/components/me/my-history";
 import { AccountSettings } from "@/components/me/account-settings";
 import { useUnreadMessages } from "@/lib/messages";
 
 /**
- * 用户中心五 Tab（契约 PR #45 / #59）：
- * 我的主页（资料/管理入口/退出）｜我的内容（主题/收藏/评论）｜我的消息（私信+公告，带红点）
- * ｜浏览记录｜账号设置（外观/软注销）
- * 支持 ?tab=profile|content|messages|history|settings 直达（顶栏 AuthMenu 下拉使用）。
+ * 用户中心六 Tab（契约 PR #45 / #59 / #108）：
+ * 我的主页（资料/管理入口/退出）｜我的内容（主题/收藏/评论）｜我的消息（公告+私信会话，带红点）
+ * ｜意见反馈（提交/我的反馈）｜浏览记录｜账号设置（外观/软注销）
+ * 支持 ?tab=profile|content|messages|feedback|history|settings 直达（顶栏 AuthMenu 下拉使用）。
  * 各面板自行处理未登录门禁。
  */
 
-type Tab = "profile" | "content" | "messages" | "history" | "settings";
+type Tab = "profile" | "content" | "messages" | "feedback" | "history" | "settings";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "profile", label: "我的主页" },
   { key: "content", label: "我的内容" },
   { key: "messages", label: "我的消息" },
+  { key: "feedback", label: "意见反馈" },
   { key: "history", label: "浏览记录" },
   { key: "settings", label: "账号设置" },
 ];
@@ -81,8 +83,9 @@ export function MeTabs() {
       <div hidden={tab !== "content"}>
         <MyContent />
       </div>
-      {/* 消息面板仅在激活时挂载：进入即 read-all 并消除红点，未打开不清未读 */}
+      {/* 消息面板仅在激活时挂载：进入即标记已读并消除红点，未打开不清未读 */}
       {tab === "messages" && <MyMessages />}
+      {tab === "feedback" && <MyFeedback />}
       <div hidden={tab !== "history"}>
         <MyHistory />
       </div>
