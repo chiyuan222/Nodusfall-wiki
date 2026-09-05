@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Put,
@@ -99,6 +100,39 @@ export class CommentsController {
   ) {
     return this.commentsService
       .update(req.user.sub, commentId, dto.content)
+      .then((data) => ({ data }));
+  }
+
+  @Get('comments/:commentId/replies')
+  @UseGuards(OptionalJwtAuthGuard)
+  listReplies(
+    @Req() req: Request,
+    @Param('commentId', new ParseUUIDPipe()) commentId: string,
+    @Query() pagination: PaginationQueryDto,
+  ) {
+    const userId = (req as any).user?.sub;
+    return this.commentsService.listReplies(
+      commentId,
+      pagination.page,
+      pagination.perPage,
+      userId,
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('comments/:commentId/replies')
+  createReply(
+    @Req() req: AuthenticatedRequest,
+    @Param('commentId', new ParseUUIDPipe()) commentId: string,
+    @Body() dto: CreateCommentDto,
+  ) {
+    return this.commentsService
+      .createReply(req.user.sub, commentId, dto.content, {
+        role: req.user.role,
+        permissions: req.user.permissions,
+        group: req.user.group,
+        status: req.user.status,
+      })
       .then((data) => ({ data }));
   }
 
