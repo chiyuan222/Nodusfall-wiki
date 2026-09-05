@@ -988,7 +988,7 @@ paths:
     patch:
       tags: [Admin]
       operationId: handleReport
-      summary: 处理举报（RESOLVED 已处理 / REJECTED 驳回）
+      summary: 处理举报（RESOLVED 已处理 / REJECTED 驳回；可附带对账号禁言/封禁）
       security: [{ bearerAuth: [] }]
       parameters:
         - name: reportId
@@ -1007,6 +1007,24 @@ paths:
                   type: string
                   enum: [RESOLVED, REJECTED]
                 note: { type: string, maxLength: 500 }
+                discipline:
+                  type: object
+                  description: >
+                    可选：处理举报时对被举报账号执行禁言/封禁。
+                    需要用户管理权限且只能处置等级低于自己的账号；RESOLVED 时可用。
+                  properties:
+                    action:
+                      type: string
+                      enum: [mute, ban]
+                    reason:
+                      type: string
+                      maxLength: 500
+                      description: 处置原因（禁言/封禁文案）
+                    durationDays:
+                      type: integer
+                      minimum: 1
+                      maximum: 365
+                      description: 时长（天）；缺省 mute=7 天、ban=永久
       responses:
         "200":
           description: 已处理
@@ -1713,6 +1731,80 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/VideoList"
+    post:
+      tags: [Videos]
+      operationId: shareVideo
+      summary: 分享视频（需视频分享资格或视频板块管理；默认公开，管理可下架）
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        $ref: "#/components/requestBodies/CreateVideoShareRequest"
+      responses:
+        "201":
+          description: 分享成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/VideoEntry"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /videos/{videoId}:
+    patch:
+      tags: [Videos]
+      operationId: updateSharedVideo
+      summary: 编辑分享的视频（作者本人或视频板块管理；不可改发布状态/排序）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: videoId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        $ref: "#/components/requestBodies/UpdateVideoShareRequest"
+      responses:
+        "200":
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/VideoEntry"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Videos]
+      operationId: deleteSharedVideo
+      summary: 删除分享的视频（作者本人或视频板块管理）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: videoId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204":
+          description: 已删除
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /admin/videos:
     post:
@@ -2896,6 +2988,41 @@ components:
               description: { type: [string, "null"], maxLength: 500 }
               published: { type: boolean }
               sortOrder: { type: integer }
+    CreateVideoShareRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [kind, title, url]
+            properties:
+              kind:
+                type: string
+                enum: [official, analysis, gameplay]
+              title: { type: string, maxLength: 200 }
+              url: { type: string, format: uri }
+              platform:
+                type: string
+                enum: [bilibili, douyin, youtube, other]
+              coverImage: { type: [string, "null"], format: uri }
+              description: { type: [string, "null"], maxLength: 500 }
+    UpdateVideoShareRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              kind:
+                type: string
+                enum: [official, analysis, gameplay]
+              title: { type: string, maxLength: 200 }
+              url: { type: string, format: uri }
+              platform:
+                type: string
+                enum: [bilibili, douyin, youtube, other]
+              coverImage: { type: [string, "null"], format: uri }
+              description: { type: [string, "null"], maxLength: 500 }
     UpdateSiteSectionsRequest:
       required: true
       content:
@@ -3704,9 +3831,14 @@ components:
 
     VideoEntry:
       type: object
-      required: [id, kind, title, url, platform, coverImage, description, published, sortOrder, createdAt, updatedAt]
+      required: [id, kind, title, url, platform, coverImage, description, published, sortOrder, createdAt, updatedAt, author]
       properties:
         id: { type: string, format: uuid }
+        author:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/UserSummary"
+          description: 分享者（管理端条目/未关联作者为 null）
         kind:
           type: string
           enum: [official, analysis, gameplay]
