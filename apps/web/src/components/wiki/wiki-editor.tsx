@@ -239,7 +239,7 @@ export function WikiEditor({
     }
   };
 
-  const save = () => {
+  const save = (target: Status) => {
     if (saving) return;
     if (!title.trim()) {
       setMsg("请填写标题。");
@@ -257,8 +257,16 @@ export function WikiEditor({
       setMsg("slug 只能包含小写字母、数字和连字符（如 aether-blade）。");
       return;
     }
+    if (
+      target === "published" &&
+      !window.confirm("确认发布？发布后全站可见。")
+    )
+      return;
+    if (target === "archived" && !window.confirm("确认归档？归档后不再公开展示。"))
+      return;
     setSaving(true);
     setMsg("");
+    setStatus(target);
     const tagList = tags
       .split(/[,，]/)
       .map((t) => t.trim())
@@ -274,7 +282,7 @@ export function WikiEditor({
               categorySlug,
               tags: tagList,
               content,
-              status: status === "archived" ? "draft" : status,
+              status: target === "archived" ? "draft" : target,
               changelog: changelog.trim() || undefined,
             },
           })
@@ -285,7 +293,7 @@ export function WikiEditor({
               categorySlug,
               tags: tagList,
               content,
-              status,
+              status: target,
               changelog: changelog.trim() || undefined,
             },
           });
@@ -293,8 +301,14 @@ export function WikiEditor({
     call
       .then((r) => {
         clearDraft();
-        router.push(`/wiki/${r.data.slug}`);
-        router.refresh();
+        if (target === "draft") {
+          setMsg("草稿已保存，仅自己可见。可在「我的草稿」中继续编辑。");
+          // 新建草稿：转到编辑路由续写，避免落到他人不可见的详情页
+          if (mode === "create") router.replace(`/wiki/${r.data.slug}/edit`);
+        } else {
+          router.push(`/wiki/${r.data.slug}`);
+          router.refresh();
+        }
       })
       .catch((e: unknown) => {
         setMsg(describeError(e, "无法连接后端，请稍后重试。"));
@@ -420,20 +434,20 @@ export function WikiEditor({
           </select>
         </label>
 
-        <label className="block">
+        <div>
           <span className="mb-1 block font-mono text-caption text-faint">
-            状态
+            当前状态
           </span>
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value as Status)}
-            className="w-full rounded-md border border-border-subtle bg-raised px-3 py-2 text-small text-primary focus:border-amber-soft"
-          >
-            <option value="draft">草稿（暂不公开展示）</option>
-            <option value="published">发布</option>
-            {mode === "edit" && <option value="archived">归档</option>}
-          </select>
-        </label>
+          <p className="rounded-md border border-border-subtle bg-surface px-3 py-2 text-small text-secondary">
+            {status === "published" ? (
+              <span className="text-amber">已发布 · 全站可见</span>
+            ) : status === "archived" ? (
+              <span className="text-faint">已归档</span>
+            ) : (
+              <span>草稿 · 仅自己可见</span>
+            )}
+          </p>
+        </div>
       </div>
 
       <label className="block">
@@ -536,12 +550,30 @@ export function WikiEditor({
       <div className="flex flex-wrap items-center gap-3 border-t border-border-subtle pt-5">
         <button
           type="button"
-          onClick={save}
+          onClick={() => save("published")}
           disabled={saving}
           className="rounded-md bg-amber px-8 py-2.5 text-small font-medium text-amber-fg hover:opacity-90 disabled:opacity-40"
         >
-          {saving ? "保存中…" : mode === "create" ? "创建条目" : "保存修改"}
+          {saving ? "保存中…" : status === "published" ? "保存并发布" : "发布"}
         </button>
+        <button
+          type="button"
+          onClick={() => save("draft")}
+          disabled={saving}
+          className="rounded-md border border-border-subtle px-6 py-2.5 text-small text-secondary hover:border-amber-soft hover:text-amber disabled:opacity-40"
+        >
+          保存草稿（仅自己可见）
+        </button>
+        {mode === "edit" && status !== "archived" && (
+          <button
+            type="button"
+            onClick={() => save("archived")}
+            disabled={saving}
+            className="rounded-md border border-border-subtle px-4 py-2.5 text-small text-faint hover:border-danger hover:text-danger disabled:opacity-40"
+          >
+            归档
+          </button>
+        )}
         <Link
           href={mode === "edit" && initial ? `/wiki/${initial.slug}` : "/wiki"}
           className="rounded-md border border-border-subtle px-6 py-2.5 text-small text-secondary hover:border-amber-soft hover:text-amber"

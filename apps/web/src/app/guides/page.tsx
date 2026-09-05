@@ -3,6 +3,7 @@ import Link from "next/link";
 import { KnotMark } from "@/components/knot-mark";
 import { Carousel } from "@/components/carousel";
 import { GuideCreateEntry } from "@/components/guides/guide-create-entry";
+import { MyDraftsEntry } from "@/components/my-drafts-entry";
 import { BoardManageEntry } from "@/components/board-manage-entry";
 import { getGuideList, getGuideCategories, USE_MOCK } from "@/lib/data";
 import { getGuideCarousel } from "@/lib/carousel-data";
@@ -75,6 +76,7 @@ export default async function GuidesIndexPage({
         </p>
         <div className="mt-5 flex flex-wrap items-center gap-3">
           <GuideCreateEntry />
+          <MyDraftsEntry kind="guide" />
           <BoardManageEntry perm="manage_guide_board" href="/admin/guides" />
         </div>
       </header>
