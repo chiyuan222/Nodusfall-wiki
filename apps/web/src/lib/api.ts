@@ -34,6 +34,46 @@ export type AppearanceConfig = Schemas["AppearanceConfig"];
 export type AppearanceHeading = Schemas["AppearanceHeading"];
 export type UpdateAppearance = Schemas["UpdateAppearance"];
 
+/**
+ * 契约 PR #108（意见反馈 + 私信会话化）。
+ * TODO(Issue #111)：契约 components.responses 缺 TooManyRequests 导致 codegen
+ * 暂时失败，以下类型先按冻结契约手写；契约修复并重跑 codegen 后应改回
+ * Schemas["FeedbackItem"] 等引用并比对一致。
+ */
+export type FeedbackCategory = "bug" | "suggestion" | "appeal" | "other";
+export type FeedbackStatus = "PENDING" | "REPLIED" | "CLOSED";
+
+export interface FeedbackItem {
+  id: string;
+  category: FeedbackCategory;
+  content: string;
+  status: FeedbackStatus;
+  replyText: string | null;
+  author: UserSummary;
+  createdAt: string;
+  repliedAt: string | null;
+  handledBy?: UserSummary | null;
+}
+
+export interface DirectMessageItem {
+  id: string;
+  sender: UserSummary;
+  content: string;
+  createdAt: string;
+  readAt: string | null;
+}
+
+export interface ConversationItem {
+  peer: UserSummary;
+  unreadCount: number;
+  lastMessage?: {
+    senderId: string;
+    content: string;
+    createdAt: string;
+  } | null;
+  updatedAt: string;
+}
+
 interface ListEnvelope<S> {
   data: S[];
   pagination: import("./api-client").Pagination;
@@ -265,6 +305,66 @@ export const messageApi = {
     request<{ data: MessageItem }>("/admin/announcements", {
       method: "POST",
       body: { title, content },
+    }).then((r) => r.data),
+
+  // ---------- 消息重构（契约 PR #108 B 组） ----------
+
+  /** 我的公告（分页，含每条已读状态） */
+  myAnnouncements: (page?: number, perPage?: number) =>
+    list<MessageItem>("/users/me/announcements", { page, perPage }),
+
+  /** 公告全部标记已读（进入公告页签调用，204 幂等） */
+  readAllAnnouncements: () =>
+    request<void>("/users/me/announcements/read-all", { method: "POST" }),
+
+  /** 私信会话列表（updatedAt 倒序，含 peer 摘要 / 未读数 / 最后消息） */
+  conversations: (page?: number, perPage?: number) =>
+    list<ConversationItem>("/users/me/conversations", { page, perPage }),
+
+  /** 与某用户的私信记录（时间倒序分页） */
+  conversationMessages: (peerId: string, page?: number, perPage?: number) =>
+    list<DirectMessageItem>(`/users/me/conversations/${peerId}`, {
+      page,
+      perPage,
+    }),
+
+  /** 发送私信（普通用户仅可发给站长；站长可发任意用户；禁止发本人） */
+  sendConversation: (peerId: string, content: string) =>
+    request<{ data: DirectMessageItem }>(`/users/me/conversations/${peerId}`, {
+      method: "POST",
+      body: { content },
+    }).then((r) => r.data),
+
+  /** 会话已读（进入聊天窗调用，清该会话未读，204 幂等） */
+  readConversation: (peerId: string) =>
+    request<void>(`/users/me/conversations/${peerId}/read`, {
+      method: "POST",
+    }),
+};
+
+// ---------- 意见反馈（契约 PR #108 A 组） ----------
+
+export const feedbackApi = {
+  /** 提交反馈（登录；当日限 10 条，超限 429） */
+  create: (category: FeedbackCategory, content: string) =>
+    request<{ data: FeedbackItem }>("/feedback", {
+      method: "POST",
+      body: { category, content },
+    }).then((r) => r.data),
+
+  /** 我的反馈记录（含站长回复，分页） */
+  listMine: (page?: number, perPage?: number) =>
+    list<FeedbackItem>("/users/me/feedback", { page, perPage }),
+
+  /** 反馈队列（站长或 manage_content；可按状态筛选） */
+  adminList: (status?: FeedbackStatus, page?: number, perPage?: number) =>
+    list<FeedbackItem>("/admin/feedback", { status, page, perPage }),
+
+  /** 回复/关闭反馈（仅站长；回复经站内信通知提交人） */
+  handle: (feedbackId: string, status: "REPLIED" | "CLOSED", replyText?: string) =>
+    request<{ data: FeedbackItem }>(`/admin/feedback/${feedbackId}`, {
+      method: "PATCH",
+      body: { status, ...(replyText ? { replyText } : {}) },
     }).then((r) => r.data),
 };
 

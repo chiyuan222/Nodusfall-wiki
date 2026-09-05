@@ -306,6 +306,12 @@ export function ProfilePanel() {
                   举报处理
                 </Link>
                 <Link
+                  href="/admin/feedback"
+                  className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary transition-colors duration-fast hover:border-amber-soft hover:text-amber"
+                >
+                  意见反馈
+                </Link>
+                <Link
                   href="/admin/moderation"
                   className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary transition-colors duration-fast hover:border-amber-soft hover:text-amber"
                 >
