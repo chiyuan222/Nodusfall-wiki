@@ -1407,7 +1407,7 @@ paths:
     get:
       tags: [Wiki]
       operationId: listWikiPages
-      summary: 获取 Wiki 页面列表
+      summary: 获取 Wiki 页面列表（默认仅已发布；mine=true 返回我的全部状态）
       security: []
       parameters:
         - name: category
@@ -1424,6 +1424,11 @@ paths:
           schema:
             type: string
             enum: [draft, published, archived]
+          description: 状态过滤。默认（未指定 mine）仅返回 published；draft/archived 仅 mine=true（作者本人）或板块管理可用
+        - name: mine
+          in: query
+          schema: { type: boolean }
+          description: true=仅返回我创建的内容（可配合 status 查我的草稿/归档）；需登录
         - $ref: "#/components/parameters/Page"
         - $ref: "#/components/parameters/PerPage"
         - name: sort
@@ -1467,6 +1472,7 @@ paths:
       tags: [Wiki]
       operationId: getWikiPage
       summary: 获取 Wiki 页面
+      description: 草稿/已归档内容仅作者本人或板块管理可见；其余访问返回 404（隐藏存在）
       security: []
       parameters:
         - $ref: "#/components/parameters/Slug"
@@ -1660,7 +1666,7 @@ paths:
     get:
       tags: [Guides]
       operationId: listGuides
-      summary: 获取攻略列表
+      summary: 获取攻略列表（默认仅已发布；mine=true 返回我的全部状态）
       security: []
       parameters:
         - name: tag
@@ -1674,6 +1680,11 @@ paths:
           schema:
             type: string
             enum: [draft, published, archived]
+          description: 状态过滤。默认（未指定 mine）仅返回 published；draft/archived 仅 mine=true（作者本人）或板块管理可用
+        - name: mine
+          in: query
+          schema: { type: boolean }
+          description: true=仅返回我创建的内容（可配合 status 查我的草稿/归档）；需登录
         - name: sort
           in: query
           schema:
@@ -1881,6 +1892,7 @@ paths:
       tags: [Guides]
       operationId: getGuide
       summary: 获取攻略详情
+      description: 草稿/已归档内容仅作者本人或板块管理可见；其余访问返回 404（隐藏存在）
       security: []
       parameters:
         - $ref: "#/components/parameters/Slug"
