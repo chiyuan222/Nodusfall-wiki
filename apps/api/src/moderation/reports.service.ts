@@ -1,12 +1,17 @@
 import {
+  BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { Report, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { pageInfo } from '../common/pagination';
+import { canDiscipline, hasPermission, PERMISSIONS } from '../common/roles';
 import { toUserSummary } from '../users/users.service';
+import { MessagesService } from '../messages/messages.service';
+import { AuditService } from '../audit/audit.service';
 
 export interface CreateReportInput {
   targetType: string;
@@ -17,7 +22,11 @@ export interface CreateReportInput {
 
 @Injectable()
 export class ReportsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly messages: MessagesService,
+    private readonly audit: AuditService,
+  ) {}
 
   async create(reporterId: string, input: CreateReportInput) {
     let targetUser: User | null = null;
@@ -106,12 +115,28 @@ export class ReportsService {
     handlerId: string,
     status: 'RESOLVED' | 'REJECTED',
     note?: string,
+    discipline?: { action: 'mute' | 'ban'; reason?: string; durationDays?: number },
+    actor?: { role: string; permissions: string[] },
   ) {
     const report = await this.prisma.report.findUnique({
       where: { id: reportId },
     });
     if (!report) {
       throw new NotFoundException('举报不存在');
+    }
+    if (discipline) {
+      if (status !== 'RESOLVED') {
+        throw new BadRequestException('仅已处理(RESOLVED)的举报可附带账号处置');
+      }
+      const target = await this.resolveDisciplineUser(report);
+      if (!target) throw new NotFoundException('被举报账号不存在');
+      if (
+        !hasPermission(actor?.role, actor?.permissions, PERMISSIONS.MANAGE_USERS) ||
+        !canDiscipline(actor?.role, target.role)
+      ) {
+        throw new ForbiddenException('无处置权限（需用户管理且只能处置低于自己的账号）');
+      }
+      await this.applyDiscipline(target, discipline, handlerId);
     }
     const updated = await this.prisma.report.update({
       where: { id: reportId },
@@ -133,6 +158,104 @@ export class ReportsService {
         ? await this.prisma.user.findUnique({ where: { id: updated.targetId } })
         : null;
     return this.toDto(updated, reporter, handler, targetUser);
+  }
+
+  private async resolveDisciplineUser(report: Report): Promise<User | null> {
+    switch (report.targetType) {
+      case 'user':
+        return this.prisma.user.findUnique({ where: { id: report.targetId } });
+      case 'wikiPage': {
+        const page = await this.prisma.wikiPage.findUnique({
+          where: { slug: report.targetId },
+          select: { authorId: true },
+        });
+        return page
+          ? this.prisma.user.findUnique({ where: { id: page.authorId } })
+          : null;
+      }
+      case 'guide': {
+        const guide = await this.prisma.guide.findUnique({
+          where: { slug: report.targetId },
+          select: { authorId: true },
+        });
+        return guide
+          ? this.prisma.user.findUnique({ where: { id: guide.authorId } })
+          : null;
+      }
+      case 'forumThread':
+      case 'forumPost':
+      case 'comment': {
+        const model =
+          report.targetType === 'forumThread'
+            ? this.prisma.forumThread
+            : report.targetType === 'forumPost'
+              ? this.prisma.forumPost
+              : this.prisma.comment;
+        const row = await (model as any).findUnique({
+          where: { id: report.targetId },
+          select: { authorId: true },
+        });
+        return row
+          ? this.prisma.user.findUnique({ where: { id: row.authorId } })
+          : null;
+      }
+      default:
+        return null;
+    }
+  }
+
+  private async applyDiscipline(
+    target: User,
+    discipline: { action: 'mute' | 'ban'; reason?: string; durationDays?: number },
+    handlerId: string,
+  ): Promise<void> {
+    const now = new Date();
+    const defaultDays = discipline.action === 'mute' ? 7 : 0;
+    const days = discipline.durationDays ?? defaultDays;
+    const until = days > 0 ? new Date(now.getTime() + days * 86400000) : null;
+    if (discipline.action === 'mute') {
+      await this.prisma.user.update({
+        where: { id: target.id },
+        data: {
+          status: 'MUTED',
+          mutedUntil: until,
+          banReason: null,
+          banUntil: null,
+        },
+      });
+    } else {
+      await this.prisma.user.update({
+        where: { id: target.id },
+        data: {
+          status: 'BANNED',
+          banReason: discipline.reason ?? null,
+          banUntil: until,
+          mutedUntil: null,
+        },
+      });
+      await this.prisma.session.updateMany({
+        where: { userId: target.id, revokedAt: null },
+        data: { revokedAt: now },
+      });
+    }
+    const label = discipline.action === 'mute' ? '禁言' : '封禁';
+    const when = until ? `，至 ${until.toISOString()}` : '（永久）';
+    try {
+      await this.messages.notifyUserChange(
+        handlerId,
+        target.id,
+        `【账号状态通知】你的账号已被${label}${discipline.reason ? `，原因：${discipline.reason}` : ''}${when}。如有疑问请联系站长。`,
+      );
+    } catch (e) {
+      console.error('discipline notify failed', e);
+    }
+    await this.audit.log(
+      handlerId,
+      'user.update',
+      'user',
+      target.id,
+      `举报处理附带${label}${discipline.reason ? `：${discipline.reason}` : ''}`,
+    );
   }
 
   private toDto(

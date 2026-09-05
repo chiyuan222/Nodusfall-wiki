@@ -1,6 +1,38 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { pageInfo } from '../common/pagination';
 import { PrismaService } from '../prisma/prisma.service';
+import { hasBoardPermission } from '../common/roles';
+import { toUserSummary } from '../users/users.service';
+
+function videoView(v: {
+  id: string;
+  kind: string;
+  title: string;
+  url: string;
+  platform: string;
+  coverImage: string | null;
+  description: string | null;
+  published: boolean;
+  sortOrder: number;
+  createdAt: Date;
+  updatedAt: Date;
+  author?: any;
+}) {
+  return {
+    id: v.id,
+    kind: v.kind,
+    title: v.title,
+    url: v.url,
+    platform: v.platform,
+    coverImage: v.coverImage,
+    description: v.description,
+    published: v.published,
+    sortOrder: v.sortOrder,
+    createdAt: v.createdAt,
+    updatedAt: v.updatedAt,
+    author: v.author ? toUserSummary(v.author) : null,
+  };
+}
 
 function inferPlatform(url: string, explicit?: string): string {
   if (explicit) return explicit;
@@ -24,6 +56,7 @@ export class VideosService {
         orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
         skip: (page - 1) * perPage,
         take: perPage,
+        include: { author: true },
       }),
     ]);
     return {
@@ -42,6 +75,7 @@ export class VideosService {
         orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
         skip: (page - 1) * perPage,
         take: perPage,
+        include: { author: true },
       }),
     ]);
     return {
@@ -59,6 +93,7 @@ export class VideosService {
     description?: string | null;
     published?: boolean;
     sortOrder?: number;
+    authorId?: string | null;
   }) {
     const video = await this.prisma.videoEntry.create({
       data: {
@@ -70,7 +105,9 @@ export class VideosService {
         description: dto.description ?? null,
         published: dto.published ?? true,
         sortOrder: dto.sortOrder ?? 0,
+        authorId: dto.authorId ?? null,
       },
+      include: { author: true },
     });
     return videoView(video);
   }
@@ -103,6 +140,7 @@ export class VideosService {
         published: dto.published ?? existing.published,
         sortOrder: dto.sortOrder ?? existing.sortOrder,
       },
+      include: { author: true },
     });
     return videoView(video);
   }
@@ -111,32 +149,21 @@ export class VideosService {
     const result = await this.prisma.videoEntry.delete({ where: { id } }).catch(() => null);
     if (!result) throw new NotFoundException('video not found');
   }
-}
 
-function videoView(v: {
-  id: string;
-  kind: string;
-  title: string;
-  url: string;
-  platform: string;
-  coverImage: string | null;
-  description: string | null;
-  published: boolean;
-  sortOrder: number;
-  createdAt: Date;
-  updatedAt: Date;
-}) {
-  return {
-    id: v.id,
-    kind: v.kind,
-    title: v.title,
-    url: v.url,
-    platform: v.platform,
-    coverImage: v.coverImage,
-    description: v.description,
-    published: v.published,
-    sortOrder: v.sortOrder,
-    createdAt: v.createdAt,
-    updatedAt: v.updatedAt,
-  };
+  async findManaged(
+    id: string,
+    userId: string,
+    role: string,
+    permissions: string[],
+  ) {
+    const entry = await this.prisma.videoEntry.findUnique({ where: { id } });
+    if (!entry) return null;
+    if (
+      entry.authorId !== userId &&
+      !hasBoardPermission(role, permissions, 'video')
+    ) {
+      throw new ForbiddenException('not your video');
+    }
+    return entry;
+  }
 }

@@ -96,6 +96,7 @@ model User {
   handledReports Report[]         @relation("ReportHandler")
   feedbacks      Feedback[]       @relation("FeedbackAuthor")
   handledFeedback Feedback[]      @relation("FeedbackHandler")
+  videoEntries   VideoEntry[]     @relation("VideoAuthor")
   uploads       Upload[]          @relation("UploadUser")
   postLikes     ForumPostLike[]   @relation("PostLikeUser")
   bookmarks     ForumThreadBookmark[] @relation("ThreadBookmarkUser")
@@ -481,11 +482,14 @@ model VideoEntry {
   platform    String
   coverImage  String?
   description String?
+  authorId    String?
+  author      User?    @relation("VideoAuthor", fields: [authorId], references: [id], onDelete: SetNull)
   published   Boolean  @default(true)
   sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  @@index([authorId])
   @@index([kind, published, sortOrder])
 }
 
