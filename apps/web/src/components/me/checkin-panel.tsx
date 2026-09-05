@@ -34,6 +34,7 @@ function levelStartExp(level: number): number {
 }
 
 const PER_PAGE = 10;
+const LOG_OPEN_KEY = "nodusfall.exp-log-open";
 
 export function CheckinPanel({
   exp,
@@ -51,6 +52,8 @@ export function CheckinPanel({
   const [checking, setChecking] = useState(false);
   const [toast, setToast] = useState("");
   const [log, setLog] = useState<ExpLogEntry[]>([]);
+  const [logLoaded, setLogLoaded] = useState(false);
+  const [logOpen, setLogOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
@@ -62,9 +65,33 @@ export function CheckinPanel({
       .then((r) => {
         setLog(r.data);
         setTotalPages(Math.max(1, r.pagination.totalPages));
+        setLogLoaded(true);
       })
       .catch(() => setLog([]));
   }, []);
+
+  // 经验记录折叠状态记忆（localStorage），展开时才加载
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem(LOG_OPEN_KEY) === "1") {
+        setLogOpen(true);
+        loadLog(1);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [loadLog]);
+
+  const toggleLog = () => {
+    const next = !logOpen;
+    setLogOpen(next);
+    try {
+      window.localStorage.setItem(LOG_OPEN_KEY, next ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+    if (next && !logLoaded) loadLog(1);
+  };
 
   useEffect(() => {
     request<{ data: CheckInStatus }>("/users/me/checkin")
@@ -72,8 +99,7 @@ export function CheckinPanel({
       .catch((e: unknown) => {
         if (e instanceof ApiError && e.status === 404) setUnsupported(true);
       });
-    loadLog(1);
-  }, [loadLog]);
+  }, []);
 
   // 后端端点尚未上线：静默占位
   if (unsupported) {
@@ -110,8 +136,10 @@ export function CheckinPanel({
             ? `签到成功，经验 +${r.data.gainedExp}`
             : "签到成功，已满级经验不再增长",
         );
-        loadLog(1);
-        setPage(1);
+        if (logOpen) {
+          loadLog(1);
+          setPage(1);
+        }
       })
       .catch((e: unknown) => {
         if (e instanceof ApiError && e.status === 409) {
@@ -177,10 +205,22 @@ export function CheckinPanel({
         )}
       </div>
 
-      {/* 经验记录 */}
+      {/* 经验记录：默认收起，点击展开加载，折叠状态 localStorage 记忆 */}
       <div className="mt-4 border-t border-border-subtle pt-3">
-        <p className="font-mono text-caption text-faint">经验记录</p>
-        {log.length === 0 ? (
+        <button
+          type="button"
+          aria-expanded={logOpen}
+          onClick={toggleLog}
+          className="flex w-full items-center justify-between font-mono text-caption text-faint transition-colors duration-fast hover:text-amber"
+        >
+          <span>经验记录</span>
+          <span aria-hidden>{logOpen ? "−" : "+"}</span>
+        </button>
+        {logOpen && (
+          <>
+            {!logLoaded ? (
+              <p className="mt-2 text-small text-faint">载入中…</p>
+            ) : log.length === 0 ? (
           <p className="mt-2 text-small text-faint">暂无经验记录。</p>
         ) : (
           <ul className="mt-2 divide-y divide-border-subtle">
@@ -202,41 +242,43 @@ export function CheckinPanel({
                 </time>
               </li>
             ))}
-          </ul>
-        )}
-        {totalPages > 1 && (
-          <nav
-            aria-label="经验记录分页"
-            className="mt-2 flex items-center justify-end gap-2 text-caption"
-          >
-            <button
-              type="button"
-              disabled={page <= 1}
-              onClick={() => {
-                const p = page - 1;
-                setPage(p);
-                loadLog(p);
-              }}
-              className="rounded-sm border border-border-subtle px-2 py-1 text-secondary hover:border-amber-soft hover:text-amber disabled:opacity-40"
+            </ul>
+          )}
+          {totalPages > 1 && (
+            <nav
+              aria-label="经验记录分页"
+              className="mt-2 flex items-center justify-end gap-2 text-caption"
             >
-              上一页
-            </button>
-            <span className="font-mono text-faint">
-              {page} / {totalPages}
-            </span>
-            <button
-              type="button"
-              disabled={page >= totalPages}
-              onClick={() => {
-                const p = page + 1;
-                setPage(p);
-                loadLog(p);
-              }}
-              className="rounded-sm border border-border-subtle px-2 py-1 text-secondary hover:border-amber-soft hover:text-amber disabled:opacity-40"
-            >
-              下一页
-            </button>
-          </nav>
+              <button
+                type="button"
+                disabled={page <= 1}
+                onClick={() => {
+                  const p = page - 1;
+                  setPage(p);
+                  loadLog(p);
+                }}
+                className="rounded-sm border border-border-subtle px-2 py-1 text-secondary hover:border-amber-soft hover:text-amber disabled:opacity-40"
+              >
+                上一页
+              </button>
+              <span className="font-mono text-faint">
+                {page} / {totalPages}
+              </span>
+              <button
+                type="button"
+                disabled={page >= totalPages}
+                onClick={() => {
+                  const p = page + 1;
+                  setPage(p);
+                  loadLog(p);
+                }}
+                className="rounded-sm border border-border-subtle px-2 py-1 text-secondary hover:border-amber-soft hover:text-amber disabled:opacity-40"
+              >
+                下一页
+              </button>
+            </nav>
+          )}
+          </>
         )}
       </div>
     </div>

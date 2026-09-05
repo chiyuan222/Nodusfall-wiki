@@ -480,8 +480,10 @@ function DirectPane({ isOwner, myId }: { isOwner: boolean; myId: string }) {
                       type="button"
                       onClick={() => openConversation(c.peer)}
                       aria-current={active}
-                      className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors duration-fast ${
-                        active ? "bg-raised" : "hover:bg-raised"
+                      className={`flex w-full items-center gap-3 border-l-2 px-4 py-3 text-left transition-colors duration-fast ${
+                        active
+                          ? "border-amber bg-raised"
+                          : "border-transparent hover:bg-raised"
                       }`}
                     >
                       <Avatar url={c.peer.avatarUrl} name={name} size="sm" />
@@ -526,9 +528,10 @@ function DirectPane({ isOwner, myId }: { isOwner: boolean; myId: string }) {
         {/* 右栏：聊天窗（窄屏仅打开会话时显示） */}
         <div className={`${activePeer ? "" : "hidden md:block"} min-w-0`}>
           {!activePeer ? (
-            <p className="p-10 text-center text-small text-faint">
-              选择左侧会话开始聊天。
-            </p>
+            <div className="flex h-[26rem] flex-col items-center justify-center gap-2 text-center">
+              <span aria-hidden className="font-serif text-h1 text-faint">✉</span>
+              <p className="text-small text-faint">选择左侧会话开始聊天。</p>
+            </div>
           ) : (
             <div className="flex h-[26rem] flex-col">
               {/* 聊天窗头部 */}
@@ -537,9 +540,9 @@ function DirectPane({ isOwner, myId }: { isOwner: boolean; myId: string }) {
                   type="button"
                   onClick={() => setActivePeer(null)}
                   aria-label="返回会话列表"
-                  className="rounded-md border border-border-subtle px-2 py-1 text-caption text-secondary hover:border-amber-soft hover:text-amber md:hidden"
+                  className="rounded-md border border-border-subtle bg-raised px-3 py-1.5 text-small text-secondary hover:border-amber-soft hover:text-amber md:hidden"
                 >
-                  ← 返回
+                  ← 会话列表
                 </button>
                 <Avatar
                   url={activePeer.avatarUrl}
@@ -564,43 +567,68 @@ function DirectPane({ isOwner, myId }: { isOwner: boolean; myId: string }) {
                     {msgErr}
                   </p>
                 ) : msgs.length === 0 ? (
-                  <p className="pt-8 text-center text-caption text-faint">
-                    还没有消息，说点什么吧。
-                  </p>
+                  <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
+                    <span aria-hidden className="font-serif text-h2 text-faint">✉</span>
+                    <p className="text-caption text-faint">
+                      还没有消息，说点什么吧。
+                    </p>
+                  </div>
                 ) : (
-                  [...msgs].reverse().map((m) => {
-                    const fromMe = m.sender.id === myId;
-                    return (
-                      <div
-                        key={m.id}
-                        className={`flex items-end gap-2 ${fromMe ? "flex-row-reverse" : ""}`}
-                      >
-                        {!fromMe && (
-                          <Avatar
-                            url={m.sender.avatarUrl}
-                            name={nameOf(m.sender)}
-                            size="sm"
-                          />
-                        )}
-                        <div
-                          className={`max-w-[75%] ${fromMe ? "text-right" : ""}`}
-                        >
-                          <p
-                            className={`inline-block whitespace-pre-wrap break-words rounded-lg px-3 py-2 text-left text-small ${
-                              fromMe
-                                ? "bg-amber text-amber-fg"
-                                : "border border-border-subtle bg-raised text-primary"
-                            }`}
+                  (() => {
+                    const ordered = [...msgs].reverse();
+                    const dayOf = (iso: string) => new Date(iso).toDateString();
+                    let lastDay = "";
+                    return ordered.map((m) => {
+                      const fromMe = m.sender.id === myId;
+                      const day = dayOf(m.createdAt);
+                      const showDay = day !== lastDay;
+                      lastDay = day;
+                      return (
+                        <div key={m.id} className="space-y-3">
+                          {showDay && (
+                            <div className="flex items-center gap-3 pt-1" aria-hidden>
+                              <span className="h-px grow bg-border-subtle" />
+                              <span className="font-mono text-caption text-faint">
+                                {new Date(m.createdAt).toLocaleDateString("zh-CN", {
+                                  month: "long",
+                                  day: "numeric",
+                                  weekday: "short",
+                                })}
+                              </span>
+                              <span className="h-px grow bg-border-subtle" />
+                            </div>
+                          )}
+                          <div
+                            className={`flex items-end gap-2 ${fromMe ? "flex-row-reverse" : ""}`}
                           >
-                            {m.content}
-                          </p>
-                          <p className="mt-0.5 font-mono text-caption text-faint">
-                            {fmtTime(m.createdAt)}
-                          </p>
+                            {!fromMe && (
+                              <Avatar
+                                url={m.sender.avatarUrl}
+                                name={nameOf(m.sender)}
+                                size="sm"
+                              />
+                            )}
+                            <div
+                              className={`max-w-[75%] ${fromMe ? "text-right" : ""}`}
+                            >
+                              <p
+                                className={`inline-block whitespace-pre-wrap break-words px-3 py-2 text-left text-small shadow-sm ${
+                                  fromMe
+                                    ? "rounded-2xl rounded-br-sm bg-amber text-amber-fg"
+                                    : "rounded-2xl rounded-bl-sm border border-border-subtle bg-raised text-primary"
+                                }`}
+                              >
+                                {m.content}
+                              </p>
+                              <p className="mt-0.5 font-mono text-[10px] text-faint/80">
+                                {fmtTime(m.createdAt)}
+                              </p>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })
+                      );
+                    });
+                  })()
                 )}
                 <div ref={bottomRef} />
               </div>
