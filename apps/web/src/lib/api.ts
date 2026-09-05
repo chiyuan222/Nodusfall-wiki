@@ -34,45 +34,12 @@ export type AppearanceConfig = Schemas["AppearanceConfig"];
 export type AppearanceHeading = Schemas["AppearanceHeading"];
 export type UpdateAppearance = Schemas["UpdateAppearance"];
 
-/**
- * 契约 PR #108（意见反馈 + 私信会话化）。
- * TODO(Issue #111)：契约 components.responses 缺 TooManyRequests 导致 codegen
- * 暂时失败，以下类型先按冻结契约手写；契约修复并重跑 codegen 后应改回
- * Schemas["FeedbackItem"] 等引用并比对一致。
- */
-export type FeedbackCategory = "bug" | "suggestion" | "appeal" | "other";
-export type FeedbackStatus = "PENDING" | "REPLIED" | "CLOSED";
-
-export interface FeedbackItem {
-  id: string;
-  category: FeedbackCategory;
-  content: string;
-  status: FeedbackStatus;
-  replyText: string | null;
-  author: UserSummary;
-  createdAt: string;
-  repliedAt: string | null;
-  handledBy?: UserSummary | null;
-}
-
-export interface DirectMessageItem {
-  id: string;
-  sender: UserSummary;
-  content: string;
-  createdAt: string;
-  readAt: string | null;
-}
-
-export interface ConversationItem {
-  peer: UserSummary;
-  unreadCount: number;
-  lastMessage?: {
-    senderId: string;
-    content: string;
-    createdAt: string;
-  } | null;
-  updatedAt: string;
-}
+/** 契约 PR #108（意见反馈 + 私信会话化），Issue #111 修复后已由 codegen 生成 */
+export type FeedbackCategory = FeedbackItem["category"];
+export type FeedbackStatus = FeedbackItem["status"];
+export type FeedbackItem = Schemas["FeedbackItem"];
+export type DirectMessageItem = Schemas["DirectMessageItem"];
+export type ConversationItem = Schemas["ConversationItem"];
 
 interface ListEnvelope<S> {
   data: S[];
@@ -122,6 +89,12 @@ export const wikiApi = {
     request<void>(`/wiki/pages/${slug}/bookmark`, { method: "PUT" }),
   unbookmark: (slug: string) =>
     request<void>(`/wiki/pages/${slug}/bookmark`, { method: "DELETE" }),
+
+  /** 「不推荐/内容有误」标记 / 取消（幂等 204，契约 PR #113） */
+  dislike: (slug: string) =>
+    request<void>(`/wiki/pages/${slug}/dislike`, { method: "PUT" }),
+  undislike: (slug: string) =>
+    request<void>(`/wiki/pages/${slug}/dislike`, { method: "DELETE" }),
 };
 
 // ---------- 攻略 ----------
@@ -164,6 +137,12 @@ export const guidesApi = {
     request<void>(`/guides/${slug}/bookmark`, { method: "PUT" }),
   unbookmark: (slug: string) =>
     request<void>(`/guides/${slug}/bookmark`, { method: "DELETE" }),
+
+  /** 「不推荐/内容有误」标记 / 取消（幂等 204，契约 PR #113） */
+  dislike: (slug: string) =>
+    request<void>(`/guides/${slug}/dislike`, { method: "PUT" }),
+  undislike: (slug: string) =>
+    request<void>(`/guides/${slug}/dislike`, { method: "DELETE" }),
 };
 
 // ---------- 论坛 ----------
@@ -263,6 +242,17 @@ export const commentApi = {
 
   unlike: (commentId: string) =>
     request<void>(`/comments/${commentId}/like`, { method: "DELETE" }),
+
+  /** 楼中楼回复列表（正序分页，匿名可读，契约 PR #114） */
+  replies: (commentId: string, page?: number) =>
+    list<Comment>(`/comments/${commentId}/replies`, { page }),
+
+  /** 发表回复（需登录；父评论须为顶层，单层限制由后端校验） */
+  createReply: (commentId: string, content: string) =>
+    request<{ data: Comment }>(`/comments/${commentId}/replies`, {
+      method: "POST",
+      body: { content },
+    }).then((r) => r.data),
 };
 
 // ---------- 搜索 ----------

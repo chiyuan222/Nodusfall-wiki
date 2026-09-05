@@ -72,6 +72,8 @@ export const mockWikiPages: WikiPageSummary[] = [
     likeCount: 12,
     likedByMe: false,
     bookmarkedByMe: false,
+    dislikeCount: 0,
+    dislikedByMe: false,
   },
   {
     id: "w-02",
@@ -88,6 +90,8 @@ export const mockWikiPages: WikiPageSummary[] = [
     likeCount: 4,
     likedByMe: false,
     bookmarkedByMe: true,
+    dislikeCount: 0,
+    dislikedByMe: false,
   },
   {
     id: "w-03",
@@ -104,6 +108,8 @@ export const mockWikiPages: WikiPageSummary[] = [
     likeCount: 0,
     likedByMe: false,
     bookmarkedByMe: false,
+    dislikeCount: 0,
+    dislikedByMe: false,
   },
 ];
 
@@ -126,6 +132,8 @@ export const mockGuides: GuideSummary[] = [
     likeCount: 88,
     likedByMe: true,
     bookmarkedByMe: false,
+    dislikeCount: 0,
+    dislikedByMe: false,
   },
   {
     id: "g-02",
@@ -142,6 +150,8 @@ export const mockGuides: GuideSummary[] = [
     likeCount: 0,
     likedByMe: false,
     bookmarkedByMe: false,
+    dislikeCount: 0,
+    dislikedByMe: false,
   },
 ];
 
