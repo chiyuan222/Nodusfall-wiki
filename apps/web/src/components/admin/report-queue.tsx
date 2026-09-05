@@ -40,7 +40,7 @@ export function ReportQueue() {
   const [busyId, setBusyId] = useState("");
 
   const allowed =
-    !!me && (isAdminRole(me.role) || hasPermission(me, "manage_content"));
+    !!me && (isAdminRole(me.role) || hasPermission(me, "manage_reports"));
 
   const load = useCallback(
     (p: number) => {

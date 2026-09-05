@@ -209,13 +209,20 @@ export function ProfilePanel() {
       {/* 管理入口（管理员/站长；按 manage_users / manage_content 开关细化显示） */}
       {(isAdminRole(me.role) ||
         hasPermission(me, "manage_users") ||
-        hasPermission(me, "manage_content")) && (
+        hasPermission(me, "manage_content") ||
+        hasPermission(me, "manage_reports") ||
+        hasPermission(me, "manage_all_boards") ||
+        hasPermission(me, "manage_wiki_board") ||
+        hasPermission(me, "manage_guide_board") ||
+        hasPermission(me, "manage_forum_board") ||
+        hasPermission(me, "manage_video_board")) && (
         <div className="mt-6 rounded-md border border-amber-soft bg-raised p-4">
           <p className="font-mono text-caption uppercase tracking-[0.3em] text-amber">
             内容管理
           </p>
           <div className="mt-3 flex flex-wrap gap-3">
-            {isAdminRole(me.role) && (
+            {/* 权限体系 v2（后端对照表）：链接按 manage_* 开关显示 */}
+            {hasPermission(me, "manage_content") && (
               <>
                 <Link
                   href="/admin/home"
@@ -230,40 +237,10 @@ export function ProfilePanel() {
                   总览页内容管理
                 </Link>
                 <Link
-                  href="/wiki/new"
-                  className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary transition-colors duration-fast hover:border-amber-soft hover:text-amber"
-                >
-                  新建 Wiki 条目
-                </Link>
-                <Link
-                  href="/admin/wiki"
-                  className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary transition-colors duration-fast hover:border-amber-soft hover:text-amber"
-                >
-                  Wiki 内容管理
-                </Link>
-                <Link
-                  href="/admin/guides"
-                  className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary transition-colors duration-fast hover:border-amber-soft hover:text-amber"
-                >
-                  攻略内容管理
-                </Link>
-                <Link
-                  href="/admin/videos"
-                  className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary transition-colors duration-fast hover:border-amber-soft hover:text-amber"
-                >
-                  相关视频管理
-                </Link>
-                <Link
                   href="/admin/site"
                   className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary transition-colors duration-fast hover:border-amber-soft hover:text-amber"
                 >
                   站点设置
-                </Link>
-                <Link
-                  href="/admin/taxonomy"
-                  className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary transition-colors duration-fast hover:border-amber-soft hover:text-amber"
-                >
-                  板块与分类管理
                 </Link>
                 <Link
                   href="/admin/stats"
@@ -271,15 +248,56 @@ export function ProfilePanel() {
                 >
                   站点统计
                 </Link>
-                {me.role?.toLowerCase() === "owner" && (
-                  <Link
-                    href="/admin/audit-logs"
-                    className="rounded-md border border-amber-soft px-4 py-2 text-small text-amber transition-colors duration-fast hover:bg-amber hover:text-amber-fg"
-                  >
-                    操作日志（仅站长）
-                  </Link>
-                )}
               </>
+            )}
+            {(hasPermission(me, "manage_wiki_board") ||
+              me.wikiCreateGranted) && (
+              <Link
+                href="/wiki/new"
+                className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary transition-colors duration-fast hover:border-amber-soft hover:text-amber"
+              >
+                新建 Wiki 条目
+              </Link>
+            )}
+            {hasPermission(me, "manage_wiki_board") && (
+              <Link
+                href="/admin/wiki"
+                className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary transition-colors duration-fast hover:border-amber-soft hover:text-amber"
+              >
+                Wiki 内容管理
+              </Link>
+            )}
+            {hasPermission(me, "manage_guide_board") && (
+              <Link
+                href="/admin/guides"
+                className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary transition-colors duration-fast hover:border-amber-soft hover:text-amber"
+              >
+                攻略内容管理
+              </Link>
+            )}
+            {hasPermission(me, "manage_video_board") && (
+              <Link
+                href="/admin/videos"
+                className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary transition-colors duration-fast hover:border-amber-soft hover:text-amber"
+              >
+                相关视频管理
+              </Link>
+            )}
+            {isAdminRole(me.role) && (
+              <Link
+                href="/admin/taxonomy"
+                className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary transition-colors duration-fast hover:border-amber-soft hover:text-amber"
+              >
+                板块与分类管理
+              </Link>
+            )}
+            {me.role?.toLowerCase() === "owner" && (
+              <Link
+                href="/admin/audit-logs"
+                className="rounded-md border border-amber-soft px-4 py-2 text-small text-amber transition-colors duration-fast hover:bg-amber hover:text-amber-fg"
+              >
+                操作日志（仅站长）
+              </Link>
             )}
             {(isAdminRole(me.role) || hasPermission(me, "manage_users")) && (
               <Link
@@ -289,27 +307,34 @@ export function ProfilePanel() {
                 用户与权限管理
               </Link>
             )}
-            {(isAdminRole(me.role) || hasPermission(me, "manage_content")) && (
-              <>
-                <Link
-                  href="/admin/reports"
-                  className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary transition-colors duration-fast hover:border-amber-soft hover:text-amber"
-                >
-                  举报处理
-                </Link>
-                <Link
-                  href="/admin/feedback"
-                  className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary transition-colors duration-fast hover:border-amber-soft hover:text-amber"
-                >
-                  意见反馈
-                </Link>
-                <Link
-                  href="/admin/moderation"
-                  className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary transition-colors duration-fast hover:border-amber-soft hover:text-amber"
-                >
-                  内容巡查
-                </Link>
-              </>
+            {hasPermission(me, "manage_reports") && (
+              <Link
+                href="/admin/reports"
+                className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary transition-colors duration-fast hover:border-amber-soft hover:text-amber"
+              >
+                举报处理
+              </Link>
+            )}
+            {/* 反馈队列后端仅站长可访问 */}
+            {me.role?.toLowerCase() === "owner" && (
+              <Link
+                href="/admin/feedback"
+                className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary transition-colors duration-fast hover:border-amber-soft hover:text-amber"
+              >
+                意见反馈
+              </Link>
+            )}
+            {(hasPermission(me, "manage_all_boards") ||
+              hasPermission(me, "manage_wiki_board") ||
+              hasPermission(me, "manage_guide_board") ||
+              hasPermission(me, "manage_forum_board") ||
+              hasPermission(me, "manage_video_board")) && (
+              <Link
+                href="/admin/moderation"
+                className="rounded-md border border-border-subtle px-4 py-2 text-small text-secondary transition-colors duration-fast hover:border-amber-soft hover:text-amber"
+              >
+                内容巡查
+              </Link>
             )}
           </div>
         </div>

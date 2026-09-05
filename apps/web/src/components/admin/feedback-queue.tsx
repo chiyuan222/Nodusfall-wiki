@@ -10,7 +10,7 @@ import {
 } from "@/lib/api";
 import { ApiError } from "@/lib/errors";
 import { Avatar } from "@/components/avatar";
-import { useMe, hasPermission } from "@/lib/me";
+import { useMe } from "@/lib/me";
 
 /**
  * 反馈处理队列（/admin/feedback，契约 PR #108 A 组）：
@@ -54,8 +54,8 @@ export function FeedbackQueue() {
   const [acting, setActing] = useState(false);
   const [actErr, setActErr] = useState("");
 
-  const canView =
-    !!me && (me.role?.toLowerCase() === "owner" || hasPermission(me, "manage_content"));
+  // 反馈队列仅站长可见可处理（后端 admin/feedback 仅 owner）
+  const canView = !!me && me.role?.toLowerCase() === "owner";
   const isOwner = me?.role?.toLowerCase() === "owner";
 
   const load = useCallback((status: FeedbackStatus | "", p: number) => {

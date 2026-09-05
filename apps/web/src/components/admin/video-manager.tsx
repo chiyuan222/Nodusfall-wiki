@@ -72,7 +72,7 @@ export function VideoManager() {
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const allowed =
-    !!me && (isAdminRole(me.role) || hasPermission(me, "manage_content"));
+    !!me && (isAdminRole(me.role) || hasPermission(me, "manage_video_board"));
 
   const load = useCallback((kind: VideoKind | "all") => {
     setLoading(true);
