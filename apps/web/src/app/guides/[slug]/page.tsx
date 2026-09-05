@@ -96,6 +96,8 @@ export default async function GuideDetailPage({
               likeCount={guide.likeCount}
               likedByMe={guide.likedByMe}
               bookmarkedByMe={guide.bookmarkedByMe}
+              dislikeCount={guide.dislikeCount}
+              dislikedByMe={guide.dislikedByMe}
             />
             <div className="flex flex-wrap items-center gap-2">
               <ContentActions

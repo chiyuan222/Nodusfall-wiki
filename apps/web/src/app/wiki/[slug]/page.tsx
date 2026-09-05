@@ -98,6 +98,8 @@ export default async function WikiPageDetail({
               likeCount={page.likeCount}
               likedByMe={page.likedByMe}
               bookmarkedByMe={page.bookmarkedByMe}
+              dislikeCount={page.dislikeCount}
+              dislikedByMe={page.dislikedByMe}
             />
             <div className="flex flex-wrap items-center gap-2">
               <ContentActions

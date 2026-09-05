@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { commentApi, type Comment } from "@/lib/api";
 import { request, type ListResult, type Pagination } from "@/lib/api-client";
@@ -14,10 +14,248 @@ import { Avatar } from "@/components/avatar";
 
 /**
  * 评论区（Wiki 条目 / 攻略共用，客户端组件）。
- * 数据：GET /<target>/<slug>/comments（分页）；发表/点赞/删除需登录。
+ * 数据：GET /<target>/<slug>/comments（顶层评论分页）；发表/点赞/删除需登录。
  * 首屏数据由服务端注入，后续分页与变更走客户端请求。
  * 契约 PR #51：normal 组 / muted / banned 仅浏览不显示发表框；作者位展示用户组与受限标识。
+ * 契约 PR #114：楼中楼回复——顶层卡片下「回复 N」展开回复区（正序分页 +
+ * 回复输入框），单层限制（回复不可再回复）；删除有回复的顶层评论前提示级联。
  */
+
+/** 评论作者行 + 操作按钮（顶层与回复共用） */
+function CommentMeta({
+  c,
+  me,
+  onLike,
+  onRemove,
+  extra,
+}: {
+  c: Comment;
+  me: ReturnType<typeof useMe>["me"];
+  onLike: (c: Comment) => void;
+  onRemove: (c: Comment) => void;
+  extra?: ReactNode;
+}) {
+  const canManage = me && (me.id === c.author.id || isAdminRole(me.role));
+  return (
+    <>
+      <div className="flex flex-wrap items-center gap-2">
+        <Avatar url={c.author.avatarUrl} name={authorName(c.author)} size="sm" />
+        <span className="text-small font-medium text-primary">
+          {authorName(c.author)}
+        </span>
+        <UserGroupBadge group={c.author.group} level={c.author.level} />
+        <SiteIdMark siteId={c.author.siteId} />
+        <UserStatusMark status={c.author.status} />
+        <time
+          dateTime={c.createdAt}
+          className="font-mono text-caption text-faint"
+        >
+          {new Date(c.createdAt).toLocaleString("zh-CN", {
+            dateStyle: "medium",
+            timeStyle: "short",
+          })}
+        </time>
+        <span className="grow" />
+        {extra}
+        <ReportButton targetType="comment" targetId={c.id} />
+        <ReportUserButton author={c.author} />
+        <button
+          type="button"
+          onClick={() => onLike(c)}
+          aria-pressed={c.likedByMe}
+          className={`rounded-sm border px-2 py-0.5 text-caption transition-colors duration-fast ${
+            c.likedByMe
+              ? "border-amber-soft text-amber"
+              : "border-border-subtle text-secondary hover:border-amber-soft hover:text-amber"
+          }`}
+        >
+          👍 {c.likeCount}
+        </button>
+        {canManage && (
+          <button
+            type="button"
+            onClick={() => onRemove(c)}
+            className="rounded-sm border border-border-subtle px-2 py-0.5 text-caption text-danger hover:border-danger"
+          >
+            删除
+          </button>
+        )}
+      </div>
+      <p className="mt-1.5 whitespace-pre-wrap text-body text-primary">
+        {c.content}
+      </p>
+    </>
+  );
+}
+
+/** 回复输入框（登录且可发言时渲染） */
+function ReplyEditor({
+  onSubmit,
+  posting,
+}: {
+  onSubmit: (content: string) => void;
+  posting: boolean;
+}) {
+  const [draft, setDraft] = useState("");
+  return (
+    <div className="mt-3">
+      <textarea
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        rows={2}
+        maxLength={2000}
+        placeholder="回复这条评论…"
+        className="w-full rounded-md border border-border-subtle bg-raised px-3 py-2 text-small text-primary placeholder:text-faint focus:border-amber-soft"
+      />
+      <div className="mt-1.5 flex justify-end">
+        <button
+          type="button"
+          onClick={() => {
+            const v = draft.trim();
+            if (v) onSubmit(v);
+          }}
+          disabled={posting || !draft.trim()}
+          className="rounded-md bg-amber px-4 py-1.5 text-caption font-medium text-amber-fg hover:opacity-90 disabled:opacity-40"
+        >
+          {posting ? "发表中…" : "发表回复"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** 单条顶层评论的回复区（展开后加载，契约 PR #114） */
+function ReplyThread({
+  parent,
+  me,
+  canReply,
+  onCountChange,
+  onError,
+}: {
+  parent: Comment;
+  me: ReturnType<typeof useMe>["me"];
+  canReply: boolean;
+  onCountChange: (delta: number) => void;
+  onError: (msg: string) => void;
+}) {
+  const [replies, setReplies] = useState<Comment[]>([]);
+  const [pagination, setPagination] = useState<Pagination | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [posting, setPosting] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  const load = useCallback(
+    (page: number) => {
+      if (loading) return;
+      setLoading(true);
+      commentApi
+        .replies(parent.id, page)
+        .then((r) => {
+          setReplies((prev) => (page === 1 ? r.data : [...prev, ...r.data]));
+          setPagination(r.pagination);
+          setLoaded(true);
+        })
+        .catch(() => onError("加载回复失败，请稍后重试。"))
+        .finally(() => setLoading(false));
+    },
+    [loading, parent.id, onError],
+  );
+
+  useEffect(() => {
+    if (!loaded) load(1);
+    // 仅在挂载时加载首页回复
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const likeReply = (c: Comment) => {
+    if (!getAccessToken()) {
+      onError("请先登录后再点赞。");
+      return;
+    }
+    const call = c.likedByMe ? commentApi.unlike : commentApi.like;
+    setReplies((prev) =>
+      prev.map((x) =>
+        x.id === c.id
+          ? {
+              ...x,
+              likedByMe: !x.likedByMe,
+              likeCount: x.likeCount + (x.likedByMe ? -1 : 1),
+            }
+          : x,
+      ),
+    );
+    call(c.id).catch(() => {
+      setReplies((prev) => prev.map((x) => (x.id === c.id ? c : x)));
+      onError("操作失败，请稍后重试。");
+    });
+  };
+
+  const removeReply = (c: Comment) => {
+    commentApi
+      .remove(c.id)
+      .then(() => {
+        setReplies((prev) => prev.filter((x) => x.id !== c.id));
+        onCountChange(-1);
+      })
+      .catch(() => onError("删除失败，请稍后重试。"));
+  };
+
+  const postReply = (content: string) => {
+    if (posting) return;
+    setPosting(true);
+    commentApi
+      .createReply(parent.id, content)
+      .then((created) => {
+        setReplies((prev) => [...prev, created]);
+        setPagination((p) => (p ? { ...p, total: p.total + 1 } : p));
+        onCountChange(1);
+      })
+      .catch((e: unknown) => {
+        if (e instanceof ApiError && e.status === 401) {
+          onError("登录已失效，请重新登录后再回复。");
+        } else if (e instanceof ApiError && e.status === 429) {
+          onError(`操作太频繁，请 ${e.retryAfter ?? "稍后"} 秒后再试。`);
+        } else {
+          onError("回复发表失败，请稍后重试。");
+        }
+      })
+      .finally(() => setPosting(false));
+  };
+
+  return (
+    <div className="mt-3 rounded-sm border-l-2 border-border-subtle pl-4">
+      {loading && !loaded ? (
+        <p className="py-2 font-mono text-caption text-faint">回复加载中…</p>
+      ) : replies.length === 0 ? (
+        <p className="py-2 font-mono text-caption text-faint">还没有回复。</p>
+      ) : (
+        <ol className="divide-y divide-border-subtle">
+          {replies.map((r) => (
+            <li key={r.id} className="py-3 first:pt-1">
+              <CommentMeta
+                c={r}
+                me={me}
+                onLike={likeReply}
+                onRemove={removeReply}
+              />
+            </li>
+          ))}
+        </ol>
+      )}
+      {pagination?.hasMore && (
+        <button
+          type="button"
+          onClick={() => load((pagination?.page ?? 1) + 1)}
+          disabled={loading}
+          className="mt-2 rounded-sm border border-border-subtle px-3 py-1 text-caption text-secondary hover:border-amber-soft hover:text-primary disabled:opacity-40"
+        >
+          {loading ? "加载中…" : "加载更多回复"}
+        </button>
+      )}
+      {canReply && <ReplyEditor onSubmit={postReply} posting={posting} />}
+    </div>
+  );
+}
 
 export function CommentSection({
   targetType,
@@ -36,6 +274,7 @@ export function CommentSection({
   const [draft, setDraft] = useState("");
   const [posting, setPosting] = useState(false);
   const [msg, setMsg] = useState("");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const { me, pending } = useMe();
   const loggedIn = !pending && !!me;
 
@@ -109,17 +348,30 @@ export function CommentSection({
   };
 
   const remove = (c: Comment) => {
+    if (
+      c.replyCount > 0 &&
+      !window.confirm(
+        `删除这条评论将同时移除其 ${c.replyCount} 条回复，确定删除吗？`,
+      )
+    ) {
+      return;
+    }
     commentApi
       .remove(c.id)
       .then(() => {
         setItems((prev) => prev.filter((x) => x.id !== c.id));
         setPagination((p) => ({ ...p, total: Math.max(0, p.total - 1) }));
+        if (expandedId === c.id) setExpandedId(null);
       })
       .catch(() => setMsg("删除失败，请稍后重试。"));
   };
 
-  const canManage = (c: Comment) =>
-    me && (me.id === c.author.id || isAdminRole(me.role));
+  const changeReplyCount = (id: string, delta: number) =>
+    setItems((prev) =>
+      prev.map((x) =>
+        x.id === id ? { ...x, replyCount: Math.max(0, x.replyCount + delta) } : x,
+      ),
+    );
 
   return (
     <section
@@ -188,51 +440,37 @@ export function CommentSection({
         <ol className="mt-6 divide-y divide-border-subtle">
           {items.map((c) => (
             <li key={c.id} className="py-4 first:pt-0 last:pb-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <Avatar url={c.author.avatarUrl} name={authorName(c.author)} size="sm" />
-                <span className="text-small font-medium text-primary">
-                  {authorName(c.author)}
-                </span>
-                <UserGroupBadge group={c.author.group} level={c.author.level} />
-                <SiteIdMark siteId={c.author.siteId} />
-                <UserStatusMark status={c.author.status} />
-                <time
-                  dateTime={c.createdAt}
-                  className="font-mono text-caption text-faint"
-                >
-                  {new Date(c.createdAt).toLocaleString("zh-CN", {
-                    dateStyle: "medium",
-                    timeStyle: "short",
-                  })}
-                </time>
-                <span className="grow" />
-                <ReportButton targetType="comment" targetId={c.id} />
-                <ReportUserButton author={c.author} />
-                <button
-                  type="button"
-                  onClick={() => toggleLike(c)}
-                  aria-pressed={c.likedByMe}
-                  className={`rounded-sm border px-2 py-0.5 text-caption transition-colors duration-fast ${
-                    c.likedByMe
-                      ? "border-amber-soft text-amber"
-                      : "border-border-subtle text-secondary hover:border-amber-soft hover:text-amber"
-                  }`}
-                >
-                  👍 {c.likeCount}
-                </button>
-                {canManage(c) && (
+              <CommentMeta
+                c={c}
+                me={me}
+                onLike={toggleLike}
+                onRemove={remove}
+                extra={
                   <button
                     type="button"
-                    onClick={() => remove(c)}
-                    className="rounded-sm border border-border-subtle px-2 py-0.5 text-caption text-danger hover:border-danger"
+                    onClick={() =>
+                      setExpandedId(expandedId === c.id ? null : c.id)
+                    }
+                    aria-expanded={expandedId === c.id}
+                    className={`rounded-sm border px-2 py-0.5 text-caption transition-colors duration-fast ${
+                      expandedId === c.id
+                        ? "border-amber-soft text-amber"
+                        : "border-border-subtle text-secondary hover:border-amber-soft hover:text-amber"
+                    }`}
                   >
-                    删除
+                    {c.replyCount > 0 ? `回复 ${c.replyCount}` : "回复"}
                   </button>
-                )}
-              </div>
-              <p className="mt-1.5 whitespace-pre-wrap text-body text-primary">
-                {c.content}
-              </p>
+                }
+              />
+              {expandedId === c.id && (
+                <ReplyThread
+                  parent={c}
+                  me={me}
+                  canReply={loggedIn && canPost(me)}
+                  onCountChange={(d) => changeReplyCount(c.id, d)}
+                  onError={setMsg}
+                />
+              )}
             </li>
           ))}
         </ol>
