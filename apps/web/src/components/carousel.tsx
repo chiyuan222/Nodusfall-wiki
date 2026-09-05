@@ -128,10 +128,11 @@ export function Carousel({
               )}
               {/* 文案区：有图片的帧标题留空即不叠加文字（不回退主标题/提示语）；
                   无图片的占位帧保留 emptyHint 提示。
-                  轮播标题与全站标题外观变量解耦（不加 .site-heading）：强制白字 +
-                  加强文字阴影，浅色主题（starlight/oracle）下对比度不受影响。 */}
+                  轮播标题与全站标题外观变量解耦（不加 .site-heading）：有图帧强制白字 +
+                  加强文字阴影；无图占位帧跟随主题文字色 + 浅底衬（浅色主题 oracle 下可读）。 */}
               {(() => {
-                const caption = slide?.image
+                const hasImage = !!slide?.image;
+                const caption = hasImage
                   ? slide?.title || ""
                   : slide?.title || emptyHint;
                 return (
@@ -141,10 +142,20 @@ export function Carousel({
                     }`}
                   >
                     {(caption || slide?.subtitle) && (
-                      <span className={`min-w-0 rounded-md bg-black/50 backdrop-blur-md ${compact ? "px-3 py-2" : "px-3.5 py-2.5"}`}>
+                      <span
+                        className={`min-w-0 rounded-md backdrop-blur-md ${
+                          hasImage
+                            ? "bg-black/50"
+                            : "border border-border-subtle bg-surface/85"
+                        } ${compact ? "px-3 py-2" : "px-3.5 py-2.5"}`}
+                      >
                         {caption && (
                           <span
-                            className={`block truncate font-serif font-semibold text-white [text-shadow:0_2px_10px_rgba(0,0,0,0.85)] ${
+                            className={`block truncate font-serif font-semibold ${
+                              hasImage
+                                ? "text-white [text-shadow:0_2px_10px_rgba(0,0,0,0.85)]"
+                                : "text-primary"
+                            } ${
                               compact ? "text-h3 sm:text-h2" : "text-h2 sm:text-h1"
                             }`}
                           >
@@ -152,7 +163,11 @@ export function Carousel({
                           </span>
                         )}
                         {slide?.subtitle && (
-                          <span className="mt-1 line-clamp-1 block text-small text-white/90">
+                          <span
+                            className={`mt-1 line-clamp-1 block text-small ${
+                              hasImage ? "text-white/90" : "text-secondary"
+                            }`}
+                          >
                             {slide.subtitle}
                           </span>
                         )}
