@@ -525,15 +525,15 @@ function DirectPane({ isOwner, myId }: { isOwner: boolean; myId: string }) {
           )}
         </div>
 
-        {/* 右栏：聊天窗（窄屏仅打开会话时显示） */}
-        <div className={`${activePeer ? "" : "hidden md:block"} min-w-0`}>
+        {/* 右栏：聊天窗（窄屏仅打开会话时显示）；撑满与左栏等高 */}
+        <div className={`${activePeer ? "" : "hidden md:flex"} min-w-0 md:flex md:flex-col`}>
           {!activePeer ? (
-            <div className="flex h-[26rem] flex-col items-center justify-center gap-2 text-center">
+            <div className="flex min-h-[26rem] grow flex-col items-center justify-center gap-2 text-center">
               <span aria-hidden className="font-serif text-h1 text-faint">✉</span>
               <p className="text-small text-faint">选择左侧会话开始聊天。</p>
             </div>
           ) : (
-            <div className="flex h-[26rem] flex-col">
+            <div className="flex min-h-[26rem] grow flex-col">
               {/* 聊天窗头部 */}
               <div className="flex items-center gap-2 border-b border-border-subtle px-4 py-2.5">
                 <button
