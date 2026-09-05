@@ -171,11 +171,27 @@ export class WikiService {
     page: number;
     perPage: number;
     sort?: 'updatedAt' | 'createdAt' | 'title';
-  }, userId?: string) {
+    mine?: boolean;
+  }, userId?: string, auth?: { role: string; permissions: string[] }) {
     const where: any = {};
+    const isManager = auth
+      ? hasBoardPermission(auth.role, auth.permissions, 'wiki')
+      : false;
     if (query.category) where.category = { slug: query.category };
     if (query.tag) where.tags = { has: query.tag };
-    if (query.status) where.status = query.status;
+    if (query.mine && userId) where.authorId = userId;
+    if (query.status) {
+      if (
+        !isManager &&
+        !(query.mine && userId) &&
+        query.status !== 'PUBLISHED'
+      ) {
+        throw new ForbiddenException('仅作者或板块管理可查看草稿/归档');
+      }
+      where.status = query.status;
+    } else if (!isManager && !query.mine) {
+      where.status = 'PUBLISHED';
+    }
     if (query.q) {
       where.OR = [
         { title: { contains: query.q, mode: 'insensitive' } },
@@ -265,7 +281,11 @@ export class WikiService {
     return pageDetail({ ...page, _count: { revisions: 1 } });
   }
 
-  async getPage(slug: string, userId?: string) {
+  async getPage(
+    slug: string,
+    userId?: string,
+    auth?: { role: string; permissions: string[] },
+  ) {
     await this.prisma.wikiPage.updateMany({
       where: { slug },
       data: { viewCount: { increment: 1 } },
@@ -275,6 +295,13 @@ export class WikiService {
       include: { author: true, category: true, _count: { select: { revisions: true } } },
     });
     if (!page) throw new NotFoundException('page not found');
+    if (
+      page.status !== 'PUBLISHED' &&
+      page.authorId !== userId &&
+      !(auth ? hasBoardPermission(auth.role, auth.permissions, 'wiki') : false)
+    ) {
+      throw new NotFoundException('page not found');
+    }
     const { likes, bookmarks, dislikes } = await this.pageInteractions([page.id], userId);
     return pageDetail(page, likes.has(page.id), bookmarks.has(page.id), dislikes.has(page.id));
   }

@@ -1,4 +1,5 @@
-import { IsIn, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsIn, IsOptional, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
 import { PaginationQueryDto } from '../../common/pagination';
 
 export class ListGuidesQueryDto extends PaginationQueryDto {
@@ -9,6 +10,11 @@ export class ListGuidesQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsString()
   category?: string;
+
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  mine?: boolean;
 
   @IsOptional()
   @IsString()
