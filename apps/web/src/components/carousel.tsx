@@ -104,10 +104,10 @@ export function Carousel({
               ) : (
                 <PlaceholderArt variant="banner" />
               )}
-              {/* 底部渐变，保证标题可读 */}
+              {/* 底部渐变：加深加高，保证叠加文字在复杂图片上也可读 */}
               <span
                 aria-hidden
-                className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/75 via-black/30 to-transparent"
+                className="absolute inset-x-0 bottom-0 h-3/4 bg-gradient-to-t from-black/85 via-black/45 to-transparent"
               />
               {/* 角标 */}
               {slide?.badge && (
@@ -116,7 +116,8 @@ export function Carousel({
                 </span>
               )}
               {/* 文案区：有图片的帧标题留空即不叠加文字（不回退主标题/提示语）；
-                  无图片的占位帧保留 emptyHint 提示 */}
+                  无图片的占位帧保留 emptyHint 提示。
+                  标题与副标题统一压在半透明磨砂底衬上，与任何图片保持区分度。 */}
               {(() => {
                 const caption = slide?.image
                   ? slide?.title || ""
@@ -124,14 +125,14 @@ export function Carousel({
                 return (
                   <span className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 p-5 sm:p-6">
                     {(caption || slide?.subtitle) && (
-                      <span className="min-w-0">
+                      <span className="min-w-0 rounded-md bg-black/50 px-3.5 py-2.5 backdrop-blur-md">
                         {caption && (
-                          <span className="site-heading block truncate font-serif text-h2 font-semibold text-white drop-shadow sm:text-h1">
+                          <span className="site-heading block truncate font-serif text-h2 font-semibold text-white [text-shadow:0_1px_6px_rgba(0,0,0,0.7)] sm:text-h1">
                             {caption}
                           </span>
                         )}
                         {slide?.subtitle && (
-                          <span className="mt-1 line-clamp-1 block text-small text-white/80">
+                          <span className="mt-1 line-clamp-1 block text-small text-white/90">
                             {slide.subtitle}
                           </span>
                         )}
@@ -139,7 +140,7 @@ export function Carousel({
                     )}
                     <span
                       aria-hidden
-                      className="shrink-0 font-mono text-caption tracking-[0.3em] text-white/70"
+                      className="shrink-0 rounded-sm bg-black/40 px-2 py-1 font-mono text-caption tracking-[0.3em] text-white/80 backdrop-blur-sm"
                     >
                       {String(i + 1).padStart(2, "0")} / {String(CAROUSEL_SLOTS).padStart(2, "0")}
                     </span>
