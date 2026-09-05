@@ -467,6 +467,50 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
+  /feedback:
+    post:
+      tags: [Feedback]
+      operationId: createFeedback
+      summary: 提交意见反馈（问题反馈/功能建议/内容申诉/其他）
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        $ref: "#/components/requestBodies/CreateFeedbackRequest"
+      responses:
+        "201":
+          description: 提交成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/FeedbackItem"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /users/me/feedback:
+    get:
+      tags: [Feedback]
+      operationId: listMyFeedback
+      summary: 我的反馈记录（含站长回复，分页）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+      responses:
+        "200":
+          description: 反馈列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeedbackList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
   /users/me/messages:
     get:
       tags: [Users]
@@ -586,6 +630,206 @@ paths:
           description: 已全部标记
         "401":
           $ref: "#/components/responses/Unauthorized"
+
+  /admin/feedback:
+    get:
+      tags: [Admin]
+      operationId: listAdminFeedback
+      summary: 反馈队列（仅站长或具备 manage_content 的管理员）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+        - name: status
+          in: query
+          schema: { type: string, enum: [PENDING, REPLIED, CLOSED] }
+      responses:
+        "200":
+          description: 反馈列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeedbackList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /admin/feedback/{feedbackId}:
+    patch:
+      tags: [Admin]
+      operationId: handleFeedback
+      summary: 回复/关闭反馈（仅站长；回复后站内信通知提交人）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: feedbackId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [REPLIED, CLOSED]
+                replyText:
+                  type: string
+                  maxLength: 1000
+                  description: REPLIED 时必填，作为站内信回复内容
+      responses:
+        "200":
+          description: 处理结果
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/FeedbackItem"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /users/me/announcements:
+    get:
+      tags: [Users]
+      operationId: listMyAnnouncements
+      summary: 我的公告（分页，含已读状态）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+      responses:
+        "200":
+          description: 公告列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /users/me/announcements/read-all:
+    post:
+      tags: [Users]
+      operationId: markAnnouncementsRead
+      summary: 公告全部标记已读（进入公告页后调用）
+      security: [{ bearerAuth: [] }]
+      responses:
+        "204":
+          description: 已标记
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /users/me/conversations:
+    get:
+      tags: [Users]
+      operationId: listConversations
+      summary: 私信会话列表（按最后消息时间倒序，含对方摘要/未读数/最后消息）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+      responses:
+        "200":
+          description: 会话列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConversationList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /users/me/conversations/{peerId}:
+    get:
+      tags: [Users]
+      operationId: listConversationMessages
+      summary: 与指定用户的私信记录（时间倒序分页）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: peerId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+      responses:
+        "200":
+          description: 私信列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DirectMessageList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [Users]
+      operationId: sendConversationMessage
+      summary: 发送私信（普通用户仅可发给站长；站长可主动私信任意用户；禁止发给本人）
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+                  minLength: 1
+                  maxLength: 1000
+      responses:
+        "201":
+          description: 发送成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/DirectMessageItem"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /users/me/conversations/{peerId}/read:
+    post:
+      tags: [Users]
+      operationId: markConversationRead
+      summary: 将该会话中对方发来的消息全部标记已读
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: peerId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204":
+          description: 已标记
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /admin/announcements:
     get:
@@ -2497,6 +2741,21 @@ components:
             properties:
               recipientId: { type: string, format: uuid }
               content: { type: string, maxLength: 2000 }
+    CreateFeedbackRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [category, content]
+            properties:
+              category:
+                type: string
+                enum: [bug, suggestion, appeal, other]
+              content:
+                type: string
+                minLength: 2
+                maxLength: 1000
     CreateAnnouncementRequest:
       required: true
       content:
@@ -3573,6 +3832,93 @@ components:
       required: [unread]
       properties:
         unread: { type: integer }
+
+    DirectMessageItem:
+      type: object
+      required: [id, sender, content, createdAt, readAt]
+      properties:
+        id: { type: string, format: uuid }
+        sender:
+          $ref: "#/components/schemas/UserSummary"
+        content: { type: string }
+        createdAt: { type: string, format: date-time }
+        readAt: { type: [string, "null"], format: date-time }
+
+    DirectMessageList:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/DirectMessageItem"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+
+    ConversationItem:
+      type: object
+      required: [peer, unreadCount, updatedAt]
+      properties:
+        peer:
+          $ref: "#/components/schemas/UserSummary"
+        unreadCount:
+          type: integer
+          description: 我方未读条数
+        lastMessage:
+          nullable: true
+          type: object
+          properties:
+            senderId: { type: string, format: uuid }
+            content: { type: string }
+            createdAt: { type: string, format: date-time }
+        updatedAt:
+          type: string
+          format: date-time
+          description: 最后消息时间；无消息时为会话创建时间
+
+    ConversationList:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConversationItem"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+
+    FeedbackItem:
+      type: object
+      required: [id, category, content, status, createdAt, author]
+      properties:
+        id: { type: string, format: uuid }
+        category:
+          type: string
+          enum: [bug, suggestion, appeal, other]
+        content: { type: string }
+        status:
+          type: string
+          enum: [PENDING, REPLIED, CLOSED]
+        replyText: { type: [string, "null"] }
+        author:
+          $ref: "#/components/schemas/UserSummary"
+        createdAt: { type: string, format: date-time }
+        repliedAt: { type: [string, "null"], format: date-time }
+        handledBy:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/UserSummary"
+
+    FeedbackList:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/FeedbackItem"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
 
     CheckInStatus:
       type: object
