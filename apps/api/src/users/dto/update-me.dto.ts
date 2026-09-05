@@ -1,4 +1,26 @@
-import { IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  IsBoolean,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+  ValidateNested,
+} from 'class-validator';
+
+export class ProfilePrivacyDto {
+  @IsOptional()
+  @IsBoolean()
+  showThreads?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  showComments?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  showBookmarks?: boolean;
+}
 
 export class UpdateMeDto {
   @IsOptional()
@@ -18,4 +40,9 @@ export class UpdateMeDto {
   @IsString()
   @MaxLength(500)
   bio?: string;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ProfilePrivacyDto)
+  privacy?: ProfilePrivacyDto;
 }

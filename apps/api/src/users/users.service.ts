@@ -1,11 +1,12 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { User } from '@prisma/client';
+import { Prisma, User } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailCodeService } from '../auth/email-code.service';
@@ -41,11 +42,24 @@ export interface UserSummary {
   level: number;
 }
 
+export interface ProfilePrivacy {
+  showThreads: boolean;
+  showComments: boolean;
+  showBookmarks: boolean;
+}
+
+export interface PublicUserProfile extends UserSummary {
+  bio: string | null;
+  updatedAt: Date;
+  privacy: ProfilePrivacy;
+}
+
 export interface UserResponse extends UserSummary {
   bio: string | null;
   updatedAt: Date;
   emailMasked: string | null;
   phoneMasked: string | null;
+  privacy: ProfilePrivacy;
   permissions: string[];
   wikiCreateGranted: boolean;
   guideCreateGranted: boolean;
@@ -79,6 +93,7 @@ export function toUserResponse(user: User): UserResponse {
     updatedAt: user.updatedAt,
     emailMasked: maskEmail(user.email),
     phoneMasked: maskPhone(user.phone),
+    privacy: toProfilePrivacy(user),
     permissions: effectivePermissions(user.role, user.permissions),
     wikiCreateGranted: user.wikiCreateGranted,
     guideCreateGranted: user.guideCreateGranted,
@@ -88,6 +103,23 @@ export function toUserResponse(user: User): UserResponse {
     mutedUntil: user.mutedUntil,
     exp: user.exp,
     nextLevelExp: nextLevelExp(levelFromExp(user.exp)),
+  };
+}
+
+export function toPublicUserProfile(user: User): PublicUserProfile {
+  return {
+    ...toUserSummary(user),
+    bio: user.bio,
+    updatedAt: user.updatedAt,
+    privacy: toProfilePrivacy(user),
+  };
+}
+
+function toProfilePrivacy(user: User): ProfilePrivacy {
+  return {
+    showThreads: user.showThreads,
+    showComments: user.showComments,
+    showBookmarks: user.showBookmarks,
   };
 }
 
@@ -135,6 +167,11 @@ export class UsersService {
     displayName?: string;
     avatarUrl?: string;
     bio?: string;
+    privacy?: {
+      showThreads?: boolean;
+      showComments?: boolean;
+      showBookmarks?: boolean;
+    };
   }): Promise<User> {
     if (data.displayName !== undefined) {
       await this.textFilter.assertSafe(data.displayName);
@@ -142,7 +179,44 @@ export class UsersService {
     if (data.bio !== undefined) {
       await this.textFilter.assertSafe(data.bio);
     }
-    return this.prisma.user.update({ where: { id }, data });
+    const updateData: Prisma.UserUpdateInput = {};
+    if (data.displayName !== undefined) updateData.displayName = data.displayName;
+    if (data.avatarUrl !== undefined) updateData.avatarUrl = data.avatarUrl;
+    if (data.bio !== undefined) updateData.bio = data.bio;
+    if (data.privacy) {
+      if (data.privacy.showThreads !== undefined) {
+        updateData.showThreads = data.privacy.showThreads;
+      }
+      if (data.privacy.showComments !== undefined) {
+        updateData.showComments = data.privacy.showComments;
+      }
+      if (data.privacy.showBookmarks !== undefined) {
+        updateData.showBookmarks = data.privacy.showBookmarks;
+      }
+    }
+    return this.prisma.user.update({ where: { id }, data: updateData });
+  }
+
+  async getPublicProfile(userId: string): Promise<PublicUserProfile> {
+    const user = await this.findById(userId);
+    if (!user || user.status === 'BANNED' || user.status === 'DELETED') {
+      throw new NotFoundException('user not found or unavailable');
+    }
+    return toPublicUserProfile(user);
+  }
+
+  async assertPublicSectionVisible(
+    targetUserId: string,
+    section: keyof ProfilePrivacy,
+    viewerId?: string,
+  ): Promise<void> {
+    const user = await this.findById(targetUserId);
+    if (!user || user.status === 'BANNED' || user.status === 'DELETED') {
+      throw new NotFoundException('user not found or unavailable');
+    }
+    if (viewerId !== targetUserId && !user[section]) {
+      throw new ForbiddenException('该用户未公开此栏目');
+    }
   }
 
   async register(dto: RegisterDto): Promise<User> {
@@ -229,7 +303,59 @@ export class UsersService {
   }
 
   async myComments(userId: string, page: number, perPage: number) {
-    const where = { authorId: userId };
+    return this.listComments(userId, page, perPage, false);
+  }
+
+  async userComments(userId: string, page: number, perPage: number) {
+    return this.listComments(userId, page, perPage, true);
+  }
+
+  private async listComments(
+    userId: string,
+    page: number,
+    perPage: number,
+    visibleTargetsOnly: boolean,
+  ) {
+    let where: Prisma.CommentWhereInput = { authorId: userId };
+    if (visibleTargetsOnly) {
+      const distinctTargets = await this.prisma.comment.findMany({
+        where: { authorId: userId },
+        select: { targetType: true, targetId: true },
+        distinct: ['targetType', 'targetId'],
+      });
+      const wikiIds = distinctTargets
+        .filter((t) => t.targetType === 'WIKI_PAGE')
+        .map((t) => t.targetId);
+      const guideIds = distinctTargets
+        .filter((t) => t.targetType === 'GUIDE')
+        .map((t) => t.targetId);
+      const [wikiVisible, guideVisible] = await Promise.all([
+        wikiIds.length
+          ? this.prisma.wikiPage.findMany({
+              where: { id: { in: wikiIds }, status: 'PUBLISHED' },
+              select: { id: true },
+            })
+          : Promise.resolve([]),
+        guideIds.length
+          ? this.prisma.guide.findMany({
+              where: { id: { in: guideIds }, status: 'PUBLISHED' },
+              select: { id: true },
+            })
+          : Promise.resolve([]),
+      ]);
+      const visibleWikiIds = wikiVisible.map((p) => p.id);
+      const visibleGuideIds = guideVisible.map((g) => g.id);
+      if (visibleWikiIds.length === 0 && visibleGuideIds.length === 0) {
+        return { data: [], pagination: pageInfo(page, perPage, 0) };
+      }
+      where = {
+        authorId: userId,
+        OR: [
+          { targetType: 'WIKI_PAGE', targetId: { in: visibleWikiIds } },
+          { targetType: 'GUIDE', targetId: { in: visibleGuideIds } },
+        ],
+      };
+    }
     const [total, comments] = await this.prisma.$transaction([
       this.prisma.comment.count({ where }),
       this.prisma.comment.findMany({

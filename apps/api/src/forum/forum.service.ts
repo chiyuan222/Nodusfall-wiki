@@ -537,4 +537,97 @@ export class ForumService {
       pagination: pageInfo(page, perPage, total),
     };
   }
+
+  async userThreads(
+    targetUserId: string,
+    page: number,
+    perPage: number,
+    viewerId?: string,
+  ) {
+    const where = { authorId: targetUserId };
+    const [total, threads] = await this.prisma.$transaction([
+      this.prisma.forumThread.count({ where }),
+      this.prisma.forumThread.findMany({
+        where,
+        orderBy: { updatedAt: 'desc' },
+        skip: (page - 1) * perPage,
+        take: perPage,
+        include: { author: true, board: true },
+      }),
+    ]);
+    const ids = threads.map((t) => t.id);
+    const { bookmarkRows, likeRows } = await this.viewerThreadStates(ids, viewerId);
+    const viewerBookmarks = new Set(bookmarkRows.map((b) => b.threadId));
+    const viewerLikes = new Set(likeRows.map((l) => l.threadId));
+    return {
+      data: threads.map((thread) => ({
+        ...threadSummary(
+          thread,
+          viewerLikes.has(thread.id),
+          viewerBookmarks.has(thread.id),
+        ),
+        boardSlug: thread.board.slug,
+      })),
+      pagination: pageInfo(page, perPage, total),
+    };
+  }
+
+  async userBookmarks(
+    targetUserId: string,
+    page: number,
+    perPage: number,
+    viewerId?: string,
+  ) {
+    const where = { userId: targetUserId };
+    const [total, bookmarks] = await this.prisma.$transaction([
+      this.prisma.forumThreadBookmark.count({ where }),
+      this.prisma.forumThreadBookmark.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * perPage,
+        take: perPage,
+        include: {
+          thread: { include: { author: true, board: true } },
+        },
+      }),
+    ]);
+    const ids = bookmarks.map((b) => b.threadId);
+    const { bookmarkRows, likeRows } = await this.viewerThreadStates(ids, viewerId);
+    const viewerBookmarks = new Set(bookmarkRows.map((b) => b.threadId));
+    const viewerLikes = new Set(likeRows.map((l) => l.threadId));
+    return {
+      data: bookmarks.map((bookmark) => ({
+        ...threadSummary(
+          bookmark.thread,
+          viewerLikes.has(bookmark.threadId),
+          viewerBookmarks.has(bookmark.threadId),
+        ),
+        boardSlug: bookmark.thread.board.slug,
+      })),
+      pagination: pageInfo(page, perPage, total),
+    };
+  }
+
+  private async viewerThreadStates(
+    threadIds: string[],
+    viewerId?: string,
+  ): Promise<{
+    bookmarkRows: { threadId: string }[];
+    likeRows: { threadId: string }[];
+  }> {
+    if (!viewerId || threadIds.length === 0) {
+      return { bookmarkRows: [], likeRows: [] };
+    }
+    const [bookmarkRows, likeRows] = await Promise.all([
+      this.prisma.forumThreadBookmark.findMany({
+        where: { userId: viewerId, threadId: { in: threadIds } },
+        select: { threadId: true },
+      }),
+      this.prisma.forumThreadLike.findMany({
+        where: { userId: viewerId, threadId: { in: threadIds } },
+        select: { threadId: true },
+      }),
+    ]);
+    return { bookmarkRows, likeRows };
+  }
 }
