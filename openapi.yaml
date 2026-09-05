@@ -1335,6 +1335,96 @@ paths:
         "409":
           $ref: "#/components/responses/Conflict"
 
+  /guides/categories:
+    get:
+      tags: [Guides]
+      operationId: listGuideCategories
+      summary: 获取攻略分类
+      security: []
+      responses:
+        "200":
+          description: 分类列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GuideCategoryList"
+
+  /admin/guides/categories:
+    post:
+      tags: [Guides]
+      operationId: createGuideCategory
+      summary: 新建攻略分类（攻略板块管理）
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        $ref: "#/components/requestBodies/AdminGuideCategoryCreate"
+      responses:
+        "201":
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/GuideCategory"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /admin/guides/categories/{slug}:
+    patch:
+      tags: [Guides]
+      operationId: updateGuideCategory
+      summary: 更新攻略分类（攻略板块管理）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Slug"
+      requestBody:
+        $ref: "#/components/requestBodies/AdminGuideCategoryUpdate"
+      responses:
+        "200":
+          description: 更新后的分类
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/GuideCategory"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+    delete:
+      tags: [Guides]
+      operationId: deleteGuideCategory
+      summary: 删除攻略分类（攻略板块管理，非空返回 409）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Slug"
+      responses:
+        "204":
+          description: 已删除
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
   /admin/forum/boards:
     post:
       tags: [Forum]
@@ -1674,6 +1764,10 @@ paths:
         - name: tag
           in: query
           schema: { type: string }
+        - name: category
+          in: query
+          schema: { type: string }
+          description: 攻略分类 slug 筛选
         - name: q
           in: query
           schema: { type: string }
@@ -2842,6 +2936,28 @@ components:
               name: { type: string, maxLength: 64 }
               description: { type: string }
               sortOrder: { type: integer }
+    AdminGuideCategoryCreate:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [slug, name, sortOrder]
+            properties:
+              slug: { type: string, pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$" }
+              name: { type: string, maxLength: 64 }
+              description: { type: string }
+              sortOrder: { type: integer }
+    AdminGuideCategoryUpdate:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              name: { type: string, maxLength: 64 }
+              description: { type: string }
+              sortOrder: { type: integer }
     AdminForumBoardCreate:
       required: true
       content:
@@ -3185,6 +3301,10 @@ components:
                 type: string
                 pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$"
               content: { type: string }
+              categorySlug:
+                type: string
+                pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                description: 攻略分类 slug（可选；缺省归默认分类）
               tags:
                 type: array
                 items: { type: string }
@@ -3204,6 +3324,9 @@ components:
             properties:
               title: { type: string }
               content: { type: string }
+              categorySlug:
+                type: string
+                pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$"
               tags:
                 type: array
                 items: { type: string }
@@ -3716,6 +3839,25 @@ components:
           items:
             $ref: "#/components/schemas/WikiCategory"
 
+    GuideCategory:
+      type: object
+      required: [id, slug, name, sortOrder]
+      properties:
+        id: { type: string, format: uuid }
+        slug: { type: string }
+        name: { type: string }
+        description: { type: string }
+        sortOrder: { type: integer }
+
+    GuideCategoryList:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/GuideCategory"
+
     WikiPageSummary:
       type: object
       required: [id, slug, title, excerpt, coverImage, categorySlug, tags, status, author, updatedAt, viewCount, likeCount, likedByMe, bookmarkedByMe, dislikeCount, dislikedByMe]
@@ -3792,13 +3934,14 @@ components:
 
     GuideSummary:
       type: object
-      required: [id, slug, title, excerpt, coverImage, tags, status, author, rating, updatedAt, viewCount, likeCount, likedByMe, bookmarkedByMe, dislikeCount, dislikedByMe]
+      required: [id, slug, title, excerpt, coverImage, categorySlug, tags, status, author, rating, updatedAt, viewCount, likeCount, likedByMe, bookmarkedByMe, dislikeCount, dislikedByMe]
       properties:
         id: { type: string, format: uuid }
         slug: { type: string }
         title: { type: string }
         excerpt: { type: string }
         coverImage: { type: [string, "null"], format: uri }
+        categorySlug: { type: [string, "null"], description: 攻略分类 slug（未分类为 null） }
         tags:
           type: array
           items: { type: string }
