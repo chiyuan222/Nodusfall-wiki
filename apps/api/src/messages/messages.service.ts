@@ -127,6 +127,27 @@ export class MessagesService {
     }
   }
 
+  /**
+   * 账号状态变更站内通知（管理端操作触发）。
+   * 直接写入 DirectMessage 而不走 send() 的「仅站长可私信」约束：
+   * 该方法仅供后端管理流程内部调用，不暴露为可随意私信用户的通道。
+   */
+  async notifyUserChange(operatorId: string, recipientId: string, content: string) {
+    const msg = await this.prisma.directMessage.create({
+      data: { senderId: operatorId, recipientId, content },
+      include: { sender: true },
+    });
+    return {
+      id: msg.id,
+      kind: 'direct' as const,
+      sender: toUserSummary(msg.sender),
+      title: null,
+      content: msg.content,
+      createdAt: msg.createdAt,
+      readAt: msg.readAt,
+    };
+  }
+
   async createAnnouncement(ownerId: string, dto: { title: string; content: string }) {
     const a = await this.prisma.announcement.create({
       data: { authorId: ownerId, title: dto.title, content: dto.content },
