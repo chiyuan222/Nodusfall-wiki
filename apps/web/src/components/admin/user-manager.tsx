@@ -59,6 +59,13 @@ export function UserManager() {
   const allowed = me && hasPermission(me, "manage_users");
   const assignable = assignableRoles(me?.role);
 
+  // 支持 /admin/users?q=xxx 预填搜索（如他人主页「用户管理」入口跳入）
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const q0 = new URLSearchParams(window.location.search).get("q");
+    if (q0) setQ(q0);
+  }, []);
+
   const load = useCallback(
     (p: number) => {
       setLoading(true);

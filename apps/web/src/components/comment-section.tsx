@@ -11,6 +11,7 @@ import { useMe, canPost, isAdminRole, hasPermission } from "@/lib/me";
 import { UserGroupBadge, UserStatusMark, SiteIdMark } from "@/components/user-marks";
 import { ReportEntry } from "@/components/report-button";
 import { Avatar } from "@/components/avatar";
+import { UserLink } from "@/components/user-link";
 
 /**
  * 评论区（Wiki 条目 / 攻略共用，客户端组件）。
@@ -39,10 +40,12 @@ function CommentMeta({
   return (
     <>
       <div className="flex flex-wrap items-center gap-2">
-        <Avatar url={c.author.avatarUrl} name={authorName(c.author)} size="sm" />
-        <span className="text-small font-medium text-primary">
-          {authorName(c.author)}
-        </span>
+        <UserLink user={c.author} className="flex items-center gap-2">
+          <Avatar url={c.author.avatarUrl} name={authorName(c.author)} size="sm" />
+          <span className="text-small font-medium text-primary">
+            {authorName(c.author)}
+          </span>
+        </UserLink>
         <UserGroupBadge group={c.author.group} level={c.author.level} />
         <SiteIdMark siteId={c.author.siteId} />
         <UserStatusMark status={c.author.status} />

@@ -12,6 +12,7 @@ import { authorName } from "@/lib/author";
 import { UserGroupBadge, UserStatusMark, SiteIdMark } from "@/components/user-marks";
 import { ReportEntry } from "@/components/report-button";
 import { Avatar } from "@/components/avatar";
+import { UserLink } from "@/components/user-link";
 
 export const dynamic = "force-dynamic";
 
@@ -85,8 +86,10 @@ export default async function ThreadPage({
           <h1 className="font-serif text-display font-semibold">{thread.title}</h1>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-caption text-faint">
             <span className="flex items-center gap-2">
-              <Avatar url={thread.author.avatarUrl} name={authorName(thread.author)} size="sm" />
-              {authorName(thread.author)}
+              <UserLink user={thread.author} className="flex items-center gap-2 text-secondary">
+                <Avatar url={thread.author.avatarUrl} name={authorName(thread.author)} size="sm" />
+                {authorName(thread.author)}
+              </UserLink>
               <UserGroupBadge group={thread.author.group} level={thread.author.level} />
               <SiteIdMark siteId={thread.author.siteId} />
               <UserStatusMark status={thread.author.status} />

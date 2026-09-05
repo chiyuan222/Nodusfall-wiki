@@ -11,6 +11,7 @@ import { InteractionBar } from "@/components/interaction-bar";
 import { ContentActions } from "@/components/content-actions";
 import { authorName } from "@/lib/author";
 import { SiteIdMark } from "@/components/user-marks";
+import { UserLink } from "@/components/user-link";
 import { ReportEntry } from "@/components/report-button";
 
 async function loadPage(slug: string): Promise<WikiPage> {
@@ -81,7 +82,9 @@ export default async function WikiPageDetail({
           <header className="space-y-4">
             <h1 className="font-serif text-display font-semibold">{page.title}</h1>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-caption text-faint">
-              <span>{authorName(page.author)}</span>
+              <UserLink user={page.author} className="text-secondary">
+                {authorName(page.author)}
+              </UserLink>
               <SiteIdMark siteId={page.author.siteId} />
               <span aria-hidden>·</span>
               <time dateTime={page.updatedAt}>
