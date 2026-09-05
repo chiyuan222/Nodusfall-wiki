@@ -1088,7 +1088,9 @@ paths:
           schema: { type: string, enum: [normal, verified, premium] }
         - name: role
           in: query
-          schema: { type: string, enum: [guest, member, editor, moderator, admin, owner] }
+          schema:
+            type: string
+            enum: [member, wiki_editor, guide_editor, video_editor, wiki_moderator, guide_moderator, forum_moderator, video_moderator, admin, owner]
         - name: status
           in: query
           schema: { type: string, enum: [active, muted, banned, deleted] }
