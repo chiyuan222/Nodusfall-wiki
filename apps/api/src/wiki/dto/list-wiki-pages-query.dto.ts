@@ -1,4 +1,5 @@
-import { IsIn, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsIn, IsOptional, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
 import { PaginationQueryDto } from '../../common/pagination';
 
 export class ListWikiPagesQueryDto extends PaginationQueryDto {
@@ -21,4 +22,9 @@ export class ListWikiPagesQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsIn(['updatedAt', 'createdAt', 'title'])
   sort?: 'updatedAt' | 'createdAt' | 'title';
+
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  mine?: boolean;
 }

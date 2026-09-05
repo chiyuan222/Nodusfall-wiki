@@ -33,7 +33,7 @@ interface AuthenticatedRequest extends Request {
 }
 
 interface OptionalRequest extends Request {
-  user?: { sub: string };
+  user?: { sub: string; role: string; permissions: string[] };
 }
 
 @Controller('wiki')
@@ -56,7 +56,10 @@ export class WikiController {
       page: query.page,
       perPage: query.perPage,
       sort: query.sort,
-    }, req.user?.sub);
+      mine: query.mine,
+    }, req.user?.sub, req.user
+      ? { role: req.user.role, permissions: req.user.permissions }
+      : undefined);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -75,7 +78,11 @@ export class WikiController {
   @Get('pages/:slug')
   @UseGuards(OptionalJwtAuthGuard)
   getPage(@Req() req: OptionalRequest, @Param('slug') slug: string) {
-    return this.wikiService.getPage(slug, req.user?.sub).then((data) => ({ data }));
+    return this.wikiService
+      .getPage(slug, req.user?.sub, req.user
+        ? { role: req.user.role, permissions: req.user.permissions }
+        : undefined)
+      .then((data) => ({ data }));
   }
 
   @UseGuards(JwtAuthGuard)

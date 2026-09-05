@@ -35,7 +35,7 @@ interface AuthenticatedRequest extends Request {
 }
 
 interface OptionalRequest extends Request {
-  user?: { sub: string };
+  user?: { sub: string; role: string; permissions: string[] };
 }
 
 @Controller('guides')
@@ -53,7 +53,10 @@ export class GuidesController {
       sort: query.sort,
       page: query.page,
       perPage: query.perPage,
-    }, req.user?.sub);
+      mine: query.mine,
+    }, req.user?.sub, req.user
+      ? { role: req.user.role, permissions: req.user.permissions }
+      : undefined);
   }
 
   @Get('categories')
@@ -78,7 +81,11 @@ export class GuidesController {
   @Get(':slug')
   @UseGuards(OptionalJwtAuthGuard)
   get(@Req() req: OptionalRequest, @Param('slug') slug: string) {
-    return this.guidesService.get(slug, req.user?.sub).then((data) => ({ data }));
+    return this.guidesService
+      .get(slug, req.user?.sub, req.user
+        ? { role: req.user.role, permissions: req.user.permissions }
+        : undefined)
+      .then((data) => ({ data }));
   }
 
   @UseGuards(JwtAuthGuard)

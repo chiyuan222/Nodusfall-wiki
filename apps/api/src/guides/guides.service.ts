@@ -99,11 +99,27 @@ export class GuidesService {
     sort?: 'rating' | 'updatedAt' | 'createdAt';
     page: number;
     perPage: number;
-  }, userId?: string) {
+    mine?: boolean;
+  }, userId?: string, auth?: { role: string; permissions: string[] }) {
     const where: any = {};
+    const isManager = auth
+      ? hasBoardPermission(auth.role, auth.permissions, 'guide')
+      : false;
     if (query.tag) where.tags = { has: query.tag };
     if (query.category) where.category = { slug: query.category };
-    if (query.status) where.status = query.status;
+    if (query.mine && userId) where.authorId = userId;
+    if (query.status) {
+      if (
+        !isManager &&
+        !(query.mine && userId) &&
+        query.status !== 'PUBLISHED'
+      ) {
+        throw new ForbiddenException('仅作者或板块管理可查看草稿/归档');
+      }
+      where.status = query.status;
+    } else if (!isManager && !query.mine) {
+      where.status = 'PUBLISHED';
+    }
     if (query.q) {
       where.OR = [
         { title: { contains: query.q, mode: 'insensitive' } },
@@ -200,7 +216,11 @@ export class GuidesService {
     return detail(guide);
   }
 
-  async get(slug: string, userId?: string) {
+  async get(
+    slug: string,
+    userId?: string,
+    auth?: { role: string; permissions: string[] },
+  ) {
     await this.prisma.guide.updateMany({
       where: { slug },
       data: { viewCount: { increment: 1 } },
@@ -210,6 +230,13 @@ export class GuidesService {
       include: { author: true, category: true },
     });
     if (!guide) throw new NotFoundException('guide not found');
+    if (
+      guide.status !== 'PUBLISHED' &&
+      guide.authorId !== userId &&
+      !(auth ? hasBoardPermission(auth.role, auth.permissions, 'guide') : false)
+    ) {
+      throw new NotFoundException('guide not found');
+    }
     const { likes, bookmarks, dislikes } = await this.interactions([guide.id], userId);
     return detail(guide, likes.has(guide.id), bookmarks.has(guide.id), dislikes.has(guide.id));
   }
