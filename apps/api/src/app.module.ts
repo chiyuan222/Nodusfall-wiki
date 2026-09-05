@@ -20,6 +20,7 @@ import { SiteModule } from './site/site.module';
 import { ExpModule } from './exp/exp.module';
 import { AuditModule } from './audit/audit.module';
 import { ModerationModule } from './moderation/moderation.module';
+import { FeedbackModule } from './feedback/feedback.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { ModerationModule } from './moderation/moderation.module';
     ExpModule,
     AuditModule,
     ModerationModule,
+    FeedbackModule,
   ],
 })
 export class AppModule implements NestModule {
