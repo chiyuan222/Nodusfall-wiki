@@ -383,9 +383,9 @@ function DirectPane({ isOwner, myId }: { isOwner: boolean; myId: string }) {
         ref={listRef}
         className="overflow-hidden rounded-md border border-border-subtle bg-surface md:grid md:grid-cols-[280px_1fr]"
       >
-        {/* 左栏：会话列表（窄屏在打开会话时隐藏） */}
+        {/* 左栏：会话列表（窄屏在打开会话时隐藏）；超长时独立滚动（≤70vh） */}
         <div
-          className={`border-border-subtle md:border-r ${
+          className={`border-border-subtle md:max-h-[70vh] md:overflow-y-auto md:border-r ${
             activePeer ? "hidden md:block" : ""
           }`}
         >
