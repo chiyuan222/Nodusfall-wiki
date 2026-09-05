@@ -544,14 +544,19 @@ function DirectPane({ isOwner, myId }: { isOwner: boolean; myId: string }) {
                 >
                   ← 会话列表
                 </button>
-                <Avatar
-                  url={activePeer.avatarUrl}
-                  name={nameOf(activePeer)}
-                  size="sm"
-                />
-                <span className="text-small font-medium text-primary">
-                  {nameOf(activePeer)}
-                </span>
+                <Link
+                  href={`/users/${activePeer.id}`}
+                  className="flex items-center gap-2 transition-colors duration-fast hover:text-amber"
+                >
+                  <Avatar
+                    url={activePeer.avatarUrl}
+                    name={nameOf(activePeer)}
+                    size="sm"
+                  />
+                  <span className="text-small font-medium text-primary">
+                    {nameOf(activePeer)}
+                  </span>
+                </Link>
                 {activePeer.role?.toLowerCase() === "owner" &&
                   nameOf(activePeer) !== "站长" && (
                   <span className="rounded-sm bg-amber/10 px-1 py-0.5 text-caption text-amber">

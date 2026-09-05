@@ -563,8 +563,59 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** 获取公开用户资料 */
+        /** 获取公开用户主页（他人主页；严格不含任何邮箱/手机等隐私字段） */
         get: operations["getUser"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/{userId}/threads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 公开主页——该用户发布的主题（受本人 showThreads 开关控制） */
+        get: operations["listUserThreads"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/{userId}/comments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 公开主页——该用户的评论（受本人 showComments 开关控制） */
+        get: operations["listUserComments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/{userId}/bookmarks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 公开主页——该用户的收藏（受本人 showBookmarks 开关控制） */
+        get: operations["listUserBookmarks"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1642,8 +1693,34 @@ export interface components {
             /** @description 通用用户等级 1-10 */
             level: number;
         };
+        /** @description 公开主页各内容分区的对外可见性（默认全部开启，与现有行为一致） */
+        ProfilePrivacy: {
+            /**
+             * @description 对外展示我发布的主题
+             * @default true
+             */
+            showThreads: boolean;
+            /**
+             * @description 对外展示我的评论
+             * @default true
+             */
+            showComments: boolean;
+            /**
+             * @description 对外展示我的收藏
+             * @default true
+             */
+            showBookmarks: boolean;
+        };
+        PublicUserProfile: components["schemas"]["UserSummary"] & {
+            /** @description 个人简介，未填写为 null */
+            bio?: string | null;
+            /** Format: date-time */
+            updatedAt?: string;
+            privacy?: components["schemas"]["ProfilePrivacy"];
+        };
         User: components["schemas"]["UserSummary"] & {
             bio?: string;
+            privacy?: components["schemas"]["ProfilePrivacy"];
             /** Format: date-time */
             updatedAt?: string;
             emailMasked?: string;
@@ -2652,6 +2729,15 @@ export interface components {
                     /** Format: uri */
                     avatarUrl?: string;
                     bio?: string;
+                    /** @description 公开主页各内容分区对外可见性（部分更新，仅传需要修改的字段即可） */
+                    privacy?: {
+                        /** @description 对外展示我发布的主题 */
+                        showThreads?: boolean;
+                        /** @description 对外展示我的评论 */
+                        showComments?: boolean;
+                        /** @description 对外展示我的收藏 */
+                        showBookmarks?: boolean;
+                    };
                 };
             };
         };
@@ -3909,15 +3995,96 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description 用户公开资料 */
+            /** @description 用户公开主页资料。banned/deleted 用户返回 404（不对外展示）；muted 用户可正常浏览但仅只读。 响应只含对外展示字段，不返回 email/phone（含打码列）、权限数组、封禁原因等私有管理字段。 */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserSummary"];
+                    "application/json": components["schemas"]["PublicUserProfile"];
                 };
             };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listUserThreads: {
+        parameters: {
+            query?: {
+                page?: components["parameters"]["Page"];
+                perPage?: components["parameters"]["PerPage"];
+            };
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 该用户已发布的主题列表（仅含访问者可见内容：已发布、未删除、未下架）。 本人始终可预览；他人视角若 showThreads=false 则响应 403。 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForumThreadList"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listUserComments: {
+        parameters: {
+            query?: {
+                page?: components["parameters"]["Page"];
+                perPage?: components["parameters"]["PerPage"];
+            };
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 该用户对 Wiki/攻略的评论列表（复用 MyComment 形状：含被评目标标题与 slug，便于跳回原文）。 本人始终可预览；他人视角若 showComments=false 则响应 403。 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyCommentList"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listUserBookmarks: {
+        parameters: {
+            query?: {
+                page?: components["parameters"]["Page"];
+                perPage?: components["parameters"]["PerPage"];
+            };
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 该用户收藏的主题列表（仅含仍公开可见的主题；原帖已删除/下架则不出现）。 本人始终可预览；他人视角若 showBookmarks=false 则响应 403。 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForumThreadList"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
         };
     };

@@ -14,6 +14,7 @@ import { InteractionBar } from "@/components/interaction-bar";
 import { ContentActions } from "@/components/content-actions";
 import { authorName } from "@/lib/author";
 import { SiteIdMark } from "@/components/user-marks";
+import { UserLink } from "@/components/user-link";
 import { ReportEntry } from "@/components/report-button";
 
 async function loadGuide(slug: string): Promise<Guide> {
@@ -83,7 +84,9 @@ export default async function GuideDetailPage({
               <p className="text-body text-secondary">{guide.excerpt}</p>
             )}
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-caption text-faint">
-              <span>{authorName(guide.author)}</span>
+              <UserLink user={guide.author} className="text-secondary">
+                {authorName(guide.author)}
+              </UserLink>
               <SiteIdMark siteId={guide.author.siteId} />
               <span aria-hidden>·</span>
               <time dateTime={guide.updatedAt}>

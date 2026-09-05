@@ -11,6 +11,7 @@ import { Markdown } from "@/components/markdown";
 import { authorName } from "@/lib/author";
 import { ReportEntry } from "@/components/report-button";
 import { Avatar } from "@/components/avatar";
+import { UserLink } from "@/components/user-link";
 import { isAdminRole } from "@/lib/me";
 
 interface Me {
@@ -284,10 +285,12 @@ export function PostSection({
                 <span className="font-mono text-caption text-amber">
                   #{p.floor}
                 </span>
-                <Avatar url={p.author.avatarUrl} name={authorName(p.author)} size="sm" />
-                <span className="text-small font-medium text-primary">
-                  {authorName(p.author)}
-                </span>
+                <UserLink user={p.author} className="flex items-center gap-2">
+                  <Avatar url={p.author.avatarUrl} name={authorName(p.author)} size="sm" />
+                  <span className="text-small font-medium text-primary">
+                    {authorName(p.author)}
+                  </span>
+                </UserLink>
                 <time
                   dateTime={p.createdAt}
                   className="font-mono text-caption text-faint"
