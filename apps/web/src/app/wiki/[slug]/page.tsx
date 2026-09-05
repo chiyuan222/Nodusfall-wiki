@@ -17,7 +17,7 @@ async function loadPage(slug: string): Promise<WikiPage> {
   try {
     return await wikiApi.page(slug);
   } catch (e) {
-    if (e instanceof ApiError && e.status === 404) notFound();
+    if (e instanceof ApiError && (e.status === 404 || e.status === 403)) notFound(); // 他人草稿对非作者隐藏存在（403 视同 404）
     throw e;
   }
 }
