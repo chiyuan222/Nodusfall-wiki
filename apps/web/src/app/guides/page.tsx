@@ -4,7 +4,7 @@ import { KnotMark } from "@/components/knot-mark";
 import { Carousel } from "@/components/carousel";
 import { GuideCreateEntry } from "@/components/guides/guide-create-entry";
 import { BoardManageEntry } from "@/components/board-manage-entry";
-import { getGuideList, USE_MOCK } from "@/lib/data";
+import { getGuideList, getGuideCategories, USE_MOCK } from "@/lib/data";
 import { getGuideCarousel } from "@/lib/carousel-data";
 import { authorName } from "@/lib/author";
 
@@ -41,11 +41,19 @@ const FEATURES = [
   { title: "编辑器", desc: "结构化写作，段落、配装与图片混排" },
 ] as const;
 
-export default async function GuidesIndexPage() {
-  const [list, carousel] = await Promise.all([
-    getGuideList(),
+export default async function GuidesIndexPage({
+  searchParams,
+}: {
+  searchParams: { category?: string };
+}) {
+  const activeCategory = searchParams.category ?? "";
+  const [list, carousel, categories] = await Promise.all([
+    getGuideList(activeCategory || undefined),
     getGuideCarousel(),
+    getGuideCategories(),
   ]);
+  const categoryName = (slug?: string | null) =>
+    categories.find((c) => c.slug === slug)?.name ?? null;
 
   return (
     <div className="mx-auto max-w-page space-y-12">
@@ -81,27 +89,74 @@ export default async function GuidesIndexPage() {
         />
       </section>
 
-      {/* 排序/筛选栏（待数据接入，禁用态） */}
-      <div
-        aria-label="排序与筛选（待数据接入）"
-        className="flex flex-wrap items-center gap-2"
-      >
-        {["最新", "评分最高", "最多讨论"].map((s) => (
-          <span
-            key={s}
-            title="待数据接入后启用"
-            className="cursor-not-allowed rounded-full border border-border-subtle px-4 py-1.5 text-small text-faint"
-          >
-            {s}
-          </span>
-        ))}
-        <span className="ml-2 font-mono text-caption text-faint">
-          筛选将在数据接入后启用
-        </span>
-      </div>
+      <div className="grid gap-6 lg:grid-cols-12">
+        {/* 分类导航（GET /guides/categories；选中 → /guides?category=slug） */}
+        <aside aria-label="攻略分类导航" className="lg:col-span-4">
+          <div className="rounded-md border border-border-subtle bg-surface p-5">
+            <h2 className="flex items-center gap-2 text-h3 font-semibold">
+              <KnotMark size={18} />
+              分类导航
+            </h2>
+            <ul className="mt-4 space-y-2">
+              <li>
+                <Link
+                  href="/guides"
+                  aria-current={!activeCategory ? "page" : undefined}
+                  className={`group flex items-center gap-3 rounded-sm border px-3 py-2.5 text-small transition-colors duration-fast ${
+                    !activeCategory
+                      ? "border-amber-soft text-amber"
+                      : "border-border-subtle text-primary hover:border-amber-soft"
+                  }`}
+                >
+                  <span
+                    aria-hidden
+                    className={`block h-1.5 w-1.5 rounded-full ${!activeCategory ? "bg-amber" : "bg-border-subtle"}`}
+                  />
+                  全部攻略
+                </Link>
+              </li>
+              {categories.map((c) => (
+                <li key={c.id}>
+                  <Link
+                    href={`/guides?category=${c.slug}`}
+                    aria-current={activeCategory === c.slug ? "page" : undefined}
+                    className={`group flex items-center gap-3 rounded-sm border px-3 py-2.5 text-small transition-colors duration-fast ${
+                      activeCategory === c.slug
+                        ? "border-amber-soft text-amber"
+                        : "border-border-subtle text-primary hover:border-amber-soft"
+                    }`}
+                  >
+                    <span
+                      aria-hidden
+                      className={`block h-1.5 w-1.5 rounded-full ${activeCategory === c.slug ? "bg-amber" : "bg-border-subtle"}`}
+                    />
+                    {c.name}
+                    <span aria-hidden className="ml-auto font-mono text-caption text-faint transition-colors duration-fast group-hover:text-amber">
+                      →
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            {categories.length === 0 && (
+              <p className="mt-4 text-caption text-faint">
+                分类框架由管理员在板块管理中建立。
+              </p>
+            )}
+          </div>
+        </aside>
 
-      {/* 攻略列表（有数据）/ 空态（无数据） */}
-      {list && list.data.length > 0 ? (
+        {/* 攻略列表（有数据）/ 空态（无数据） */}
+        <section aria-label="攻略列表" className="lg:col-span-8">
+          {activeCategory && (
+            <p className="mb-4 text-small text-secondary">
+              分类：{categoryName(activeCategory) ?? activeCategory}{" "}
+              <Link href="/guides" className="ml-2 text-amber hover:underline">
+                查看全部 ×
+              </Link>
+            </p>
+          )}
+          {list && list.data.length > 0 ? (
         <ol aria-label="攻略列表" className="space-y-4">
           {list.data.map((g) => (
             <li key={g.id}>
@@ -118,6 +173,11 @@ export default async function GuidesIndexPage() {
                     {g.excerpt}
                   </span>
                   <span className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-faint">
+                    {categoryName(g.categorySlug) && (
+                      <span className="rounded-sm border border-amber-soft px-1.5 py-0.5 text-amber">
+                        {categoryName(g.categorySlug)}
+                      </span>
+                    )}
                     {g.tags.map((t) => (
                       <span key={t} className="rounded-sm border border-border-subtle px-1.5 py-0.5">
                         {t}
@@ -141,8 +201,8 @@ export default async function GuidesIndexPage() {
             </li>
           ))}
         </ol>
-      ) : (
-      <section aria-label="攻略列表" className="flex flex-col items-center justify-center rounded-md border border-border-subtle bg-surface px-6 py-16 text-center">
+          ) : (
+            <div className="flex flex-col items-center justify-center rounded-md border border-border-subtle bg-surface px-6 py-16 text-center">
         <KnotMark size={44} />
         <h2 className="mt-5 font-serif text-h2 font-semibold">
           等待第一篇攻略
@@ -164,8 +224,10 @@ export default async function GuidesIndexPage() {
             了解玩法框架
           </Link>
         </div>
-      </section>
-      )}
+            </div>
+          )}
+        </section>
+      </div>
 
       {/* 能力预告 */}
       <section aria-labelledby="guides-features" className="border-t border-border-subtle pt-10">

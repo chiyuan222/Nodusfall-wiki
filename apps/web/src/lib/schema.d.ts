@@ -813,6 +813,58 @@ export interface paths {
         patch: operations["updateWikiCategory"];
         trace?: never;
     };
+    "/guides/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 获取攻略分类 */
+        get: operations["listGuideCategories"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/guides/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 新建攻略分类（攻略板块管理） */
+        post: operations["createGuideCategory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/guides/categories/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** 删除攻略分类（攻略板块管理，非空返回 409） */
+        delete: operations["deleteGuideCategory"];
+        options?: never;
+        head?: never;
+        /** 更新攻略分类（攻略板块管理） */
+        patch: operations["updateGuideCategory"];
+        trace?: never;
+    };
     "/admin/forum/boards": {
         parameters: {
             query?: never;
@@ -855,7 +907,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** 获取 Wiki 页面列表 */
+        /** 获取 Wiki 页面列表（默认仅已发布；mine=true 返回我的全部状态） */
         get: operations["listWikiPages"];
         put?: never;
         /** 创建 Wiki 页面 */
@@ -873,7 +925,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** 获取 Wiki 页面 */
+        /**
+         * 获取 Wiki 页面
+         * @description 草稿/已归档内容仅作者本人或板块管理可见；其余访问返回 404（隐藏存在）
+         */
         get: operations["getWikiPage"];
         put?: never;
         post?: never;
@@ -980,7 +1035,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** 获取攻略列表 */
+        /** 获取攻略列表（默认仅已发布；mine=true 返回我的全部状态） */
         get: operations["listGuides"];
         put?: never;
         /** 创建攻略 */
@@ -1069,7 +1124,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** 获取攻略详情 */
+        /**
+         * 获取攻略详情
+         * @description 草稿/已归档内容仅作者本人或板块管理可见；其余访问返回 404（隐藏存在）
+         */
         get: operations["getGuide"];
         put?: never;
         post?: never;
@@ -1734,6 +1792,17 @@ export interface components {
         WikiCategoryList: {
             data: components["schemas"]["WikiCategory"][];
         };
+        GuideCategory: {
+            /** Format: uuid */
+            id: string;
+            slug: string;
+            name: string;
+            description?: string;
+            sortOrder: number;
+        };
+        GuideCategoryList: {
+            data: components["schemas"]["GuideCategory"][];
+        };
         WikiPageSummary: {
             /** Format: uuid */
             id: string;
@@ -1796,6 +1865,8 @@ export interface components {
             excerpt: string;
             /** Format: uri */
             coverImage: string | null;
+            /** @description 攻略分类 slug（未分类为 null） */
+            categorySlug: string | null;
             tags: string[];
             /** @enum {string} */
             status: "draft" | "published" | "archived";
@@ -2500,6 +2571,25 @@ export interface components {
                 };
             };
         };
+        AdminGuideCategoryCreate: {
+            content: {
+                "application/json": {
+                    slug: string;
+                    name: string;
+                    description?: string;
+                    sortOrder: number;
+                };
+            };
+        };
+        AdminGuideCategoryUpdate: {
+            content: {
+                "application/json": {
+                    name?: string;
+                    description?: string;
+                    sortOrder?: number;
+                };
+            };
+        };
         AdminForumBoardCreate: {
             content: {
                 "application/json": {
@@ -2762,6 +2852,8 @@ export interface components {
                     title: string;
                     slug?: string;
                     content: string;
+                    /** @description 攻略分类 slug（可选；缺省归默认分类） */
+                    categorySlug?: string;
                     tags?: string[];
                     /**
                      * @default draft
@@ -2777,6 +2869,7 @@ export interface components {
                 "application/json": {
                     title?: string;
                     content?: string;
+                    categorySlug?: string;
                     tags?: string[];
                     /** @enum {string} */
                     status?: "draft" | "published" | "archived";
@@ -3987,7 +4080,7 @@ export interface operations {
                 /** @description 搜索用户名/邮箱/手机号 */
                 q?: string;
                 group?: "normal" | "verified" | "premium";
-                role?: "guest" | "member" | "editor" | "moderator" | "admin" | "owner";
+                role?: "member" | "wiki_editor" | "guide_editor" | "video_editor" | "wiki_moderator" | "guide_moderator" | "forum_moderator" | "video_moderator" | "admin" | "owner";
                 status?: "active" | "muted" | "banned" | "deleted";
                 level?: number;
             };
@@ -4253,6 +4346,105 @@ export interface operations {
             409: components["responses"]["Conflict"];
         };
     };
+    listGuideCategories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 分类列表 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuideCategoryList"];
+                };
+            };
+        };
+    };
+    createGuideCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["AdminGuideCategoryCreate"];
+        responses: {
+            /** @description 创建成功 */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["GuideCategory"];
+                    };
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    deleteGuideCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 已删除 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    updateGuideCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["AdminGuideCategoryUpdate"];
+        responses: {
+            /** @description 更新后的分类 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data?: components["schemas"]["GuideCategory"];
+                    };
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
     createForumBoard: {
         parameters: {
             query?: never;
@@ -4334,7 +4526,10 @@ export interface operations {
                 category?: string;
                 tag?: string;
                 q?: string;
+                /** @description 状态过滤。默认（未指定 mine）仅返回 published；draft/archived 仅 mine=true（作者本人）或板块管理可用 */
                 status?: "draft" | "published" | "archived";
+                /** @description true=仅返回我创建的内容（可配合 status 查我的草稿/归档）；需登录 */
+                mine?: boolean;
                 page?: components["parameters"]["Page"];
                 perPage?: components["parameters"]["PerPage"];
                 sort?: "updatedAt" | "createdAt" | "title";
@@ -4639,8 +4834,13 @@ export interface operations {
         parameters: {
             query?: {
                 tag?: string;
+                /** @description 攻略分类 slug 筛选 */
+                category?: string;
                 q?: string;
+                /** @description 状态过滤。默认（未指定 mine）仅返回 published；draft/archived 仅 mine=true（作者本人）或板块管理可用 */
                 status?: "draft" | "published" | "archived";
+                /** @description true=仅返回我创建的内容（可配合 status 查我的草稿/归档）；需登录 */
+                mine?: boolean;
                 sort?: "rating" | "updatedAt" | "createdAt";
                 page?: components["parameters"]["Page"];
                 perPage?: components["parameters"]["PerPage"];

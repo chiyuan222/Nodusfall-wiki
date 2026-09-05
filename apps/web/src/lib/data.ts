@@ -61,11 +61,33 @@ export async function getWikiIndexData(): Promise<WikiIndexData | null> {
   };
 }
 
-export async function getGuideList(): Promise<ListResult<GuideSummary> | null> {
-  const real = await tryFetch<ListResult<GuideSummary>>("/guides");
+export async function getGuideList(
+  category?: string,
+): Promise<ListResult<GuideSummary> | null> {
+  const qs = category ? `?category=${encodeURIComponent(category)}` : "";
+  const real = await tryFetch<ListResult<GuideSummary>>(`/guides${qs}`);
   if (real) return real;
   if (!USE_MOCK) return null;
   return { data: mockGuides, pagination: mockPagination(mockGuides.length) };
+}
+
+/** 攻略分类（契约 PR #132：GET /guides/categories） */
+export interface GuideCategory {
+  id: string;
+  slug: string;
+  name: string;
+  description?: string;
+  sortOrder: number;
+}
+
+export async function getGuideCategories(): Promise<GuideCategory[]> {
+  const real = await tryFetch<{ data: GuideCategory[] }>("/guides/categories");
+  if (real) {
+    return [...real.data].sort(
+      (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0),
+    );
+  }
+  return [];
 }
 
 export interface ForumIndexData {
