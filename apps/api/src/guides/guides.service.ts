@@ -6,7 +6,7 @@ import {
 import { ContentStatus, Guide, User } from '@prisma/client';
 import { pageInfo } from '../common/pagination';
 import { extractFirstImage } from '../common/markdown';
-import { hasPermission, isManagerRole, PERMISSIONS } from '../common/roles';
+import { hasBoardPermission, isManagerRole } from '../common/roles';
 import { PrismaService } from '../prisma/prisma.service';
 import { toUserSummary } from '../users/users.service';
 import { ExpService } from '../exp/exp.service';
@@ -144,14 +144,21 @@ export class GuidesService {
     relatedCharacter?: string;
     coverImage?: string | null;
     },
-    auth?: { role: string; permissions: string[]; status: string; wikiCreateGranted?: boolean },
+    auth?: {
+      role: string;
+      permissions: string[];
+      status: string;
+      wikiCreateGranted?: boolean;
+      guideCreateGranted?: boolean;
+    },
   ) {
     if (auth?.status === 'MUTED' || auth?.status === 'BANNED') {
       throw new ForbiddenException('account restricted');
     }
     if (
       !auth?.wikiCreateGranted &&
-      !hasPermission(auth?.role, auth?.permissions, PERMISSIONS.MANAGE_CONTENT)
+      !auth?.guideCreateGranted &&
+      !isManagerRole(auth?.role)
     ) {
       throw new ForbiddenException('guide create not granted');
     }
@@ -212,7 +219,7 @@ export class GuidesService {
     if (!existing) throw new NotFoundException('guide not found');
     if (
       existing.authorId !== userId &&
-      !hasPermission(auth?.role, auth?.permissions, PERMISSIONS.MANAGE_CONTENT)
+      !hasBoardPermission(auth?.role, auth?.permissions, 'guide')
     ) {
       throw new ForbiddenException('not your guide');
     }
@@ -251,7 +258,7 @@ export class GuidesService {
     }
     if (
       guide.authorId !== userId &&
-      !hasPermission(auth?.role, auth?.permissions, PERMISSIONS.MANAGE_DELETION)
+      !hasBoardPermission(auth?.role, auth?.permissions, 'guide')
     ) {
       throw new ForbiddenException('not your guide');
     }

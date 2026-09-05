@@ -10,7 +10,7 @@ import type { Request } from 'express';
 import { Type } from 'class-transformer';
 import { IsIn, IsInt, IsOptional, Max, Min } from 'class-validator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { hasPermission, isManagerRole, PERMISSIONS } from '../common/roles';
+import { hasAnyBoardPermission, hasPermission, isManagerRole, PERMISSIONS } from '../common/roles';
 import { ModerationService } from './moderation.service';
 
 class ListModerationContentQueryDto {
@@ -45,7 +45,7 @@ export class AdminModerationController {
   list(@Req() req: AdminRequest, @Query() query: ListModerationContentQueryDto) {
     if (
       !isManagerRole(req.user.role) ||
-      !hasPermission(req.user.role, req.user.permissions, PERMISSIONS.MANAGE_CONTENT)
+      !hasAnyBoardPermission(req.user.role, req.user.permissions)
     ) {
       throw new ForbiddenException('moderator only');
     }

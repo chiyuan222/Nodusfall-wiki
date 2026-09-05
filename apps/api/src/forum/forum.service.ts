@@ -7,7 +7,7 @@ import {
 import { ForumBoard, ForumPost, ForumThread, User } from '@prisma/client';
 import { pageInfo } from '../common/pagination';
 import { extractFirstImage } from '../common/markdown';
-import { hasPermission, PERMISSIONS } from '../common/roles';
+import { hasBoardPermission, isStaffRole } from '../common/roles';
 import { PrismaService } from '../prisma/prisma.service';
 import { toUserSummary } from '../users/users.service';
 import { ExpService } from '../exp/exp.service';
@@ -204,7 +204,7 @@ export class ForumService {
     if (auth?.status === 'MUTED' || auth?.status === 'BANNED') {
       throw new ForbiddenException('account restricted');
     }
-    if (auth?.group !== 'VERIFIED' && !hasPermission(auth?.role, auth?.permissions, PERMISSIONS.MANAGE_FORUM)) {
+    if (auth?.group !== 'VERIFIED' && !isStaffRole(auth?.role)) {
       throw new ForbiddenException('verified account required');
     }
     await this.textFilter.assertSafe(`${dto.title}\n${dto.content}`);
@@ -270,8 +270,8 @@ export class ForumService {
     }
     const existing = await this.prisma.forumThread.findUnique({ where: { id: threadId } });
     if (!existing) throw new NotFoundException('thread not found');
-    const isManager = hasPermission(auth?.role, auth?.permissions, PERMISSIONS.MANAGE_FORUM);
-    const isModerator = hasPermission(auth?.role, auth?.permissions, PERMISSIONS.MANAGE_CONTENT);
+    const isManager = hasBoardPermission(auth?.role, auth?.permissions, 'forum');
+    const isModerator = hasBoardPermission(auth?.role, auth?.permissions, 'forum');
     if (existing.authorId !== userId && !isManager && !isModerator) {
       throw new ForbiddenException('not your thread');
     }
@@ -314,7 +314,7 @@ export class ForumService {
     if (!thread) throw new NotFoundException('thread not found');
     if (
       thread.authorId !== userId &&
-      !hasPermission(auth?.role, auth?.permissions, PERMISSIONS.MANAGE_DELETION)
+      !hasBoardPermission(auth?.role, auth?.permissions, 'forum')
     ) {
       throw new ForbiddenException('not your thread');
     }
@@ -402,7 +402,7 @@ export class ForumService {
     if (auth?.status === 'MUTED' || auth?.status === 'BANNED') {
       throw new ForbiddenException('account restricted');
     }
-    if (auth?.group !== 'VERIFIED' && !hasPermission(auth?.role, auth?.permissions, PERMISSIONS.MANAGE_FORUM)) {
+    if (auth?.group !== 'VERIFIED' && !isStaffRole(auth?.role)) {
       throw new ForbiddenException('verified account required');
     }
     await this.textFilter.assertSafe(dto.content);
@@ -446,7 +446,7 @@ export class ForumService {
     if (!post) throw new NotFoundException('post not found');
     if (
       post.authorId !== userId &&
-      !hasPermission(auth?.role, auth?.permissions, PERMISSIONS.MANAGE_DELETION)
+      !hasBoardPermission(auth?.role, auth?.permissions, 'forum')
     ) {
       throw new ForbiddenException('not your post');
     }

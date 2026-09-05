@@ -21,7 +21,7 @@ export class AdminStatsController {
 
   @Get('overview')
   overview(@Req() req: StatsRequest) {
-    if (!hasPermission(req.user.role, req.user.permissions, PERMISSIONS.MANAGE_USERS)) {
+    if (!hasPermission(req.user.role, req.user.permissions, PERMISSIONS.MANAGE_CONTENT)) {
       throw new ForbiddenException('admin only');
     }
     return this.statsService.overview();

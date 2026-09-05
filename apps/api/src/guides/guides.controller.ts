@@ -29,6 +29,8 @@ interface AuthenticatedRequest extends Request {
     permissions: string[];
     status: string;
     wikiCreateGranted: boolean;
+    guideCreateGranted: boolean;
+    videoShareGranted: boolean;
   };
 }
 
@@ -62,6 +64,7 @@ export class GuidesController {
         permissions: req.user.permissions,
         status: req.user.status,
         wikiCreateGranted: req.user.wikiCreateGranted,
+        guideCreateGranted: req.user.guideCreateGranted,
       })
       .then((data) => ({ data }));
   }

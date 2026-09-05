@@ -12,6 +12,7 @@ import { EmailCodeService } from '../auth/email-code.service';
 import { SmsCodeService } from '../auth/sms-code.service';
 import { TextFilterService } from '../moderation/text-filter.service';
 import { pageInfo } from '../common/pagination';
+import { effectivePermissions } from '../common/roles';
 import { RegisterDto } from './dto/register.dto';
 import { levelFromExp, nextLevelExp } from '../exp/exp.service';
 
@@ -23,9 +24,19 @@ export interface UserSummary {
   username: string;
   displayName: string;
   avatarUrl: string | null;
-  role: 'guest' | 'member' | 'editor' | 'moderator' | 'admin';
+  role:
+    | 'member'
+    | 'wiki_editor'
+    | 'guide_editor'
+    | 'video_editor'
+    | 'wiki_moderator'
+    | 'guide_moderator'
+    | 'forum_moderator'
+    | 'video_moderator'
+    | 'admin'
+    | 'owner';
   createdAt: Date;
-  status: 'active' | 'deleted';
+  status: 'active' | 'muted' | 'banned' | 'deleted';
   group: 'normal' | 'verified' | 'premium';
   level: number;
 }
@@ -37,6 +48,8 @@ export interface UserResponse extends UserSummary {
   phoneMasked: string | null;
   permissions: string[];
   wikiCreateGranted: boolean;
+  guideCreateGranted: boolean;
+  videoShareGranted: boolean;
   banReason: string | null;
   banUntil: Date | null;
   mutedUntil: Date | null;
@@ -66,8 +79,10 @@ export function toUserResponse(user: User): UserResponse {
     updatedAt: user.updatedAt,
     emailMasked: maskEmail(user.email),
     phoneMasked: maskPhone(user.phone),
-    permissions: user.permissions,
+    permissions: effectivePermissions(user.role, user.permissions),
     wikiCreateGranted: user.wikiCreateGranted,
+    guideCreateGranted: user.guideCreateGranted,
+    videoShareGranted: user.videoShareGranted,
     banReason: user.banReason,
     banUntil: user.banUntil,
     mutedUntil: user.mutedUntil,
@@ -441,6 +456,8 @@ export class UsersService {
       banUntil?: string | null;
       mutedUntil?: string | null;
       wikiCreateGranted?: boolean;
+      guideCreateGranted?: boolean;
+      videoShareGranted?: boolean;
       permissions?: string[];
       role?: string;
     },
@@ -465,8 +482,23 @@ export class UsersService {
       }
     }
     if (dto.wikiCreateGranted !== undefined) data.wikiCreateGranted = dto.wikiCreateGranted;
+    if (dto.guideCreateGranted !== undefined) data.guideCreateGranted = dto.guideCreateGranted;
+    if (dto.videoShareGranted !== undefined) data.videoShareGranted = dto.videoShareGranted;
     if (dto.permissions !== undefined) data.permissions = dto.permissions;
-    if (dto.role) data.role = dto.role.toUpperCase();
+    if (dto.role) {
+      const role = dto.role.toUpperCase();
+      data.role = role;
+      // 分区小编/版主默认具备对应分区创作资格（除非显式另传）
+      if (dto.wikiCreateGranted === undefined && (role === 'WIKI_EDITOR' || role === 'WIKI_MODERATOR')) {
+        data.wikiCreateGranted = true;
+      }
+      if (dto.guideCreateGranted === undefined && (role === 'GUIDE_EDITOR' || role === 'GUIDE_MODERATOR')) {
+        data.guideCreateGranted = true;
+      }
+      if (dto.videoShareGranted === undefined && (role === 'VIDEO_EDITOR' || role === 'VIDEO_MODERATOR')) {
+        data.videoShareGranted = true;
+      }
+    }
 
     await this.prisma.user.update({ where: { id }, data });
     if (dto.status === 'banned') {

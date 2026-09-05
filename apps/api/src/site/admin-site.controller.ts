@@ -28,7 +28,7 @@ export class AdminSiteController {
   ) {}
 
   private assert(req: AdminRequest): void {
-    if (!hasPermission(req.user.role, req.user.permissions, PERMISSIONS.MANAGE_CMS)) {
+    if (!hasPermission(req.user.role, req.user.permissions, PERMISSIONS.MANAGE_CONTENT)) {
       throw new ForbiddenException('admin only');
     }
   }

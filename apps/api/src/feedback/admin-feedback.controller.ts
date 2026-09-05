@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { isOwner, hasPermission, PERMISSIONS } from '../common/roles';
+import { isOwner } from '../common/roles';
 import { AdminListFeedbackQueryDto } from './dto/admin-list-feedback-query.dto';
 import { HandleFeedbackDto } from './dto/handle-feedback.dto';
 import { FeedbackService } from './feedback.service';
@@ -26,7 +26,7 @@ export class AdminFeedbackController {
   constructor(private readonly feedbackService: FeedbackService) {}
 
   private assertView(req: AdminRequest): void {
-    if (!hasPermission(req.user.role, req.user.permissions, PERMISSIONS.MANAGE_CONTENT)) {
+    if (!isOwner(req.user.role)) {
       throw new ForbiddenException('admin only');
     }
   }

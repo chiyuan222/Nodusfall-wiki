@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { Comment, User } from '@prisma/client';
 import { pageInfo } from '../common/pagination';
-import { hasPermission, PERMISSIONS } from '../common/roles';
+import { hasBoardPermission, isStaffRole } from '../common/roles';
 import { PrismaService } from '../prisma/prisma.service';
 import { toUserSummary } from '../users/users.service';
 import { ExpService } from '../exp/exp.service';
@@ -60,7 +60,7 @@ export class CommentsService {
     }
     if (
       auth?.group !== 'VERIFIED' &&
-      !hasPermission(auth?.role, auth?.permissions, PERMISSIONS.MANAGE_CONTENT)
+      !isStaffRole(auth?.role)
     ) {
       throw new ForbiddenException('verified account required');
     }
@@ -220,11 +220,11 @@ export class CommentsService {
   ): Promise<void> {
     const comment = await this.prisma.comment.findUnique({ where: { id: commentId } });
     if (!comment) throw new NotFoundException('comment not found');
-    if (
-      comment.authorId !== userId &&
-      !hasPermission(auth?.role, auth?.permissions, PERMISSIONS.MANAGE_DELETION)
-    ) {
-      throw new ForbiddenException('not your comment');
+    if (comment.authorId !== userId) {
+      const board = comment.targetType === 'WIKI_PAGE' ? 'wiki' : 'guide';
+      if (!hasBoardPermission(auth?.role, auth?.permissions, board)) {
+        throw new ForbiddenException('not your comment');
+      }
     }
     await this.prisma.comment.delete({ where: { id: commentId } });
   }
