@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { request } from "@/lib/api-client";
 import { ApiError } from "@/lib/errors";
-import { useMe, isAdminRole } from "@/lib/me";
+import { useMe, hasPermission } from "@/lib/me";
 import type { components } from "@/lib/schema";
 
 /**
@@ -46,7 +46,7 @@ export function StatsOverview() {
   const [data, setData] = useState<Overview | null>(null);
   const [err, setErr] = useState("");
 
-  const allowed = me && (isAdminRole(me.role) || (me.permissions ?? []).length > 0);
+  const allowed = me && hasPermission(me, "manage_content");
 
   useEffect(() => {
     if (!allowed) return;

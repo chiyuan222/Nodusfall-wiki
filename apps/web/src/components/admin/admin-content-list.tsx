@@ -5,7 +5,7 @@ import Link from "next/link";
 import { request, type ListResult } from "@/lib/api-client";
 import { ApiError } from "@/lib/errors";
 import { getAccessToken } from "@/lib/session";
-import { isAdminRole, hasPermission, type MeUser } from "@/lib/me";
+import { hasPermission, type MeUser } from "@/lib/me";
 
 /**
  * Wiki / 攻略内容管理列表（客户端组件，/admin/wiki 与 /admin/guides 共用）。
@@ -85,17 +85,9 @@ export function AdminContentList({ kind }: { kind: "wiki" | "guide" }) {
     }
     request<{ data: Me }>("/users/me")
       .then((r) => {
-        const role = r.data.role?.toLowerCase() ?? "";
-        // 权限体系 v2：管理可用性走 hasPermission（effective permissions 已由后端回填）
         const ok = isWiki
-          ? isAdminRole(role) ||
-            role === "wiki_editor" ||
-            role === "wiki_moderator" ||
-            hasPermission(r.data, "manage_wiki_board")
-          : isAdminRole(role) ||
-            role === "guide_editor" ||
-            role === "guide_moderator" ||
-            hasPermission(r.data, "manage_guide_board");
+          ? hasPermission(r.data, "manage_wiki_board")
+          : hasPermission(r.data, "manage_guide_board");
         setPhase(ok ? "ready" : "forbidden");
       })
       .catch(() => setPhase("forbidden"));

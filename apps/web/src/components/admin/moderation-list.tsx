@@ -62,8 +62,19 @@ export function ModerationList() {
   const [unsupported, setUnsupported] = useState(false);
   const [busyId, setBusyId] = useState("");
 
+  // 内容巡查：任一分区板块权限即可进入（权限体系 v2 对照表）
   const allowed =
-    !!me && (isAdminRole(me.role) || hasPermission(me, "manage_content"));
+    !!me &&
+    (isAdminRole(me.role) ||
+      (
+        [
+          "manage_all_boards",
+          "manage_wiki_board",
+          "manage_guide_board",
+          "manage_forum_board",
+          "manage_video_board",
+        ] as const
+      ).some((k) => hasPermission(me, k)));
 
   const load = useCallback(
     (p: number, t: string) => {

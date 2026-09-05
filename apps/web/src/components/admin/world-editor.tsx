@@ -22,6 +22,7 @@ import {
   saveCmsPage,
   type LoadSource,
 } from "./cms-io";
+import { useMe, hasPermission } from "@/lib/me";
 
 /**
  * /world 总览页内容编辑器
@@ -40,6 +41,9 @@ type ListOp = <T>(
 ) => void;
 
 export function WorldEditor() {
+  const { me, pending: mePending } = useMe();
+  // 门禁（权限体系 v2）：CMS 管理需 manage_content（admin/owner 恒通过）
+  const allowed = !!me && hasPermission(me, "manage_content");
   const [draft, setDraft] = useState<Draft | null>(null);
   const [error, setError] = useState("");
   const [dirty, setDirty] = useState(false);
@@ -141,6 +145,20 @@ export function WorldEditor() {
         <button type="button" onClick={load} className="mt-6 rounded-md bg-amber px-6 py-2 text-small font-medium text-amber-fg">
           重试
         </button>
+      </div>
+    );
+  }
+
+  if (mePending) {
+    return <p className="py-16 text-center text-small text-faint">正在校验权限…</p>;
+  }
+  if (!allowed) {
+    return (
+      <div className="py-16 text-center">
+        <h1 className="font-serif text-h1 font-semibold">无访问权限</h1>
+        <p className="mt-3 text-small text-secondary">
+          页面内容管理需要 manage_content 权限开关（admin/owner 默认具备）。
+        </p>
       </div>
     );
   }
