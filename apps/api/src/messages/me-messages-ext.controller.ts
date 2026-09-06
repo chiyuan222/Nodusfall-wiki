@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -39,6 +40,21 @@ export class MyAnnouncementsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async markRead(@Req() req: AuthRequest): Promise<void> {
     await this.messagesService.markAnnouncementsRead(req.user.sub);
+  }
+
+  @Delete()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async clear(@Req() req: AuthRequest): Promise<void> {
+    await this.messagesService.clearAnnouncements(req.user.sub);
+  }
+
+  @Delete(':announcementId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteOne(
+    @Req() req: AuthRequest,
+    @Param('announcementId', new ParseUUIDPipe()) announcementId: string,
+  ): Promise<void> {
+    await this.messagesService.deleteAnnouncement(req.user.sub, announcementId);
   }
 }
 
@@ -83,5 +99,20 @@ export class ConversationsController {
     @Param('peerId', new ParseUUIDPipe()) peerId: string,
   ): Promise<void> {
     await this.messagesService.markConversationRead(req.user.sub, peerId);
+  }
+
+  @Delete()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async clear(@Req() req: AuthRequest): Promise<void> {
+    await this.messagesService.clearConversations(req.user.sub);
+  }
+
+  @Delete(':peerId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteOne(
+    @Req() req: AuthRequest,
+    @Param('peerId', new ParseUUIDPipe()) peerId: string,
+  ): Promise<void> {
+    await this.messagesService.deleteConversation(req.user.sub, peerId);
   }
 }

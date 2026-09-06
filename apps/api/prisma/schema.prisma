@@ -86,6 +86,7 @@ model User {
   sentMessages  DirectMessage[]   @relation("DirectMessageSender")
   receivedMessages DirectMessage[] @relation("DirectMessageRecipient")
   announcements Announcement[]    @relation("AnnouncementAuthor")
+  announcementHides AnnouncementHide[]
   checkins     CheckIn[]
   expLogs      ExpLog[]
   wikiPages     WikiPage[]        @relation("WikiPageAuthor")
@@ -466,6 +467,8 @@ model DirectMessage {
   recipient   User     @relation("DirectMessageRecipient", fields: [recipientId], references: [id])
   content     String
   readAt      DateTime?
+  senderHiddenAt    DateTime?
+  recipientHiddenAt DateTime?
   createdAt   DateTime @default(now())
 
   @@index([recipientId, readAt])
@@ -480,6 +483,7 @@ model Announcement {
   content   String
   createdAt DateTime @default(now())
   reads     AnnouncementRead[]
+  hides     AnnouncementHide[]
 }
 
 model AnnouncementRead {
@@ -490,6 +494,18 @@ model AnnouncementRead {
   readAt         DateTime     @default(now())
 
   @@unique([announcementId, userId])
+}
+
+model AnnouncementHide {
+  id             String       @id @default(uuid())
+  announcementId String
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+
+  @@unique([announcementId, userId])
+  @@index([userId])
 }
 
 model VideoEntry {
