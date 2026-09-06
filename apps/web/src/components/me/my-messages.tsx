@@ -381,11 +381,11 @@ function DirectPane({ isOwner, myId }: { isOwner: boolean; myId: string }) {
 
       <div
         ref={listRef}
-        className="overflow-hidden rounded-md border border-border-subtle bg-surface md:grid md:grid-cols-[280px_1fr]"
+        className="overflow-hidden rounded-md border border-border-subtle bg-surface md:grid md:h-[70vh] md:grid-cols-[280px_1fr]"
       >
-        {/* 左栏：会话列表（窄屏在打开会话时隐藏）；超长时独立滚动（≤70vh） */}
+        {/* 左栏：会话列表（窄屏在打开会话时隐藏）；两栏均限定高度、内部独立滚动 */}
         <div
-          className={`border-border-subtle md:max-h-[70vh] md:overflow-y-auto md:border-r ${
+          className={`max-h-[60vh] overflow-y-auto border-border-subtle md:h-full md:max-h-none md:border-r ${
             activePeer ? "hidden md:block" : ""
           }`}
         >
@@ -525,15 +525,15 @@ function DirectPane({ isOwner, myId }: { isOwner: boolean; myId: string }) {
           )}
         </div>
 
-        {/* 右栏：聊天窗（窄屏仅打开会话时显示）；撑满与左栏等高 */}
-        <div className={`${activePeer ? "" : "hidden md:flex"} min-w-0 md:flex md:flex-col`}>
+        {/* 右栏：聊天窗（窄屏仅打开会话时显示）；桌面端与左栏同高、内部滚动 */}
+        <div className={`${activePeer ? "" : "hidden md:flex"} min-w-0 md:flex md:h-full md:min-h-0 md:flex-col`}>
           {!activePeer ? (
-            <div className="flex min-h-[26rem] grow flex-col items-center justify-center gap-2 text-center">
+            <div className="flex min-h-[26rem] grow flex-col items-center justify-center gap-2 text-center md:min-h-0">
               <span aria-hidden className="font-serif text-h1 text-faint">✉</span>
               <p className="text-small text-faint">选择左侧会话开始聊天。</p>
             </div>
           ) : (
-            <div className="flex min-h-[26rem] grow flex-col">
+            <div className="flex min-h-[26rem] grow flex-col md:h-full md:min-h-0">
               {/* 聊天窗头部 */}
               <div className="flex items-center gap-2 border-b border-border-subtle px-4 py-2.5">
                 <button
@@ -566,7 +566,7 @@ function DirectPane({ isOwner, myId }: { isOwner: boolean; myId: string }) {
               </div>
 
               {/* 气泡区（接口倒序返回，渲染时翻转为正序） */}
-              <div className="grow space-y-3 overflow-y-auto px-4 py-3">
+              <div className="min-h-0 grow space-y-3 overflow-y-auto px-4 py-3">
                 {msgErr ? (
                   <p role="alert" className="pt-8 text-center text-small text-faint">
                     {msgErr}
