@@ -18,7 +18,10 @@ export class MessagesService {
 
   async list(userId: string, page: number, perPage: number) {
     const dmWhere = {
-      OR: [{ recipientId: userId }, { senderId: userId }],
+      OR: [
+        { recipientId: userId, recipientHiddenAt: null },
+        { senderId: userId, senderHiddenAt: null },
+      ],
     };
     const [directTotal, directMsgs, announcements, reads] = await Promise.all([
       this.prisma.directMessage.count({ where: dmWhere }),
@@ -28,6 +31,7 @@ export class MessagesService {
         include: { sender: true },
       }),
       this.prisma.announcement.findMany({
+        where: { hides: { none: { userId } } },
         orderBy: { createdAt: 'desc' },
         include: { author: true },
       }),
@@ -68,14 +72,18 @@ export class MessagesService {
   }
 
   async unreadCount(userId: string) {
-    const [directUnread, announcementTotal, readCount] = await Promise.all([
+    const [directUnread, unreadAnnouncements] = await Promise.all([
       this.prisma.directMessage.count({
-        where: { recipientId: userId, readAt: null },
+        where: { recipientId: userId, readAt: null, recipientHiddenAt: null },
       }),
-      this.prisma.announcement.count(),
-      this.prisma.announcementRead.count({ where: { userId } }),
+      this.prisma.announcement.count({
+        where: {
+          hides: { none: { userId } },
+          reads: { none: { userId } },
+        },
+      }),
     ]);
-    return { unread: directUnread + Math.max(0, announcementTotal - readCount) };
+    return { unread: directUnread + unreadAnnouncements };
   }
 
   async send(senderId: string, dto: { recipientId: string; content: string }) {
@@ -108,7 +116,7 @@ export class MessagesService {
 
   async markAllRead(userId: string): Promise<void> {
     await this.prisma.directMessage.updateMany({
-      where: { recipientId: userId, readAt: null },
+      where: { recipientId: userId, readAt: null, recipientHiddenAt: null },
       data: { readAt: new Date() },
     });
     await this.markAnnouncementsRead(userId);
@@ -133,8 +141,11 @@ export class MessagesService {
 
   async listAnnouncementsForUser(userId: string, page: number, perPage: number) {
     const [total, announcements, reads] = await Promise.all([
-      this.prisma.announcement.count(),
+      this.prisma.announcement.count({
+        where: { hides: { none: { userId } } },
+      }),
       this.prisma.announcement.findMany({
+        where: { hides: { none: { userId } } },
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * perPage,
         take: perPage,
@@ -162,7 +173,12 @@ export class MessagesService {
 
   async listConversations(userId: string, page: number, perPage: number) {
     const msgs = await this.prisma.directMessage.findMany({
-      where: { OR: [{ senderId: userId }, { recipientId: userId }] },
+      where: {
+        OR: [
+          { senderId: userId, senderHiddenAt: null },
+          { recipientId: userId, recipientHiddenAt: null },
+        ],
+      },
       orderBy: { createdAt: 'desc' },
       take: 1000,
     });
@@ -217,8 +233,8 @@ export class MessagesService {
     if (!peer) throw new NotFoundException('用户不存在');
     const where = {
       OR: [
-        { senderId: userId, recipientId: peerId },
-        { senderId: peerId, recipientId: userId },
+        { senderId: userId, recipientId: peerId, senderHiddenAt: null },
+        { senderId: peerId, recipientId: userId, recipientHiddenAt: null },
       ],
     };
     const [total, items] = await this.prisma.$transaction([
@@ -260,6 +276,72 @@ export class MessagesService {
     await this.prisma.directMessage.updateMany({
       where: { recipientId: userId, senderId: peerId, readAt: null },
       data: { readAt: new Date() },
+    });
+  }
+
+  async deleteConversation(userId: string, peerId: string): Promise<void> {
+    const peer = await this.prisma.user.findUnique({ where: { id: peerId } });
+    if (!peer) throw new NotFoundException('用户不存在');
+    const now = new Date();
+    await this.prisma.$transaction([
+      this.prisma.directMessage.updateMany({
+        where: {
+          senderId: userId,
+          recipientId: peerId,
+          senderHiddenAt: null,
+        },
+        data: { senderHiddenAt: now },
+      }),
+      this.prisma.directMessage.updateMany({
+        where: {
+          recipientId: userId,
+          senderId: peerId,
+          recipientHiddenAt: null,
+        },
+        data: { recipientHiddenAt: now },
+      }),
+    ]);
+  }
+
+  async clearConversations(userId: string): Promise<void> {
+    const now = new Date();
+    await this.prisma.$transaction([
+      this.prisma.directMessage.updateMany({
+        where: { senderId: userId, senderHiddenAt: null },
+        data: { senderHiddenAt: now },
+      }),
+      this.prisma.directMessage.updateMany({
+        where: { recipientId: userId, recipientHiddenAt: null },
+        data: { recipientHiddenAt: now },
+      }),
+    ]);
+  }
+
+  async deleteAnnouncement(userId: string, announcementId: string): Promise<void> {
+    const announcement = await this.prisma.announcement.findUnique({
+      where: { id: announcementId },
+    });
+    if (!announcement) throw new NotFoundException('公告不存在');
+    await this.prisma.announcementHide.upsert({
+      where: {
+        announcementId_userId: { announcementId, userId },
+      },
+      update: {},
+      create: { announcementId, userId },
+    });
+  }
+
+  async clearAnnouncements(userId: string): Promise<void> {
+    const announcements = await this.prisma.announcement.findMany({
+      select: { id: true },
+    });
+    if (announcements.length === 0) return;
+    await this.prisma.announcementHide.createMany({
+      data: announcements.map((a) => ({
+        announcementId: a.id,
+        userId,
+      })),
+      skipDuplicates: true,
     });
   }
 
