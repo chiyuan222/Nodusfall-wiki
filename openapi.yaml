@@ -718,6 +718,16 @@ paths:
                 $ref: "#/components/schemas/MessageList"
         "401":
           $ref: "#/components/responses/Unauthorized"
+    delete:
+      tags: [Users]
+      operationId: clearMyAnnouncements
+      summary: 清空我的全部公告（本人视角软删除：仅从我的收件箱移除，不影响其他用户；之后站长发布的新公告仍会送达）
+      security: [{ bearerAuth: [] }]
+      responses:
+        "204":
+          description: 已清空
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   /users/me/announcements/read-all:
     post:
@@ -730,6 +740,25 @@ paths:
           description: 已标记
         "401":
           $ref: "#/components/responses/Unauthorized"
+
+  /users/me/announcements/{announcementId}:
+    delete:
+      tags: [Users]
+      operationId: deleteMyAnnouncement
+      summary: 删除单条公告（本人视角软删除：仅从我的收件箱移除该公告，不影响其他用户）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: announcementId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204":
+          description: 已删除（幂等：重复删除同一公告同样返回 204）
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /users/me/conversations:
     get:
@@ -747,6 +776,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ConversationList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    delete:
+      tags: [Users]
+      operationId: clearMyConversations
+      summary: 清空我的全部私信会话（本人视角软删除：仅隐藏我的会话与聊天记录，对方记录不受影响；对方之后新发消息会重新出现该会话）
+      security: [{ bearerAuth: [] }]
+      responses:
+        "204":
+          description: 已清空
         "401":
           $ref: "#/components/responses/Unauthorized"
 
@@ -809,6 +848,23 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Users]
+      operationId: deleteMyConversation
+      summary: 删除与该用户的私信会话（本人视角软删除：仅隐藏我的会话与聊天记录，对方记录不受影响；对方之后新发消息会重新出现该会话）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: peerId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204":
+          description: 已删除（幂等：无历史消息或重复删除同样返回 204）
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
 
