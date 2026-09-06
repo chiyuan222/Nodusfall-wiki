@@ -13,7 +13,7 @@ import { request, type ListResult } from "@/lib/api-client";
 import { ApiError } from "@/lib/errors";
 import { Avatar } from "@/components/avatar";
 import { useMe } from "@/lib/me";
-import { broadcastMessagesRead } from "@/lib/messages";
+import { broadcastMessagesRead, broadcastMessagesRefresh } from "@/lib/messages";
 
 /**
  * 我的消息（契约 PR #108 B 组）：「公告」与「私信」双页签（QQ/微信式）。
@@ -44,6 +44,15 @@ const fmtTime = (iso: string) => {
 const nameOf = (u?: UserSummary | null) =>
   u?.displayName ?? u?.username ?? "未知用户";
 
+/** 删除/清空幂等处理：404（记录不存在）视为成功，静默通过 */
+const swallow404 = async (p: Promise<unknown>) => {
+  try {
+    await p;
+  } catch (e) {
+    if (!(e instanceof ApiError && e.status === 404)) throw e;
+  }
+};
+
 /* ================= 公告页签 ================= */
 
 function AnnouncementsPane({ isOwner }: { isOwner: boolean }) {
@@ -60,6 +69,41 @@ function AnnouncementsPane({ isOwner }: { isOwner: boolean }) {
   const [annContent, setAnnContent] = useState("");
   const [annSending, setAnnSending] = useState(false);
   const [annErr, setAnnErr] = useState("");
+
+  // 删除/清空（契约 PR #145：本人视角软删除，404 视为成功）
+  const [busyId, setBusyId] = useState("");
+  const [clearing, setClearing] = useState(false);
+
+  const removeOne = (id: string) => {
+    if (!window.confirm("删除这条公告？仅从你的收件箱移除，不影响其他用户。"))
+      return;
+    setBusyId(id);
+    swallow404(messageApi.deleteAnnouncement(id))
+      .then(() => {
+        setItems((prev) => prev.filter((m) => m.id !== id));
+        broadcastMessagesRefresh();
+      })
+      .catch(() => setErr("删除失败，请稍后重试。"))
+      .finally(() => setBusyId(""));
+  };
+
+  const clearAll = () => {
+    if (
+      !window.confirm(
+        "清空全部公告？仅清空你的收件箱，站长后续发布的新公告仍会送达。",
+      )
+    )
+      return;
+    setClearing(true);
+    swallow404(messageApi.clearAnnouncements())
+      .then(() => {
+        setItems([]);
+        setHasMore(false);
+        broadcastMessagesRefresh();
+      })
+      .catch(() => setErr("清空失败，请稍后重试。"))
+      .finally(() => setClearing(false));
+  };
 
   const load = useCallback((p: number) => {
     setLoading(true);
@@ -153,6 +197,19 @@ function AnnouncementsPane({ isOwner }: { isOwner: boolean }) {
         </div>
       )}
 
+      {items.length > 0 && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            disabled={clearing}
+            onClick={clearAll}
+            className="rounded-md border border-border-subtle px-3 py-1.5 text-caption text-secondary transition-colors duration-fast hover:border-danger hover:text-danger disabled:opacity-40"
+          >
+            {clearing ? "清空中…" : "清空全部公告"}
+          </button>
+        </div>
+      )}
+
       <div className="rounded-md border border-border-subtle bg-surface">
         {loading ? (
           <p className="p-6 text-center text-small text-faint">载入中…</p>
@@ -181,6 +238,14 @@ function AnnouncementsPane({ isOwner }: { isOwner: boolean }) {
                       {new Date(m.createdAt).toLocaleString("zh-CN")}
                     </time>
                   </span>
+                  <button
+                    type="button"
+                    disabled={busyId === m.id}
+                    onClick={() => removeOne(m.id)}
+                    className="ml-auto rounded-md border border-border-subtle px-2 py-0.5 text-caption text-faint transition-colors duration-fast hover:border-danger hover:text-danger disabled:opacity-40"
+                  >
+                    {busyId === m.id ? "删除中…" : "删除"}
+                  </button>
                 </div>
                 <p className="mt-2 whitespace-pre-wrap break-words text-small text-secondary">
                   {m.content}
@@ -342,6 +407,50 @@ function DirectPane({ isOwner, myId }: { isOwner: boolean; myId: string }) {
       .finally(() => setSending(false));
   };
 
+  // 删除/清空会话（契约 PR #145：本人视角软删除，404 视为成功）
+  const [delPeerId, setDelPeerId] = useState("");
+  const [clearingConvs, setClearingConvs] = useState(false);
+
+  const removeConversation = (peer: UserSummary) => {
+    if (
+      !window.confirm(
+        `删除与「${nameOf(peer)}」的会话？仅删除你这边的记录，对方不受影响；对方新发消息时会重新出现。`,
+      )
+    )
+      return;
+    setDelPeerId(peer.id);
+    swallow404(messageApi.deleteConversation(peer.id))
+      .then(() => {
+        setConvs((prev) => prev.filter((c) => c.peer.id !== peer.id));
+        if (activePeer?.id === peer.id) {
+          setActivePeer(null);
+          setMsgs([]);
+        }
+        broadcastMessagesRefresh();
+      })
+      .catch(() => setListErr("删除会话失败，请稍后重试。"))
+      .finally(() => setDelPeerId(""));
+  };
+
+  const clearAllConvs = () => {
+    if (
+      !window.confirm(
+        "清空全部私信会话？仅删除你这边的记录，对方不受影响；对方新发消息时会重新出现。",
+      )
+    )
+      return;
+    setClearingConvs(true);
+    swallow404(messageApi.clearConversations())
+      .then(() => {
+        setConvs([]);
+        setActivePeer(null);
+        setMsgs([]);
+        broadcastMessagesRefresh();
+      })
+      .catch(() => setListErr("清空失败，请稍后重试。"))
+      .finally(() => setClearingConvs(false));
+  };
+
   // 站长搜索用户发起会话
   const searchUsers = (q: string) => {
     setQuery(q);
@@ -456,6 +565,19 @@ function DirectPane({ isOwner, myId }: { isOwner: boolean; myId: string }) {
             </div>
           )}
 
+          {convs.length > 0 && (
+            <div className="flex justify-end border-b border-border-subtle px-3 py-2">
+              <button
+                type="button"
+                disabled={clearingConvs}
+                onClick={clearAllConvs}
+                className="rounded-md border border-border-subtle px-2.5 py-1 text-caption text-faint transition-colors duration-fast hover:border-danger hover:text-danger disabled:opacity-40"
+              >
+                {clearingConvs ? "清空中…" : "清空全部会话"}
+              </button>
+            </div>
+          )}
+
           {listErr ? (
             <p role="alert" className="p-4 text-center text-small text-faint">
               {listErr}
@@ -475,12 +597,12 @@ function DirectPane({ isOwner, myId }: { isOwner: boolean; myId: string }) {
                   ? `${c.lastMessage.senderId === myId ? "我：" : ""}${c.lastMessage.content}`
                   : "开始会话";
                 return (
-                  <li key={c.peer.id}>
+                  <li key={c.peer.id} className="group flex items-stretch">
                     <button
                       type="button"
                       onClick={() => openConversation(c.peer)}
                       aria-current={active}
-                      className={`flex w-full items-center gap-3 border-l-2 px-4 py-3 text-left transition-colors duration-fast ${
+                      className={`flex min-w-0 grow items-center gap-3 border-l-2 px-4 py-3 text-left transition-colors duration-fast ${
                         active
                           ? "border-amber bg-raised"
                           : "border-transparent hover:bg-raised"
@@ -518,6 +640,18 @@ function DirectPane({ isOwner, myId }: { isOwner: boolean; myId: string }) {
                         )}
                       </span>
                     </button>
+                    {/* 删除会话（合成的「联系站长」发现入口不显示） */}
+                    {c.updatedAt && (
+                      <button
+                        type="button"
+                        aria-label={`删除与 ${name} 的会话`}
+                        disabled={delPeerId === c.peer.id}
+                        onClick={() => removeConversation(c.peer)}
+                        className="shrink-0 self-center mr-2 flex h-6 w-6 items-center justify-center rounded-full text-caption text-faint transition-colors duration-fast hover:bg-danger/10 hover:text-danger disabled:opacity-40 md:opacity-0 md:group-hover:opacity-100"
+                      >
+                        {delPeerId === c.peer.id ? "…" : "✕"}
+                      </button>
+                    )}
                   </li>
                 );
               })}

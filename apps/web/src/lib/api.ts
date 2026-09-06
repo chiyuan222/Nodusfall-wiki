@@ -330,6 +330,26 @@ export const messageApi = {
     request<void>(`/users/me/conversations/${peerId}/read`, {
       method: "POST",
     }),
+
+  // ---------- 私信/公告清理（契约 PR #145，本人视角软删除） ----------
+
+  /** 删除与该用户的私信会话（仅本人视角；204 幂等，peer 不存在 404 前端视为成功） */
+  deleteConversation: (peerId: string) =>
+    request<void>(`/users/me/conversations/${peerId}`, { method: "DELETE" }),
+
+  /** 清空我的全部私信会话（204） */
+  clearConversations: () =>
+    request<void>("/users/me/conversations", { method: "DELETE" }),
+
+  /** 删除单条公告（仅本人收件箱；204 幂等） */
+  deleteAnnouncement: (announcementId: string) =>
+    request<void>(`/users/me/announcements/${announcementId}`, {
+      method: "DELETE",
+    }),
+
+  /** 清空我的全部公告（204） */
+  clearAnnouncements: () =>
+    request<void>("/users/me/announcements", { method: "DELETE" }),
 };
 
 // ---------- 意见反馈（契约 PR #108 A 组） ----------
