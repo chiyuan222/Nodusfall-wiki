@@ -374,7 +374,7 @@ model ForumPost {
 model ForumPostLike {
   id        String     @id @default(uuid())
   postId    String
-  post      ForumPost  @relation(fields: [postId], references: [id])
+  post      ForumPost  @relation(fields: [postId], references: [id], onDelete: Cascade)
   userId    String
   user      User       @relation("PostLikeUser", fields: [userId], references: [id])
   createdAt DateTime   @default(now())
@@ -385,7 +385,7 @@ model ForumPostLike {
 model ForumThreadBookmark {
   id        String      @id @default(uuid())
   threadId  String
-  thread    ForumThread @relation(fields: [threadId], references: [id])
+  thread    ForumThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
   userId    String
   user      User        @relation("ThreadBookmarkUser", fields: [userId], references: [id])
   createdAt DateTime    @default(now())
@@ -414,7 +414,7 @@ model Comment {
 model CommentLike {
   id        String   @id @default(uuid())
   commentId String
-  comment   Comment  @relation(fields: [commentId], references: [id])
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
   userId    String
   user      User     @relation("CommentLikeUser", fields: [userId], references: [id])
   createdAt DateTime @default(now())
