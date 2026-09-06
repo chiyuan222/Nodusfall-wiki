@@ -463,7 +463,8 @@ export interface paths {
         get: operations["listMyAnnouncements"];
         put?: never;
         post?: never;
-        delete?: never;
+        /** 清空我的全部公告（本人视角软删除：仅从我的收件箱移除，不影响其他用户；之后站长发布的新公告仍会送达） */
+        delete: operations["clearMyAnnouncements"];
         options?: never;
         head?: never;
         patch?: never;
@@ -486,6 +487,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/users/me/announcements/{announcementId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** 删除单条公告（本人视角软删除：仅从我的收件箱移除该公告，不影响其他用户） */
+        delete: operations["deleteMyAnnouncement"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/users/me/conversations": {
         parameters: {
             query?: never;
@@ -497,7 +515,8 @@ export interface paths {
         get: operations["listConversations"];
         put?: never;
         post?: never;
-        delete?: never;
+        /** 清空我的全部私信会话（本人视角软删除：仅隐藏我的会话与聊天记录，对方记录不受影响；对方之后新发消息会重新出现该会话） */
+        delete: operations["clearMyConversations"];
         options?: never;
         head?: never;
         patch?: never;
@@ -515,7 +534,8 @@ export interface paths {
         put?: never;
         /** 发送私信（普通用户仅可发给站长；站长可主动私信任意用户；禁止发给本人） */
         post: operations["sendConversationMessage"];
-        delete?: never;
+        /** 删除与该用户的私信会话（本人视角软删除：仅隐藏我的会话与聊天记录，对方记录不受影响；对方之后新发消息会重新出现该会话） */
+        delete: operations["deleteMyConversation"];
         options?: never;
         head?: never;
         patch?: never;
@@ -3811,6 +3831,25 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
         };
     };
+    clearMyAnnouncements: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 已清空 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
     markAnnouncementsRead: {
         parameters: {
             query?: never;
@@ -3828,6 +3867,28 @@ export interface operations {
                 content?: never;
             };
             401: components["responses"]["Unauthorized"];
+        };
+    };
+    deleteMyAnnouncement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                announcementId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 已删除（幂等：重复删除同一公告同样返回 204） */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
         };
     };
     listConversations: {
@@ -3850,6 +3911,25 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ConversationList"];
                 };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    clearMyConversations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 已清空 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             401: components["responses"]["Unauthorized"];
         };
@@ -3911,6 +3991,28 @@ export interface operations {
             400: components["responses"]["ValidationError"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteMyConversation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                peerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 已删除（幂等：无历史消息或重复删除同样返回 204） */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
         };
     };
