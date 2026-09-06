@@ -80,9 +80,8 @@ export default async function GuideDetailPage({
         <article className="space-y-6">
           <header className="max-w-reading space-y-4">
             <h1 className="font-serif text-display font-semibold">{guide.title}</h1>
-            {guide.excerpt && (
-              <p className="text-body text-secondary">{guide.excerpt}</p>
-            )}
+            {/* 不渲染 excerpt：后端摘要由正文前 160 字自动生成，展示会与正文开头重复
+                （与 Wiki 详情页一致，excerpt 仅用于 metadata/列表卡片） */}
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-caption text-faint">
               <UserLink user={guide.author} className="text-secondary">
                 {authorName(guide.author)}
